@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NGINX OSS Mastery &bull; Sprint 1 Day 1 Examination</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --nginx-green: #009639;
+      --nginx-green-hover: #007A2E;
+      --nginx-green-glow: rgba(0, 150, 57, 0.25);
+    }
+    .nginx-btn {
+      background-color: var(--nginx-green);
+      transition: all 0.2s ease;
+    }
+    .nginx-btn:hover {
+      background-color: var(--nginx-green-hover);
+    }
+    .nginx-border {
+      border-color: var(--nginx-green);
+    }
+    .nginx-glow {
+      box-shadow: 0 4px 20px var(--nginx-green-glow);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-900 selection:text-white">
+
+  <!-- NGINX OSS Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <!-- Official NGINX Logo -->
+        <a href="https://nginx.org" target="_blank" rel="noopener noreferrer" class="flex items-center">
+          <img src="https://nginx.org/img/nginx_logo.svg" alt="NGINX Logo" class="h-8 w-auto filter drop-shadow" />
+        </a>
+        <div class="h-6 w-[1px] bg-slate-800 hidden sm:block"></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-white text-sm">OPEN SOURCE MASTERY</span>
+            <span class="px-1.5 py-0.5 text-[9px] uppercase font-black tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Sprint 1 &bull; Day 1 Exam
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400">Architecture, Process Lifecycle, Unix Signals &amp; Zero-Downtime Operations</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="startNewExam()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors flex items-center gap-1.5 font-semibold">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          New Sample (10 of 20)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+
+    <!-- Exam Overview Card -->
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-600 via-[#009639] to-teal-400"></div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Day 1 Assessment</span>
+          <h1 class="text-2xl font-black text-white mt-1">Architecture &amp; Process Lifecycle Examination</h1>
+          <p class="text-xs text-slate-400 mt-1 max-w-xl">
+            This quiz samples <strong>10 randomized questions</strong> from our 20-question Day 1 pool. Passing score is <strong>80% (8 of 10)</strong>.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+          <div class="text-right">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Question Pool</div>
+            <div class="text-lg font-black text-white">10 / 20 Active</div>
+          </div>
+          <div class="h-8 w-[1px] bg-slate-800"></div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Passing Grade</div>
+            <div class="text-lg font-black text-[#009639]">80% (8/10)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions Container -->
+    <div id="questions-list" class="space-y-6">
+      <div class="text-center py-12 text-slate-500 text-sm">Initializing question engine...</div>
+    </div>
+
+    <!-- Exam Actions & Result Footer -->
+    <div id="exam-footer" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky bottom-4 shadow-2xl backdrop-blur bg-opacity-95 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div id="score-summary" class="text-sm font-semibold text-slate-300">
+        Answer all 10 questions, then submit for automated grading and detailed explanations.
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="submit-btn" onclick="gradeExam()" class="nginx-btn text-white text-xs font-bold px-6 py-2.5 rounded-xl nginx-glow flex items-center gap-2">
+          <span>Submit Exam &amp; Reveal Solutions</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </button>
+        <button id="retry-btn" onclick="startNewExam()" class="hidden px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors">
+          Take Another 10-Question Sample
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const EMBEDDED_QUESTION_POOL = [
+  {
+    "id": 1,
+    "category": "Architecture & Processes",
+    "question": "What is the primary security rationale for NGINX separating the master process from worker processes?",
+    "options": {
+      "A": "The master process handles TLS handshakes while workers handle plaintext HTTP.",
+      "B": "The master process runs as root to bind privileged ports (<1024), while workers run unprivileged so a compromised worker cannot compromise the host OS.",
+      "C": "The master process executes Lua and njs scripts, whereas workers only serve static files.",
+      "D": "Worker processes run with real-time kernel scheduling priority while the master runs at default priority."
+    },
+    "answer": "B",
+    "explanation": "NGINX follows the principle of least privilege. The master process runs as root only to read configurations, open log files, and bind privileged ports (<1024, like 80/443). It then forks unprivileged worker processes (typically user 'nginx' or 'nobody') that handle all untrusted client connections over the event loop."
+  },
+  {
+    "id": 2,
+    "category": "Architecture & Processes",
+    "question": "Why does NGINX's event-driven architecture handle 50,000 concurrent idle connections with minimal memory compared to traditional thread-per-connection web servers?",
+    "options": {
+      "A": "NGINX compresses connection buffers into swap space using zlib.",
+      "B": "NGINX spawns a new thread only when a client sends a full 4KB HTTP request line.",
+      "C": "Each worker runs a single-threaded asynchronous event loop (e.g. epoll/kqueue) that only allocates CPU cycles when sockets transition to readable/writable states, avoiding thread stack memory overhead.",
+      "D": "NGINX drops idle TCP connections after 200 milliseconds by default."
+    },
+    "answer": "C",
+    "explanation": "Traditional servers (like Apache MPM prefork or worker) allocate a dedicated OS thread or process per connection, each with its own 2MB\u20138MB stack. Under 50k connections, this exhausts RAM and causes CPU context-switching thrashing. NGINX workers use asynchronous, non-blocking I/O multiplexing (epoll on Linux, kqueue on BSD/macOS), keeping state in tiny connection pool structs."
+  },
+  {
+    "id": 3,
+    "category": "Architecture & Processes",
+    "question": "How many worker processes should typically be configured via the `worker_processes` directive on a dedicated production server?",
+    "options": {
+      "A": "1 worker per 1,000 expected concurrent connections.",
+      "B": "`auto` (which binds 1 worker per available CPU core) to prevent CPU core context-switching.",
+      "C": "Always exactly 2: one for incoming requests and one for disk I/O.",
+      "D": "Double the number of CPU cores plus 1."
+    },
+    "answer": "B",
+    "explanation": "Setting 'worker_processes auto;' instructs NGINX to inspect the system and spawn one worker per CPU core. Because NGINX workers are event-driven and non-blocking, having more workers than cores leads to CPU core context-switching overhead without increasing throughput."
+  },
+  {
+    "id": 4,
+    "category": "Architecture & Processes",
+    "question": "What does the `worker_connections` directive in the `events` block specify?",
+    "options": {
+      "A": "The maximum number of simultaneously open connections each worker process can maintain.",
+      "B": "The total number of HTTP requests an NGINX server can handle per day.",
+      "C": "The bandwidth limit in megabits per second allocated to each worker.",
+      "D": "The number of backend upstream servers each worker can connect to."
+    },
+    "answer": "A",
+    "explanation": "`worker_connections` sets the maximum number of simultaneous connections that can be opened by a worker process. Note that this includes both client connections and connections to upstream proxied servers."
+  },
+  {
+    "id": 5,
+    "category": "Signals & Process Lifecycle",
+    "question": "What is the critical difference between stopping NGINX with `nginx -s stop` vs. `nginx -s quit`?",
+    "options": {
+      "A": "`nginx -s stop` reloads configuration before shutting down, while `quit` exits immediately.",
+      "B": "`nginx -s stop` sends SIGTERM (abruptly killing workers and aborting active client requests), while `quit` sends SIGQUIT (gracefully allowing workers to finish serving in-flight requests before exiting).",
+      "C": "`nginx -s quit` flushes the cache to disk; `stop` does not.",
+      "D": "`nginx -s stop` is only supported on systemd-based Linux systems."
+    },
+    "answer": "B",
+    "explanation": "Sending SIGTERM/SIGINT ('stop') forcefully terminates workers, immediately closing TCP sockets on active clients. Sending SIGQUIT ('quit') instructs workers to stop accepting new connections on the listen socket while completing requests currently in flight before terminating cleanly."
+  },
+  {
+    "id": 6,
+    "category": "Signals & Process Lifecycle",
+    "question": "When you execute `nginx -s reload` (or send SIGHUP to the master process), how does NGINX achieve zero downtime?",
+    "options": {
+      "A": "It pauses network interface packets in kernel queue while restarting the binary.",
+      "B": "The master checks config syntax, forks a new set of worker processes with the new config on the existing listening socket, and instructs the old workers to finish current requests and gracefully terminate.",
+      "C": "It sends a 302 redirect to all active clients pointing to a standby port.",
+      "D": "It reloads the configuration in-memory inside existing running worker processes without spawning new processes."
+    },
+    "answer": "B",
+    "explanation": "During a reload (SIGHUP), the master process validates the new configuration. If valid, it spawns new workers using the new config. The old workers stop accepting new connections, finish serving active connections, and exit. The listening socket remains open throughout the transition, dropping zero requests."
+  },
+  {
+    "id": 7,
+    "category": "Signals & Process Lifecycle",
+    "question": "Which Unix signal is sent to the NGINX master process to re-open log files (essential for `logrotate` without restarting NGINX)?",
+    "options": {
+      "A": "SIGUSR1",
+      "B": "SIGUSR2",
+      "C": "SIGHUP",
+      "D": "SIGWINCH"
+    },
+    "answer": "A",
+    "explanation": "SIGUSR1 (invoked via 'nginx -s reopen' or 'kill -USR1 <master_pid>') instructs NGINX to re-open all log files. In log rotation scripts, the log file is renamed on disk, SIGUSR1 is sent, and NGINX cleanly creates and writes to the new log file without dropping log entries."
+  },
+  {
+    "id": 8,
+    "category": "Signals & Process Lifecycle",
+    "question": "If an invalid syntax error is introduced into `nginx.conf` and you run `nginx -s reload`, what happens to the currently running NGINX service?",
+    "options": {
+      "A": "The master process crashes and all active worker processes terminate immediately.",
+      "B": "The master rejects the configuration, logs an error, and the existing worker processes continue serving traffic normally using the old configuration.",
+      "C": "NGINX starts in emergency recovery mode on port 8080.",
+      "D": "All incoming traffic receives an HTTP 500 error."
+    },
+    "answer": "B",
+    "explanation": "NGINX always validates configuration syntax before applying it during a reload. If the syntax is invalid, the master process logs the error and refuses to spawn new workers, leaving existing workers running uninterrupted."
+  },
+  {
+    "id": 9,
+    "category": "Zero-Downtime Binary Hot-Swap",
+    "question": "During an on-disk binary upgrade of NGINX, what is the first signal sent to the master process to initiate the live binary replacement?",
+    "options": {
+      "A": "SIGKILL",
+      "B": "SIGUSR2",
+      "C": "SIGHUP",
+      "D": "SIGQUIT"
+    },
+    "answer": "B",
+    "explanation": "Sending SIGUSR2 to the master process causes it to rename its PID file to 'nginx.pid.oldbin' and execute the new NGINX binary on disk. The new master starts, verifies configurations and listening sockets, and forks its own new worker processes while the old master and workers remain running."
+  },
+  {
+    "id": 10,
+    "category": "Zero-Downtime Binary Hot-Swap",
+    "question": "Why does the old master rename its PID file to `nginx.pid.oldbin` upon receiving `SIGUSR2`?",
+    "options": {
+      "A": "To create a backup copy of the access logs.",
+      "B": "To free up the standard `nginx.pid` path so the newly spawned master process can write its own PID file without conflict.",
+      "C": "To indicate to the Linux kernel that memory should be paged to swap.",
+      "D": "To trigger an automated systemd health check."
+    },
+    "answer": "B",
+    "explanation": "The old master renames `nginx.pid` to `nginx.pid.oldbin` so that when the new master starts, it can cleanly write its new process ID to the configured PID file path, allowing administrators and scripts to manage both the old and new masters simultaneously."
+  },
+  {
+    "id": 11,
+    "category": "Zero-Downtime Binary Hot-Swap",
+    "question": "How does the new master process receive the existing listening network sockets without dropping active connections during a binary upgrade?",
+    "options": {
+      "A": "The operating system passes open socket file descriptors from the old master to the child new master via environment variables and standard file descriptor inheritance.",
+      "B": "The new master uses iptables to capture traffic on a hidden port.",
+      "C": "The old master closes all sockets before the new master opens them.",
+      "D": "Sockets are stored in a Redis shared cache."
+    },
+    "answer": "A",
+    "explanation": "When the old master forks and executes the new binary, it passes open socket file descriptors via the `NGINX` environment variable. The new master inherits these descriptors directly from the parent, ensuring the listening socket never closes."
+  },
+  {
+    "id": 12,
+    "category": "Zero-Downtime Binary Hot-Swap",
+    "question": "After sending SIGUSR2 and verifying that the new NGINX binary is running and serving traffic correctly, what signal is sent to the OLD master process to finalize the upgrade?",
+    "options": {
+      "A": "SIGQUIT to gracefully terminate the old master and its old workers.",
+      "B": "SIGTERM to instantly kill the old master without warning.",
+      "C": "SIGUSR1 to merge the old workers into the new master.",
+      "D": "SIGHUP to force the old master to adopt the new binary."
+    },
+    "answer": "A",
+    "explanation": "Sending SIGQUIT to the old master process causes it to gracefully shut down its old worker processes and exit, leaving only the new master and new worker processes running. The upgrade is complete."
+  },
+  {
+    "id": 13,
+    "category": "Zero-Downtime Binary Hot-Swap",
+    "question": "If you perform a binary upgrade using SIGUSR2 but discover a critical bug in the new binary, how do you roll back to the old master process before finalizing?",
+    "options": {
+      "A": "Reboot the Linux operating system.",
+      "B": "Send SIGHUP to the old master (telling it to restart its workers) and send SIGQUIT to the new master.",
+      "C": "Delete the new binary from `/usr/sbin/nginx`.",
+      "D": "Send SIGINT to both master processes simultaneously."
+    },
+    "answer": "B",
+    "explanation": "Because the old master never exited, sending SIGHUP to the old master instructs it to re-spawn its worker processes. Then, sending SIGQUIT to the new master shuts down the buggy new instance. Traffic seamlessly falls back to the original version with zero downtime."
+  },
+  {
+    "id": 14,
+    "category": "Configuration Syntax & Testing",
+    "question": "What is the difference between running `nginx -t` and `nginx -T`?",
+    "options": {
+      "A": "`nginx -t` tests configuration syntax only, while `nginx -T` tests syntax AND dumps the entire merged configuration (including all `include` files) to stdout.",
+      "B": "`nginx -T` runs a timed benchmark test against the configuration.",
+      "C": "`nginx -t` tests static files; `nginx -T` tests upstream proxy connectivity.",
+      "D": "`nginx -T` executes tests with root permissions; `nginx -t` runs unprivileged."
+    },
+    "answer": "A",
+    "explanation": "`nginx -t` simply checks configuration files for syntax errors and validates whether referenced files/directories exist. `nginx -T` performs the same syntax check and, if successful, dumps the entire configuration tree with all included files and line numbers to stdout\u2014invaluable for debugging complex multi-file configurations."
+  },
+  {
+    "id": 15,
+    "category": "Configuration Syntax & Testing",
+    "question": "Which of the following top-level contexts is INVALID in a standard NGINX configuration?",
+    "options": {
+      "A": "`events { ... }`",
+      "B": "`http { ... }`",
+      "C": "`location { ... }` directly in the main context outside `server` and `http`",
+      "D": "`stream { ... }`"
+    },
+    "answer": "C",
+    "explanation": "A `location` block can only exist inside a `server` context (or nested within another `location` context). It cannot exist directly in the `http` context or the `main` global context."
+  },
+  {
+    "id": 16,
+    "category": "Configuration Syntax & Testing",
+    "question": "What happens if you omit the terminating semicolon (`;`) at the end of an NGINX directive?",
+    "options": {
+      "A": "NGINX silently ignores the directive and applies the default value.",
+      "B": "NGINX fails configuration parsing on startup or reload (`nginx -t`) with an 'invalid number of arguments' or 'unknown directive' syntax error.",
+      "C": "NGINX treats the next line as a parameter of the current directive.",
+      "D": "Both B and C describe how the parser fails."
+    },
+    "answer": "D",
+    "explanation": "Directives in NGINX must end with a semicolon. If omitted, the parser treats subsequent tokens on the next line as arguments to the current directive, usually resulting in an 'invalid number of arguments' or 'unknown directive' error during 'nginx -t'."
+  },
+  {
+    "id": 17,
+    "category": "Configuration Syntax & Testing",
+    "question": "How do you inspect the exact compile-time flags and installed modules of your NGINX binary?",
+    "options": {
+      "A": "`nginx -v`",
+      "B": "`nginx -V` (uppercase V)",
+      "C": "`nginx --modules`",
+      "D": "`cat /etc/nginx/modules.conf`"
+    },
+    "answer": "B",
+    "explanation": "`nginx -v` (lowercase) displays only the version string. `nginx -V` (uppercase) displays the version, compiler version, and all configure arguments including compiled-in third-party modules and path prefixes."
+  },
+  {
+    "id": 18,
+    "category": "Configuration Syntax & Testing",
+    "question": "Which directive in the `main` context specifies the location of the master process ID file?",
+    "options": {
+      "A": "`pid /var/run/nginx.pid;`",
+      "B": "`process_id /var/run/nginx.pid;`",
+      "C": "`master_pid /var/run/nginx.pid;`",
+      "D": "`daemon_pid /var/run/nginx.pid;`"
+    },
+    "answer": "A",
+    "explanation": "The `pid` directive specifies the file path where NGINX writes the process ID of the master process upon startup."
+  },
+  {
+    "id": 19,
+    "category": "Process Monitoring & Debugging",
+    "question": "Which command allows you to view which worker process is actively listening on port 8080 on Linux?",
+    "options": {
+      "A": "`ss -tulpn | grep 8080` or `lsof -i :8080`",
+      "B": "`ping localhost:8080`",
+      "C": "`traceroute 8080`",
+      "D": "`cat /proc/nginx/ports`"
+    },
+    "answer": "A",
+    "explanation": "`ss -tulpn` (Socket Statistics) or `lsof -i :8080` (List Open Files) displays active listening sockets along with process names and PIDs bound to those ports."
+  },
+  {
+    "id": 20,
+    "category": "Process Monitoring & Debugging",
+    "question": "What is the effect of configuring `daemon off;` in the `main` context?",
+    "options": {
+      "A": "NGINX disables worker processes and runs as a single thread.",
+      "B": "NGINX runs in the foreground rather than detaching into the background, which is required when running inside Docker containers or systemd units.",
+      "C": "NGINX disables the master process completely.",
+      "D": "NGINX turns off access logging."
+    },
+    "answer": "B",
+    "explanation": "By default, NGINX forks and detaches into the background as a traditional Unix daemon. In containerized environments (Docker, Kubernetes) or systemd service units, the container/process manager expects the main process to remain in the foreground (PID 1). Setting `daemon off;` prevents NGINX from detaching."
+  }
+];
+
+    let fullQuestionPool = EMBEDDED_QUESTION_POOL;
+    let currentQuestions = [];
+    let userAnswers = {};
+    let isGraded = false;
+
+    async function loadQuizData() {
+      try {
+        const res = await fetch("day01_quiz_pool.json");
+        if (res.ok) {
+          const remoteData = await res.json();
+          if (Array.isArray(remoteData) && remoteData.length >= 20) {
+            fullQuestionPool = remoteData;
+          }
+        }
+      } catch (e) {
+        fullQuestionPool = EMBEDDED_QUESTION_POOL;
+      }
+      startNewExam();
+    }
+
+    function getRandomSample(arr, count) {
+      const shuffled = [...arr].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, count);
+    }
+
+    function startNewExam() {
+      if (!fullQuestionPool.length) return;
+      isGraded = false;
+      userAnswers = {};
+      currentQuestions = getRandomSample(fullQuestionPool, 10);
+      
+      document.getElementById("submit-btn").classList.remove("hidden");
+      document.getElementById("retry-btn").classList.add("hidden");
+      document.getElementById("score-summary").innerHTML = `
+        <span class="text-slate-300">Answer all 10 questions, then submit for automated grading.</span>
+      `;
+
+      renderQuestions();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById("questions-list");
+      container.innerHTML = currentQuestions.map((q, idx) => {
+        return `
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4" id="q-card-${q.id}">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-extrabold text-emerald-400">QUESTION ${idx + 1} OF 10</span>
+              <span class="px-2.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60 font-medium">
+                ${escapeHtml(q.category)}
+              </span>
+            </div>
+
+            <div class="text-sm font-bold text-white leading-relaxed">
+              ${escapeHtml(q.question).replace(/\n/g, "<br>")}
+            </div>
+
+            <div class="space-y-2 pt-2">
+              ${["A", "B", "C", "D"].map(key => {
+                if (!q.options[key]) return "";
+                return `
+                  <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950/40 cursor-pointer transition-all text-xs text-slate-300" id="opt-label-${q.id}-${key}">
+                    <input type="radio" name="question_${q.id}" value="${key}" onchange="selectAnswer(${q.id}, )" class="mt-0.5 accent-[#009639]">
+                    <span><strong class="text-slate-200">${key})</strong> ${escapeHtml(q.options[key])}</span>
+                  </label>
+                `;
+              }).join("")}
+            </div>
+
+            <div id="explanation-${q.id}" class="hidden p-4 rounded-xl text-xs space-y-2"></div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function selectAnswer(questionId, optionKey) {
+      if (isGraded) return;
+      userAnswers[questionId] = optionKey;
+    }
+
+    function gradeExam() {
+      isGraded = true;
+      let score = 0;
+      const total = currentQuestions.length;
+
+      currentQuestions.forEach((q) => {
+        const selected = userAnswers[q.id];
+        const isCorrect = (selected === q.answer);
+        if (isCorrect) score++;
+
+        const expPanel = document.getElementById(`explanation-${q.id}`);
+        expPanel.classList.remove("hidden");
+
+        if (isCorrect) {
+          expPanel.className = "p-4 rounded-xl text-xs space-y-1 bg-emerald-950/30 border border-emerald-500/30 text-emerald-200";
+          expPanel.innerHTML = `
+            <div class="font-extrabold flex items-center gap-2 text-emerald-400">
+              <span>&check; Correct!</span>
+            </div>
+            <div class="text-slate-300 leading-relaxed">${escapeHtml(q.explanation)}</div>
+          `;
+        } else {
+          expPanel.className = "p-4 rounded-xl text-xs space-y-1 bg-rose-950/30 border border-rose-500/30 text-rose-200";
+          expPanel.innerHTML = `
+            <div class="font-extrabold flex items-center gap-2 text-rose-400">
+              <span>&cross; Incorrect. Correct Answer: Option ${q.answer}</span>
+            </div>
+            <div class="text-slate-300 leading-relaxed">${escapeHtml(q.explanation)}</div>
+          `;
+        }
+
+        ["A", "B", "C", "D"].forEach(key => {
+          const optLabel = document.getElementById(`opt-label-${q.id}-${key}`);
+          if (!optLabel) return;
+          if (key === q.answer) {
+            optLabel.classList.add("border-emerald-500", "bg-emerald-950/20", "text-emerald-300");
+          } else if (key === selected && !isCorrect) {
+            optLabel.classList.add("border-rose-500", "bg-rose-950/20", "text-rose-300");
+          }
+        });
+      });
+
+      const percentage = Math.round((score / total) * 100);
+      const passed = percentage >= 80;
+
+      const summary = document.getElementById("score-summary");
+      summary.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="text-2xl font-black ${passed ? "text-[#009639]" : "text-rose-400"}">
+            Score: ${score} / ${total} (${percentage}%)
+          </span>
+          <span class="px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider ${passed ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-rose-500/20 text-rose-300 border border-rose-500/30"}">
+            ${passed ? "PASSED &bull; DAY 1 COMPLETE" : "NEEDS REVIEW &bull; RE-ATTEMPT"}
+          </span>
+        </div>
+      `;
+
+      document.getElementById("submit-btn").classList.add("hidden");
+      document.getElementById("retry-btn").classList.remove("hidden");
+
+      try {
+        const history = JSON.parse(localStorage.getItem("nginx_day01_scores") || "[]");
+        history.push({ score, total, percentage, passed, date: new Date().toISOString() });
+        localStorage.setItem("nginx_day01_scores", JSON.stringify(history));
+      } catch (e) {}
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    window.addEventListener("DOMContentLoaded", loadQuizData);
+  </script>
+</body>
+</html>
