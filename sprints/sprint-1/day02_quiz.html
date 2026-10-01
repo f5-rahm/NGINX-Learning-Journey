@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NGINX OSS Mastery &bull; Sprint 1 Day 2 Examination</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --nginx-green: #009639;
+      --nginx-green-hover: #007A2E;
+      --nginx-green-glow: rgba(0, 150, 57, 0.25);
+    }
+    .nginx-btn {
+      background-color: var(--nginx-green);
+      transition: all 0.2s ease;
+    }
+    .nginx-btn:hover {
+      background-color: var(--nginx-green-hover);
+    }
+    .nginx-border {
+      border-color: var(--nginx-green);
+    }
+    .nginx-glow {
+      box-shadow: 0 4px 20px var(--nginx-green-glow);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-900 selection:text-white">
+
+  <!-- NGINX OSS Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <!-- Official NGINX Logo -->
+        <a href="https://nginx.org" target="_blank" rel="noopener noreferrer" class="flex items-center">
+          <img src="https://nginx.org/img/nginx_logo.svg" alt="NGINX Logo" class="h-8 w-auto filter drop-shadow" />
+        </a>
+        <div class="h-6 w-[1px] bg-slate-800 hidden sm:block"></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-white text-sm">OPEN SOURCE MASTERY</span>
+            <span class="px-1.5 py-0.5 text-[9px] uppercase font-black tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Sprint 1 &bull; Day 2 Exam
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400">Location Precedence, Path Resolution, SPA Routing &amp; Edge Hardening</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="startNewExam()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors flex items-center gap-1.5 font-semibold">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          New Sample (10 of 20)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+
+    <!-- Exam Overview Card -->
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-600 via-[#009639] to-teal-400"></div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Day 2 Assessment</span>
+          <h1 class="text-2xl font-black text-white mt-1">Web Server &amp; Location Precedence Examination</h1>
+          <p class="text-xs text-slate-400 mt-1 max-w-xl">
+            This quiz samples <strong>10 randomized questions</strong> from our 20-question Day 2 pool. Passing score is <strong>80% (8 of 10)</strong>.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+          <div class="text-right">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Question Pool</div>
+            <div class="text-lg font-black text-white">10 / 20 Active</div>
+          </div>
+          <div class="h-8 w-[1px] bg-slate-800"></div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Passing Grade</div>
+            <div class="text-lg font-black text-[#009639]">80% (8/10)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions Container -->
+    <div id="questions-list" class="space-y-6">
+      <div class="text-center py-12 text-slate-500 text-sm">Initializing question engine...</div>
+    </div>
+
+    <!-- Exam Actions & Result Footer -->
+    <div id="exam-footer" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky bottom-4 shadow-2xl backdrop-blur bg-opacity-95 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div id="score-summary" class="text-sm font-semibold text-slate-300">
+        Answer all 10 questions, then submit for automated grading and detailed explanations.
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="submit-btn" onclick="gradeExam()" class="nginx-btn text-white text-xs font-bold px-6 py-2.5 rounded-xl nginx-glow flex items-center gap-2">
+          <span>Submit Exam &amp; Reveal Solutions</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </button>
+        <button id="retry-btn" onclick="startNewExam()" class="hidden px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors">
+          Take Another 10-Question Sample
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const EMBEDDED_QUESTION_POOL = [
+  {
+    "id": 1,
+    "category": "Location Precedence",
+    "question": "Which location modifier represents the HIGHEST evaluation precedence in NGINX?",
+    "options": {
+      "A": "Prefix match with `^~`",
+      "B": "Exact match with `=`",
+      "C": "Case-sensitive regular expression with `~`",
+      "D": "Case-insensitive regular expression with `~*`"
+    },
+    "answer": "B",
+    "explanation": "Exact match (`=`) has the highest precedence. If the incoming request URI matches an exact location (e.g. `location = /healthz`), NGINX stops searching immediately and handles the request."
+  },
+  {
+    "id": 2,
+    "category": "Location Precedence",
+    "question": "Given the following configuration, which location block handles the request `GET /images/logo.png`?\n\n1: `location /images/ { ... }`\n2: `location ^~ /images/ { ... }`\n3: `location ~* \\.(png|jpg)$ { ... }`",
+    "options": {
+      "A": "Block 1 (standard prefix)",
+      "B": "Block 2 (`^~` preferential prefix)",
+      "C": "Block 3 (regex match)",
+      "D": "It produces an ambiguous configuration error"
+    },
+    "answer": "B",
+    "explanation": "The `^~` modifier is a preferential prefix match. When NGINX finds that the longest matching prefix location has the `^~` modifier, it selects that location and deliberately SKIPS checking any regular expressions."
+  },
+  {
+    "id": 3,
+    "category": "Location Precedence",
+    "question": "Given two regex locations:\n\n`location ~* \\.png$ { ... }` (defined on line 10)\n`location ~* ^/assets/.*\\.png$ { ... }` (defined on line 20)\n\nWhich block handles `GET /assets/banner.png`?",
+    "options": {
+      "A": "Line 20 because its regex is more specific.",
+      "B": "Line 10 because NGINX evaluates regular expressions in sequential top-to-bottom order and picks the FIRST match.",
+      "C": "Both blocks execute in pipeline order.",
+      "D": "The request is rejected with HTTP 500."
+    },
+    "answer": "B",
+    "explanation": "Unlike prefix matches (where the LONGEST prefix candidate is chosen), regular expressions (`~` and `~*`) are evaluated in strictly top-to-bottom file order. The first regex that matches the URI wins."
+  },
+  {
+    "id": 4,
+    "category": "Location Precedence",
+    "question": "If a request matches both `location /static/` and `location /static/css/`, but does NOT match any regex or exact locations, which block is selected?",
+    "options": {
+      "A": "The block that appeared first in the configuration file.",
+      "B": "`location /static/css/` because NGINX chooses the longest matching prefix.",
+      "C": "NGINX merges both configuration blocks.",
+      "D": "An HTTP 300 Multiple Choices response is returned."
+    },
+    "answer": "B",
+    "explanation": "For standard prefix locations, NGINX searches all prefix blocks and remembers the LONGEST matching prefix. If no regex matches later, this longest prefix is selected."
+  },
+  {
+    "id": 5,
+    "category": "Document Root & Path Resolution",
+    "question": "Given the configuration:\n```nginx\nlocation /media/ {\n    root /var/data;\n}\n```\nWhat file path on disk does NGINX look for when a client requests `GET /media/audio/song.mp3`?",
+    "options": {
+      "A": "`/var/data/audio/song.mp3`",
+      "B": "`/var/data/media/audio/song.mp3`",
+      "C": "`/var/data/song.mp3`",
+      "D": "`/media/var/data/audio/song.mp3`"
+    },
+    "answer": "B",
+    "explanation": "With the `root` directive, NGINX appends the ENTIRE incoming request URI to the root path: /var/data + /media/audio/song.mp3 = /var/data/media/audio/song.mp3."
+  },
+  {
+    "id": 6,
+    "category": "Document Root & Path Resolution",
+    "question": "Given the configuration:\n```nginx\nlocation /media/ {\n    alias /var/data/content/;\n}\n```\nWhat file path on disk does NGINX look for when a client requests `GET /media/audio/song.mp3`?",
+    "options": {
+      "A": "`/var/data/content/media/audio/song.mp3`",
+      "B": "`/var/data/content/audio/song.mp3`",
+      "C": "`/var/data/audio/song.mp3`",
+      "D": "`/var/data/content/song.mp3`"
+    },
+    "answer": "B",
+    "explanation": "With the `alias` directive, NGINX strips the matched location prefix (`/media/`) from the URI and replaces it with the alias path: /var/data/content/ + audio/song.mp3 = /var/data/content/audio/song.mp3."
+  },
+  {
+    "id": 7,
+    "category": "Document Root & Path Resolution",
+    "question": "What is the critical syntax requirement when using the `alias` directive with a directory prefix?",
+    "options": {
+      "A": "The alias path must not exist on disk.",
+      "B": "If the location ends with a trailing slash (`/`), the alias path MUST also end with a trailing slash (`/`).",
+      "C": "The alias directive must be wrapped in quotes.",
+      "D": "The alias directive cannot be used inside location blocks."
+    },
+    "answer": "B",
+    "explanation": "If a location has a trailing slash (`location /assets/`), the alias path must also end with a trailing slash (`alias /var/www/assets/;`). Mismatched trailing slashes result in malformed disk path concatenations and 404 errors."
+  },
+  {
+    "id": 8,
+    "category": "SPA Routing & try_files",
+    "question": "In the Single Page Application (SPA) directive `try_files $uri $uri/ /index.html;`, what does the final argument `/index.html` do?",
+    "options": {
+      "A": "It returns a 301 Moved Permanently redirect to `/index.html` in the client browser.",
+      "B": "It causes NGINX to perform an internal rewrite/redirect to `/index.html`, re-evaluating the request against all server location blocks.",
+      "C": "It writes an error to the log file and closes the connection.",
+      "D": "It searches for index.html in the Linux root directory `/`."
+    },
+    "answer": "B",
+    "explanation": "In `try_files`, the final argument (if not a code like =404) triggers an internal redirect. NGINX rewrites the URI to `/index.html` and restarts location matching from scratch to serve the file through the appropriate location handler."
+  },
+  {
+    "id": 9,
+    "category": "SPA Routing & try_files",
+    "question": "Why is `try_files $uri $uri/ /index.html;` required for frontend SPA frameworks like React, Vue, or Angular?",
+    "options": {
+      "A": "Because SPAs cannot compile without NGINX assistance.",
+      "B": "Because client-side routes (e.g. `/dashboard/settings`) do not exist as physical files or folders on the server's disk; without `try_files`, reloading the browser returns a 404 Not Found.",
+      "C": "Because browsers refuse to execute JavaScript without an index.html wrapper.",
+      "D": "To prevent cross-site request forgery attacks."
+    },
+    "answer": "B",
+    "explanation": "In client-side routing, JavaScript handles navigation in the browser. If a user refreshes the page on `/dashboard/settings`, the server looks for a physical directory `/dashboard/settings/`. Since it doesn't exist, NGINX returns 404 unless `try_files` falls back to serving `/index.html`, allowing the client JS bundle to load and route."
+  },
+  {
+    "id": 10,
+    "category": "SPA Routing & try_files",
+    "question": "What is the consequence of configuring `try_files $uri $uri/ /index.html;` without a location block capable of serving `/index.html`?",
+    "options": {
+      "A": "An HTTP 500 Internal Server Error due to an internal redirect loop (rewrite cycle).",
+      "B": "An HTTP 403 Forbidden error.",
+      "C": "A segmentation fault in the worker process.",
+      "D": "The client hangs indefinitely."
+    },
+    "answer": "A",
+    "explanation": "If the fallback URI in `try_files` triggers an internal redirect that loops back into the same failing `try_files` rule without resolving to a physical file, NGINX detects the recursion (after 10 internal redirects) and terminates the request with HTTP 500 Internal Server Error."
+  },
+  {
+    "id": 11,
+    "category": "Context Inheritance & Directives",
+    "question": "You define `add_header X-Frame-Options \"DENY\";` in the `http` context. Inside `server { location /app/ { ... } }`, you add `add_header X-Custom \"1\";`. What headers will a response from `/app/` contain?",
+    "options": {
+      "A": "Both `X-Frame-Options` and `X-Custom`.",
+      "B": "Only `X-Custom`. In NGINX, array/list directives defined in a child block completely override and clear all parent declarations.",
+      "C": "Only `X-Frame-Options` because parent directives take precedence over child directives.",
+      "D": "Neither; NGINX logs a duplicate header collision error."
+    },
+    "answer": "B",
+    "explanation": "This is one of the most famous NGINX gotchas. Directives like 'add_header', 'access_log', and 'proxy_set_header' are array directives. If defined in a child context, all occurrences from the parent contexts are completely ignored. To keep the parent headers, you must explicitly re-declare them in the child context."
+  },
+  {
+    "id": 12,
+    "category": "Context Inheritance & Directives",
+    "question": "If `access_log /var/log/nginx/access.log;` is defined in `http`, and `location /static/ { access_log off; }` is defined, what happens to requests for `/static/image.png`?",
+    "options": {
+      "A": "They are logged to both the main access log and a static access log.",
+      "B": "They are not logged to any access log because `access_log off;` in the location context disables logging for that specific location.",
+      "C": "NGINX throws a configuration error because logging cannot be disabled per location.",
+      "D": "Only 4xx and 5xx errors are logged."
+    },
+    "answer": "B",
+    "explanation": "Defining 'access_log off;' inside a location block disables access logging specifically for requests matching that location, saving disk I/O on high-frequency static assets."
+  },
+  {
+    "id": 13,
+    "category": "Static Delivery Optimization",
+    "question": "How does enabling `sendfile on;` improve performance when delivering static files?",
+    "options": {
+      "A": "It enables Gzip compression in kernel space.",
+      "B": "It invokes the OS `sendfile()` system call, transferring file bytes directly from page cache to the network socket descriptor within the kernel, avoiding copying data into user-space memory.",
+      "C": "It pre-loads all static files into RAM at startup.",
+      "D": "It strips HTTP headers to make packets smaller."
+    },
+    "answer": "B",
+    "explanation": "`sendfile on;` performs a zero-copy data transfer. Instead of reading file data into an NGINX user-space buffer and then writing it back down to the socket, the kernel copies data directly from the page cache to the network interface socket buffer, eliminating context switches and user-space buffer allocation."
+  },
+  {
+    "id": 14,
+    "category": "Static Delivery Optimization",
+    "question": "Why should `tcp_nopush on;` typically be enabled alongside `sendfile on;` in Linux?",
+    "options": {
+      "A": "It disables TCP checksum validation for higher speed.",
+      "B": "It instructs NGINX to send the HTTP response headers and the beginning of the file in a single full TCP packet (using `TCP_CORK`), reducing packet overhead and latency.",
+      "C": "It keeps the TCP connection alive forever.",
+      "D": "It prioritizes mobile client connections."
+    },
+    "answer": "B",
+    "explanation": "On Linux, `tcp_nopush on;` enables the `TCP_CORK` socket option. When combined with `sendfile`, it forces the kernel to accumulate headers and file chunks into full-sized TCP Maximum Segment Size (MSS) packets before sending them out onto the wire, preventing tiny packets from flooding the network."
+  },
+  {
+    "id": 15,
+    "category": "Static Delivery Optimization",
+    "question": "What happens if you omit `include /etc/nginx/mime.types;` and `default_type application/octet-stream;`?",
+    "options": {
+      "A": "NGINX fails to start with a fatal syntax error.",
+      "B": "NGINX serves all static files without a `Content-Type` header (or as `text/plain`), causing modern browsers to treat `.css` and `.js` files as untyped text and refuse to render or execute them due to strict MIME sniffing policies.",
+      "C": "Files are automatically converted to HTML before delivery.",
+      "D": "All files are downloaded as `.bin` files automatically."
+    },
+    "answer": "B",
+    "explanation": "Without `mime.types`, NGINX cannot map file extensions (like `.js`, `.css`, `.svg`) to proper MIME types. Browsers enforcing strict MIME type checking (e.g. `X-Content-Type-Options: nosniff` or CSS/module imports) will block stylesheets and scripts that lack `text/css` or `application/javascript`."
+  },
+  {
+    "id": 16,
+    "category": "Edge Hardening & Security",
+    "question": "What is the purpose of setting `server_tokens off;` in the `http` context?",
+    "options": {
+      "A": "It prevents API authentication tokens from expiring.",
+      "B": "It hides the specific NGINX version number from the `Server:` response header and default error pages, reducing reconnaissance info available to attackers.",
+      "C": "It disables HTTP cookies completely.",
+      "D": "It enables rate-limiting tokens per client IP."
+    },
+    "answer": "B",
+    "explanation": "By default, NGINX returns headers like `Server: nginx/1.27.2`. Setting `server_tokens off;` strips the version number, returning only `Server: nginx`. This prevents opportunistic attackers from querying CVE databases for version-specific vulnerabilities."
+  },
+  {
+    "id": 17,
+    "category": "Edge Hardening & Security",
+    "question": "Which location block configuration correctly blocks unauthorized access to hidden files and directories (like `.git`, `.env`, or `.htaccess`) across your entire web root?",
+    "options": {
+      "A": "`location = /.env { return 404; }`",
+      "B": "`location ~ /\\. { deny all; access_log off; log_not_found off; }`",
+      "C": "`location /hidden/ { autoindex off; }`",
+      "D": "`location *.* { return 403; }`"
+    },
+    "answer": "B",
+    "explanation": "The regex `location ~ /\\.` matches any URI component beginning with a dot anywhere in the path (e.g. `/.git/config`, `/.env`, `/subdir/.secrets`). Applying `deny all;` returns an immediate HTTP 403 Forbidden."
+  },
+  {
+    "id": 18,
+    "category": "Edge Hardening & Security",
+    "question": "When defining custom error pages with `error_page 404 /custom_404.html;`, how do you prevent clients from directly requesting `GET /custom_404.html` under normal browsing?",
+    "options": {
+      "A": "By setting the file permissions on `custom_404.html` to `0000`.",
+      "B": "By marking the location as `internal;`: `location = /custom_404.html { internal; root /var/www/errors; }`.",
+      "C": "By naming the file `.custom_404.html`.",
+      "D": "NGINX automatically prevents direct access to error pages."
+    },
+    "answer": "B",
+    "explanation": "The `internal;` directive specifies that a location block can ONLY be accessed by internal requests (such as redirects from `error_page`, `try_files`, or `rewrite`). If an external client requests `/custom_404.html` directly, NGINX returns 404 Not Found."
+  },
+  {
+    "id": 19,
+    "category": "Edge Hardening & Security",
+    "question": "What is the clean, high-performance way to issue a permanent 301 redirect from `/old-page` to `/new-page`?",
+    "options": {
+      "A": "`location = /old-page { return 301 /new-page; }`",
+      "B": "`location /old-page { rewrite ^ /new-page permanent; }`",
+      "C": "`location /old-page { proxy_pass http://new-page; }`",
+      "D": "`location /old-page { try_files /new-page =301; }`"
+    },
+    "answer": "A",
+    "explanation": "Using `location = /old-page { return 301 /new-page; }` is faster and cleaner than regular expression `rewrite` rules because exact match (`=`) terminates immediately without regex engine overhead."
+  },
+  {
+    "id": 20,
+    "category": "Static Delivery Optimization",
+    "question": "What is the effect of setting `autoindex on;` inside a location block?",
+    "options": {
+      "A": "NGINX automatically indexes all files into an Elasticsearch database.",
+      "B": "NGINX generates an automatic HTML directory listing of files if no `index.html` file is found in the requested directory.",
+      "C": "NGINX automatically creates missing subdirectories on disk.",
+      "D": "NGINX compresses static files with Brotli."
+    },
+    "answer": "B",
+    "explanation": "`autoindex on;` instructs NGINX to produce an automated directory listing when a requested directory does not contain an index file. In production public web servers, this is typically set to `off` to prevent information disclosure."
+  }
+];
+
+    let fullQuestionPool = EMBEDDED_QUESTION_POOL;
+    let currentQuestions = [];
+    let userAnswers = {};
+    let isGraded = false;
+
+    async function loadQuizData() {
+      try {
+        const res = await fetch("day02_quiz_pool.json");
+        if (res.ok) {
+          const remoteData = await res.json();
+          if (Array.isArray(remoteData) && remoteData.length >= 20) {
+            fullQuestionPool = remoteData;
+          }
+        }
+      } catch (e) {
+        fullQuestionPool = EMBEDDED_QUESTION_POOL;
+      }
+      startNewExam();
+    }
+
+    function getRandomSample(arr, count) {
+      const shuffled = [...arr].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, count);
+    }
+
+    function startNewExam() {
+      if (!fullQuestionPool.length) return;
+      isGraded = false;
+      userAnswers = {};
+      currentQuestions = getRandomSample(fullQuestionPool, 10);
+      
+      document.getElementById("submit-btn").classList.remove("hidden");
+      document.getElementById("retry-btn").classList.add("hidden");
+      document.getElementById("score-summary").innerHTML = `
+        <span class="text-slate-300">Answer all 10 questions, then submit for automated grading.</span>
+      `;
+
+      renderQuestions();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById("questions-list");
+      container.innerHTML = currentQuestions.map((q, idx) => {
+        return `
+          <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4" id="q-card-${q.id}">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-extrabold text-emerald-400">QUESTION ${idx + 1} OF 10</span>
+              <span class="px-2.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60 font-medium">
+                ${escapeHtml(q.category)}
+              </span>
+            </div>
+
+            <div class="text-sm font-bold text-white leading-relaxed">
+              ${escapeHtml(q.question).replace(/\n/g, "<br>")}
+            </div>
+
+            <div class="space-y-2 pt-2">
+              ${["A", "B", "C", "D"].map(key => {
+                if (!q.options[key]) return "";
+                return `
+                  <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950/40 cursor-pointer transition-all text-xs text-slate-300" id="opt-label-${q.id}-${key}">
+                    <input type="radio" name="question_${q.id}" value="${key}" onchange="selectAnswer(${q.id}, )" class="mt-0.5 accent-[#009639]">
+                    <span><strong class="text-slate-200">${key})</strong> ${escapeHtml(q.options[key])}</span>
+                  </label>
+                `;
+              }).join("")}
+            </div>
+
+            <div id="explanation-${q.id}" class="hidden p-4 rounded-xl text-xs space-y-2"></div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function selectAnswer(questionId, optionKey) {
+      if (isGraded) return;
+      userAnswers[questionId] = optionKey;
+    }
+
+    function gradeExam() {
+      isGraded = true;
+      let score = 0;
+      const total = currentQuestions.length;
+
+      currentQuestions.forEach((q) => {
+        const selected = userAnswers[q.id];
+        const isCorrect = (selected === q.answer);
+        if (isCorrect) score++;
+
+        const expPanel = document.getElementById(`explanation-${q.id}`);
+        expPanel.classList.remove("hidden");
+
+        if (isCorrect) {
+          expPanel.className = "p-4 rounded-xl text-xs space-y-1 bg-emerald-950/30 border border-emerald-500/30 text-emerald-200";
+          expPanel.innerHTML = `
+            <div class="font-extrabold flex items-center gap-2 text-emerald-400">
+              <span>&check; Correct!</span>
+            </div>
+            <div class="text-slate-300 leading-relaxed">${escapeHtml(q.explanation)}</div>
+          `;
+        } else {
+          expPanel.className = "p-4 rounded-xl text-xs space-y-1 bg-rose-950/30 border border-rose-500/30 text-rose-200";
+          expPanel.innerHTML = `
+            <div class="font-extrabold flex items-center gap-2 text-rose-400">
+              <span>&cross; Incorrect. Correct Answer: Option ${q.answer}</span>
+            </div>
+            <div class="text-slate-300 leading-relaxed">${escapeHtml(q.explanation)}</div>
+          `;
+        }
+
+        ["A", "B", "C", "D"].forEach(key => {
+          const optLabel = document.getElementById(`opt-label-${q.id}-${key}`);
+          if (!optLabel) return;
+          if (key === q.answer) {
+            optLabel.classList.add("border-emerald-500", "bg-emerald-950/20", "text-emerald-300");
+          } else if (key === selected && !isCorrect) {
+            optLabel.classList.add("border-rose-500", "bg-rose-950/20", "text-rose-300");
+          }
+        });
+      });
+
+      const percentage = Math.round((score / total) * 100);
+      const passed = percentage >= 80;
+
+      const summary = document.getElementById("score-summary");
+      summary.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="text-2xl font-black ${passed ? "text-[#009639]" : "text-rose-400"}">
+            Score: ${score} / ${total} (${percentage}%)
+          </span>
+          <span class="px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider ${passed ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-rose-500/20 text-rose-300 border border-rose-500/30"}">
+            ${passed ? "PASSED &bull; SPRINT 1 COMPLETE" : "NEEDS REVIEW &bull; RE-ATTEMPT"}
+          </span>
+        </div>
+      `;
+
+      document.getElementById("submit-btn").classList.add("hidden");
+      document.getElementById("retry-btn").classList.remove("hidden");
+
+      try {
+        const history = JSON.parse(localStorage.getItem("nginx_day02_scores") || "[]");
+        history.push({ score, total, percentage, passed, date: new Date().toISOString() });
+        localStorage.setItem("nginx_day02_scores", JSON.stringify(history));
+      } catch (e) {}
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    window.addEventListener("DOMContentLoaded", loadQuizData);
+  </script>
+</body>
+</html>
