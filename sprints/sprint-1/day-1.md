@@ -73,7 +73,6 @@ In production, you never "restart" NGINX—you signal it:
 ### Activity 1.2: Process Inspection & Socket Handover (7 min)
 1. Start an NGINX instance with our minimal test configuration:
    ```bash
-   cd /Users/j.rahm/.gemini/antigravity/scratch/nginx-journey/sprints/sprint-01/lab
    nginx -c $PWD/solution_nginx.conf -p $PWD -g "daemon off;" &
    ```
 2. In a second terminal, inspect the process tree:
@@ -105,7 +104,7 @@ In production, you never "restart" NGINX—you signal it:
    ```
 3. Trigger a live configuration reload:
    ```bash
-   kill -HUP $(cat /Users/j.rahm/.gemini/antigravity/scratch/nginx-journey/sprints/sprint-01/lab/logs/nginx.pid)
+   kill -HUP $(cat lab/logs/nginx.pid)
    ```
 4. Observe the worker PIDs again:
    *Observation:* The master PID remained unchanged, but the worker PID changed! The continuous curl loop in Terminal 1 did not experience a single dropped connection or non-200 status code.
@@ -136,7 +135,7 @@ To verify today's learning, launch the **Day 1 Concept Quiz**:
 * Samples **10 random questions** from our 20-question Day 1 pool.
 * Passing score: **80% (8 of 10)**.
 
-👉 **[Launch Day 1 Concept Examination (`day01_quiz.html`)](file:///Users/j.rahm/.gemini/antigravity/scratch/nginx-journey/sprints/sprint-01/day01_quiz.html)**
+👉 **[Launch Day 1 Concept Examination (`day01_quiz.html`)](day01_quiz.html)**
 
 ---
 
