@@ -3,6 +3,13 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Lab Stuff
+sprints/*/lab/logs/
+sprints/*/lab/temp/
+sprints/*/lab/cache/
+*.pid.oldbin
+*.pid
+
 # C extensions
 *.so
 
