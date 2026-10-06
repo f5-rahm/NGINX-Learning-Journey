@@ -1,0 +1,1756 @@
+{
+  "schema_version": 1,
+  "defaults": {
+    "sample_size": 10,
+    "pass_percent": 80
+  },
+  "question_types": {
+    "scenario": "Why something works, or what happens in a situation",
+    "config": "Read a configuration and predict the result",
+    "diagnose": "Work from a symptom or log line back to the cause",
+    "recall": "Direct syntax, variable, or command knowledge"
+  },
+  "target_mix": {
+    "scenario": 8,
+    "config": 6,
+    "diagnose": 3,
+    "recall": 3
+  },
+  "sprints": [
+    {
+      "sprint": 1,
+      "title": "Web Serving Mastery & Core Architecture",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-10-01",
+          "title": "Architecture, Process Lifecycle & Signals",
+          "questions": [
+            {
+              "id": "s1d1q01",
+              "type": "scenario",
+              "category": "Architecture & Processes",
+              "question": "What is the primary security rationale for NGINX separating the master process from worker processes?",
+              "options": {
+                "A": "The master process handles TLS handshakes while workers handle plaintext HTTP.",
+                "B": "The master process runs as root to bind privileged ports (<1024), while workers run unprivileged so a compromised worker cannot compromise the host OS.",
+                "C": "The master process executes Lua and njs scripts, whereas workers only serve static files.",
+                "D": "Worker processes run with real-time kernel scheduling priority while the master runs at default priority."
+              },
+              "answer": "B",
+              "explanation": "NGINX follows the principle of least privilege. The master process runs as root only to read configurations, open log files, and bind privileged ports (<1024, like 80/443). It then forks unprivileged worker processes (typically user 'nginx' or 'nobody') that handle all untrusted client connections over the event loop."
+            },
+            {
+              "id": "s1d1q02",
+              "type": "scenario",
+              "category": "Architecture & Processes",
+              "question": "Why does NGINX's event-driven architecture handle 50,000 concurrent idle connections with minimal memory compared to traditional thread-per-connection web servers?",
+              "options": {
+                "A": "NGINX compresses connection buffers into swap space using zlib.",
+                "B": "NGINX spawns a new thread only when a client sends a full 4KB HTTP request line.",
+                "C": "Each worker runs a single-threaded asynchronous event loop (e.g. epoll/kqueue) that only allocates CPU cycles when sockets transition to readable/writable states, avoiding thread stack memory overhead.",
+                "D": "NGINX drops idle TCP connections after 200 milliseconds by default."
+              },
+              "answer": "C",
+              "explanation": "Traditional servers (like Apache MPM prefork or worker) allocate a dedicated OS thread or process per connection, each with its own 2MB–8MB stack. Under 50k connections, this exhausts RAM and causes CPU context-switching thrashing. NGINX workers use asynchronous, non-blocking I/O multiplexing (epoll on Linux, kqueue on BSD/macOS), keeping state in tiny connection pool structs."
+            },
+            {
+              "id": "s1d1q03",
+              "type": "recall",
+              "category": "Architecture & Processes",
+              "question": "How many worker processes should typically be configured via the `worker_processes` directive on a dedicated production server?",
+              "options": {
+                "A": "1 worker per 1,000 expected concurrent connections.",
+                "B": "`auto` (which binds 1 worker per available CPU core) to prevent CPU core context-switching.",
+                "C": "Always exactly 2: one for incoming requests and one for disk I/O.",
+                "D": "Double the number of CPU cores plus 1."
+              },
+              "answer": "B",
+              "explanation": "Setting 'worker_processes auto;' instructs NGINX to inspect the system and spawn one worker per CPU core. Because NGINX workers are event-driven and non-blocking, having more workers than cores leads to CPU core context-switching overhead without increasing throughput."
+            },
+            {
+              "id": "s1d1q04",
+              "type": "recall",
+              "category": "Architecture & Processes",
+              "question": "What does the `worker_connections` directive in the `events` block specify?",
+              "options": {
+                "A": "The maximum number of simultaneously open connections each worker process can maintain.",
+                "B": "The total number of HTTP requests an NGINX server can handle per day.",
+                "C": "The bandwidth limit in megabits per second allocated to each worker.",
+                "D": "The number of backend upstream servers each worker can connect to."
+              },
+              "answer": "A",
+              "explanation": "`worker_connections` sets the maximum number of simultaneous connections that can be opened by a worker process. Note that this includes both client connections and connections to upstream proxied servers."
+            },
+            {
+              "id": "s1d1q05",
+              "type": "scenario",
+              "category": "Signals & Process Lifecycle",
+              "question": "What is the critical difference between stopping NGINX with `nginx -s stop` vs. `nginx -s quit`?",
+              "options": {
+                "A": "`nginx -s stop` reloads configuration before shutting down, while `quit` exits immediately.",
+                "B": "`nginx -s stop` sends SIGTERM (abruptly killing workers and aborting active client requests), while `quit` sends SIGQUIT (gracefully allowing workers to finish serving in-flight requests before exiting).",
+                "C": "`nginx -s quit` flushes the cache to disk; `stop` does not.",
+                "D": "`nginx -s stop` is only supported on systemd-based Linux systems."
+              },
+              "answer": "B",
+              "explanation": "Sending SIGTERM/SIGINT ('stop') forcefully terminates workers, immediately closing TCP sockets on active clients. Sending SIGQUIT ('quit') instructs workers to stop accepting new connections on the listen socket while completing requests currently in flight before terminating cleanly."
+            },
+            {
+              "id": "s1d1q06",
+              "type": "scenario",
+              "category": "Signals & Process Lifecycle",
+              "question": "When you execute `nginx -s reload` (or send SIGHUP to the master process), how does NGINX achieve zero downtime?",
+              "options": {
+                "A": "It pauses network interface packets in kernel queue while restarting the binary.",
+                "B": "The master checks config syntax, forks a new set of worker processes with the new config on the existing listening socket, and instructs the old workers to finish current requests and gracefully terminate.",
+                "C": "It sends a 302 redirect to all active clients pointing to a standby port.",
+                "D": "It reloads the configuration in-memory inside existing running worker processes without spawning new processes."
+              },
+              "answer": "B",
+              "explanation": "During a reload (SIGHUP), the master process validates the new configuration. If valid, it spawns new workers using the new config. The old workers stop accepting new connections, finish serving active connections, and exit. The listening socket remains open throughout the transition, dropping zero requests."
+            },
+            {
+              "id": "s1d1q07",
+              "type": "recall",
+              "category": "Signals & Process Lifecycle",
+              "question": "Which Unix signal is sent to the NGINX master process to re-open log files (essential for `logrotate` without restarting NGINX)?",
+              "options": {
+                "A": "SIGUSR1",
+                "B": "SIGUSR2",
+                "C": "SIGHUP",
+                "D": "SIGWINCH"
+              },
+              "answer": "A",
+              "explanation": "SIGUSR1 (invoked via 'nginx -s reopen' or 'kill -USR1 <master_pid>') instructs NGINX to re-open all log files. In log rotation scripts, the log file is renamed on disk, SIGUSR1 is sent, and NGINX cleanly creates and writes to the new log file without dropping log entries."
+            },
+            {
+              "id": "s1d1q08",
+              "type": "scenario",
+              "category": "Signals & Process Lifecycle",
+              "question": "If an invalid syntax error is introduced into `nginx.conf` and you run `nginx -s reload`, what happens to the currently running NGINX service?",
+              "options": {
+                "A": "The master process crashes and all active worker processes terminate immediately.",
+                "B": "The master rejects the configuration, logs an error, and the existing worker processes continue serving traffic normally using the old configuration.",
+                "C": "NGINX starts in emergency recovery mode on port 8080.",
+                "D": "All incoming traffic receives an HTTP 500 error."
+              },
+              "answer": "B",
+              "explanation": "NGINX always validates configuration syntax before applying it during a reload. If the syntax is invalid, the master process logs the error and refuses to spawn new workers, leaving existing workers running uninterrupted."
+            },
+            {
+              "id": "s1d1q09",
+              "type": "recall",
+              "category": "Zero-Downtime Binary Hot-Swap",
+              "question": "During an on-disk binary upgrade of NGINX, what is the first signal sent to the master process to initiate the live binary replacement?",
+              "options": {
+                "A": "SIGKILL",
+                "B": "SIGUSR2",
+                "C": "SIGHUP",
+                "D": "SIGQUIT"
+              },
+              "answer": "B",
+              "explanation": "Sending SIGUSR2 to the master process causes it to rename its PID file to 'nginx.pid.oldbin' and execute the new NGINX binary on disk. The new master starts, verifies configurations and listening sockets, and forks its own new worker processes while the old master and workers remain running."
+            },
+            {
+              "id": "s1d1q10",
+              "type": "scenario",
+              "category": "Zero-Downtime Binary Hot-Swap",
+              "question": "Why does the old master rename its PID file to `nginx.pid.oldbin` upon receiving `SIGUSR2`?",
+              "options": {
+                "A": "To create a backup copy of the access logs.",
+                "B": "To free up the standard `nginx.pid` path so the newly spawned master process can write its own PID file without conflict.",
+                "C": "To indicate to the Linux kernel that memory should be paged to swap.",
+                "D": "To trigger an automated systemd health check."
+              },
+              "answer": "B",
+              "explanation": "The old master renames `nginx.pid` to `nginx.pid.oldbin` so that when the new master starts, it can cleanly write its new process ID to the configured PID file path, allowing administrators and scripts to manage both the old and new masters simultaneously."
+            },
+            {
+              "id": "s1d1q11",
+              "type": "scenario",
+              "category": "Zero-Downtime Binary Hot-Swap",
+              "question": "How does the new master process receive the existing listening network sockets without dropping active connections during a binary upgrade?",
+              "options": {
+                "A": "The operating system passes open socket file descriptors from the old master to the child new master via environment variables and standard file descriptor inheritance.",
+                "B": "The new master uses iptables to capture traffic on a hidden port.",
+                "C": "The old master closes all sockets before the new master opens them.",
+                "D": "Sockets are stored in a Redis shared cache."
+              },
+              "answer": "A",
+              "explanation": "When the old master forks and executes the new binary, it passes open socket file descriptors via the `NGINX` environment variable. The new master inherits these descriptors directly from the parent, ensuring the listening socket never closes."
+            },
+            {
+              "id": "s1d1q12",
+              "type": "scenario",
+              "category": "Zero-Downtime Binary Hot-Swap",
+              "question": "After sending SIGUSR2 and verifying that the new NGINX binary is running and serving traffic correctly, what signal is sent to the OLD master process to finalize the upgrade?",
+              "options": {
+                "A": "SIGQUIT to gracefully terminate the old master and its old workers.",
+                "B": "SIGTERM to instantly kill the old master without warning.",
+                "C": "SIGUSR1 to merge the old workers into the new master.",
+                "D": "SIGHUP to force the old master to adopt the new binary."
+              },
+              "answer": "A",
+              "explanation": "Sending SIGQUIT to the old master process causes it to gracefully shut down its old worker processes and exit, leaving only the new master and new worker processes running. The upgrade is complete."
+            },
+            {
+              "id": "s1d1q13",
+              "type": "scenario",
+              "category": "Zero-Downtime Binary Hot-Swap",
+              "question": "If you perform a binary upgrade using SIGUSR2 but discover a critical bug in the new binary, how do you roll back to the old master process before finalizing?",
+              "options": {
+                "A": "Reboot the Linux operating system.",
+                "B": "Send SIGHUP to the old master (telling it to restart its workers) and send SIGQUIT to the new master.",
+                "C": "Delete the new binary from `/usr/sbin/nginx`.",
+                "D": "Send SIGINT to both master processes simultaneously."
+              },
+              "answer": "B",
+              "explanation": "Because the old master never exited, sending SIGHUP to the old master instructs it to re-spawn its worker processes. Then, sending SIGQUIT to the new master shuts down the buggy new instance. Traffic seamlessly falls back to the original version with zero downtime."
+            },
+            {
+              "id": "s1d1q14",
+              "type": "recall",
+              "category": "Configuration Syntax & Testing",
+              "question": "What is the difference between running `nginx -t` and `nginx -T`?",
+              "options": {
+                "A": "`nginx -t` tests configuration syntax only, while `nginx -T` tests syntax AND dumps the entire merged configuration (including all `include` files) to stdout.",
+                "B": "`nginx -T` runs a timed benchmark test against the configuration.",
+                "C": "`nginx -t` tests static files; `nginx -T` tests upstream proxy connectivity.",
+                "D": "`nginx -T` executes tests with root permissions; `nginx -t` runs unprivileged."
+              },
+              "answer": "A",
+              "explanation": "`nginx -t` simply checks configuration files for syntax errors and validates whether referenced files/directories exist. `nginx -T` performs the same syntax check and, if successful, dumps the entire configuration tree with all included files and line numbers to stdout—invaluable for debugging complex multi-file configurations."
+            },
+            {
+              "id": "s1d1q15",
+              "type": "recall",
+              "category": "Configuration Syntax & Testing",
+              "question": "Which of the following top-level contexts is INVALID in a standard NGINX configuration?",
+              "options": {
+                "A": "`events { ... }`",
+                "B": "`http { ... }`",
+                "C": "`location { ... }` directly in the main context outside `server` and `http`",
+                "D": "`stream { ... }`"
+              },
+              "answer": "C",
+              "explanation": "A `location` block can only exist inside a `server` context (or nested within another `location` context). It cannot exist directly in the `http` context or the `main` global context."
+            },
+            {
+              "id": "s1d1q16",
+              "type": "scenario",
+              "category": "Configuration Syntax & Testing",
+              "question": "What happens if you omit the terminating semicolon (`;`) at the end of an NGINX directive?",
+              "options": {
+                "A": "NGINX silently ignores the directive and applies the default value.",
+                "B": "NGINX fails configuration parsing on startup or reload (`nginx -t`) with an 'invalid number of arguments' or 'unknown directive' syntax error.",
+                "C": "NGINX treats the next line as a parameter of the current directive.",
+                "D": "Both B and C describe how the parser fails."
+              },
+              "answer": "D",
+              "explanation": "Directives in NGINX must end with a semicolon. If omitted, the parser treats subsequent tokens on the next line as arguments to the current directive, usually resulting in an 'invalid number of arguments' or 'unknown directive' error during 'nginx -t'."
+            },
+            {
+              "id": "s1d1q17",
+              "type": "recall",
+              "category": "Configuration Syntax & Testing",
+              "question": "How do you inspect the exact compile-time flags and installed modules of your NGINX binary?",
+              "options": {
+                "A": "`nginx -v`",
+                "B": "`nginx -V` (uppercase V)",
+                "C": "`nginx --modules`",
+                "D": "`cat /etc/nginx/modules.conf`"
+              },
+              "answer": "B",
+              "explanation": "`nginx -v` (lowercase) displays only the version string. `nginx -V` (uppercase) displays the version, compiler version, and all configure arguments including compiled-in third-party modules and path prefixes."
+            },
+            {
+              "id": "s1d1q18",
+              "type": "recall",
+              "category": "Configuration Syntax & Testing",
+              "question": "Which directive in the `main` context specifies the location of the master process ID file?",
+              "options": {
+                "A": "`pid /var/run/nginx.pid;`",
+                "B": "`process_id /var/run/nginx.pid;`",
+                "C": "`master_pid /var/run/nginx.pid;`",
+                "D": "`daemon_pid /var/run/nginx.pid;`"
+              },
+              "answer": "A",
+              "explanation": "The `pid` directive specifies the file path where NGINX writes the process ID of the master process upon startup."
+            },
+            {
+              "id": "s1d1q19",
+              "type": "recall",
+              "category": "Process Monitoring & Debugging",
+              "question": "Which command allows you to view which worker process is actively listening on port 8080 on Linux?",
+              "options": {
+                "A": "`ss -tulpn | grep 8080` or `lsof -i :8080`",
+                "B": "`ping localhost:8080`",
+                "C": "`traceroute 8080`",
+                "D": "`cat /proc/nginx/ports`"
+              },
+              "answer": "A",
+              "explanation": "`ss -tulpn` (Socket Statistics) or `lsof -i :8080` (List Open Files) displays active listening sockets along with process names and PIDs bound to those ports."
+            },
+            {
+              "id": "s1d1q20",
+              "type": "scenario",
+              "category": "Process Monitoring & Debugging",
+              "question": "What is the effect of configuring `daemon off;` in the `main` context?",
+              "options": {
+                "A": "NGINX disables worker processes and runs as a single thread.",
+                "B": "NGINX runs in the foreground rather than detaching into the background, which is required when running inside Docker containers or systemd units.",
+                "C": "NGINX disables the master process completely.",
+                "D": "NGINX turns off access logging."
+              },
+              "answer": "B",
+              "explanation": "By default, NGINX forks and detaches into the background as a traditional Unix daemon. In containerized environments (Docker, Kubernetes) or systemd service units, the container/process manager expects the main process to remain in the foreground (PID 1). Setting `daemon off;` prevents NGINX from detaching."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "date": "2026-10-02",
+          "title": "Web Server Construction, Location Precedence & Hardening",
+          "questions": [
+            {
+              "id": "s1d2q01",
+              "type": "recall",
+              "category": "Location Precedence",
+              "question": "Which location modifier represents the HIGHEST evaluation precedence in NGINX?",
+              "options": {
+                "A": "Prefix match with `^~`",
+                "B": "Exact match with `=`",
+                "C": "Case-sensitive regular expression with `~`",
+                "D": "Case-insensitive regular expression with `~*`"
+              },
+              "answer": "B",
+              "explanation": "Exact match (`=`) has the highest precedence. If the incoming request URI matches an exact location (e.g. `location = /healthz`), NGINX stops searching immediately and handles the request."
+            },
+            {
+              "id": "s1d2q02",
+              "type": "config",
+              "category": "Location Precedence",
+              "question": "Given the following configuration, which location block handles the request `GET /images/logo.png`?\n\n1: `location /images/ { ... }`\n2: `location ^~ /images/ { ... }`\n3: `location ~* \\.(png|jpg)$ { ... }`",
+              "options": {
+                "A": "Block 1 (standard prefix)",
+                "B": "Block 2 (`^~` preferential prefix)",
+                "C": "Block 3 (regex match)",
+                "D": "It produces an ambiguous configuration error"
+              },
+              "answer": "B",
+              "explanation": "The `^~` modifier is a preferential prefix match. When NGINX finds that the longest matching prefix location has the `^~` modifier, it selects that location and deliberately SKIPS checking any regular expressions."
+            },
+            {
+              "id": "s1d2q03",
+              "type": "config",
+              "category": "Location Precedence",
+              "question": "Given two regex locations:\n\n`location ~* \\.png$ { ... }` (defined on line 10)\n`location ~* ^/assets/.*\\.png$ { ... }` (defined on line 20)\n\nWhich block handles `GET /assets/banner.png`?",
+              "options": {
+                "A": "Line 20 because its regex is more specific.",
+                "B": "Line 10 because NGINX evaluates regular expressions in sequential top-to-bottom order and picks the FIRST match.",
+                "C": "Both blocks execute in pipeline order.",
+                "D": "The request is rejected with HTTP 500."
+              },
+              "answer": "B",
+              "explanation": "Unlike prefix matches (where the LONGEST prefix candidate is chosen), regular expressions (`~` and `~*`) are evaluated in strictly top-to-bottom file order. The first regex that matches the URI wins."
+            },
+            {
+              "id": "s1d2q04",
+              "type": "config",
+              "category": "Location Precedence",
+              "question": "If a request matches both `location /static/` and `location /static/css/`, but does NOT match any regex or exact locations, which block is selected?",
+              "options": {
+                "A": "The block that appeared first in the configuration file.",
+                "B": "`location /static/css/` because NGINX chooses the longest matching prefix.",
+                "C": "NGINX merges both configuration blocks.",
+                "D": "An HTTP 300 Multiple Choices response is returned."
+              },
+              "answer": "B",
+              "explanation": "For standard prefix locations, NGINX searches all prefix blocks and remembers the LONGEST matching prefix. If no regex matches later, this longest prefix is selected."
+            },
+            {
+              "id": "s1d2q05",
+              "type": "config",
+              "category": "Document Root & Path Resolution",
+              "question": "Given the configuration:\n```nginx\nlocation /media/ {\n    root /var/data;\n}\n```\nWhat file path on disk does NGINX look for when a client requests `GET /media/audio/song.mp3`?",
+              "options": {
+                "A": "`/var/data/audio/song.mp3`",
+                "B": "`/var/data/media/audio/song.mp3`",
+                "C": "`/var/data/song.mp3`",
+                "D": "`/media/var/data/audio/song.mp3`"
+              },
+              "answer": "B",
+              "explanation": "With the `root` directive, NGINX appends the ENTIRE incoming request URI to the root path: /var/data + /media/audio/song.mp3 = /var/data/media/audio/song.mp3."
+            },
+            {
+              "id": "s1d2q06",
+              "type": "config",
+              "category": "Document Root & Path Resolution",
+              "question": "Given the configuration:\n```nginx\nlocation /media/ {\n    alias /var/data/content/;\n}\n```\nWhat file path on disk does NGINX look for when a client requests `GET /media/audio/song.mp3`?",
+              "options": {
+                "A": "`/var/data/content/media/audio/song.mp3`",
+                "B": "`/var/data/content/audio/song.mp3`",
+                "C": "`/var/data/audio/song.mp3`",
+                "D": "`/var/data/content/song.mp3`"
+              },
+              "answer": "B",
+              "explanation": "With the `alias` directive, NGINX strips the matched location prefix (`/media/`) from the URI and replaces it with the alias path: /var/data/content/ + audio/song.mp3 = /var/data/content/audio/song.mp3."
+            },
+            {
+              "id": "s1d2q07",
+              "type": "recall",
+              "category": "Document Root & Path Resolution",
+              "question": "What is the critical syntax requirement when using the `alias` directive with a directory prefix?",
+              "options": {
+                "A": "The alias path must not exist on disk.",
+                "B": "If the location ends with a trailing slash (`/`), the alias path MUST also end with a trailing slash (`/`).",
+                "C": "The alias directive must be wrapped in quotes.",
+                "D": "The alias directive cannot be used inside location blocks."
+              },
+              "answer": "B",
+              "explanation": "If a location has a trailing slash (`location /assets/`), the alias path must also end with a trailing slash (`alias /var/www/assets/;`). Mismatched trailing slashes result in malformed disk path concatenations and 404 errors."
+            },
+            {
+              "id": "s1d2q08",
+              "type": "scenario",
+              "category": "SPA Routing & try_files",
+              "question": "In the Single Page Application (SPA) directive `try_files $uri $uri/ /index.html;`, what does the final argument `/index.html` do?",
+              "options": {
+                "A": "It returns a 301 Moved Permanently redirect to `/index.html` in the client browser.",
+                "B": "It causes NGINX to perform an internal rewrite/redirect to `/index.html`, re-evaluating the request against all server location blocks.",
+                "C": "It writes an error to the log file and closes the connection.",
+                "D": "It searches for index.html in the Linux root directory `/`."
+              },
+              "answer": "B",
+              "explanation": "In `try_files`, the final argument (if not a code like =404) triggers an internal redirect. NGINX rewrites the URI to `/index.html` and restarts location matching from scratch to serve the file through the appropriate location handler."
+            },
+            {
+              "id": "s1d2q09",
+              "type": "scenario",
+              "category": "SPA Routing & try_files",
+              "question": "Why is `try_files $uri $uri/ /index.html;` required for frontend SPA frameworks like React, Vue, or Angular?",
+              "options": {
+                "A": "Because SPAs cannot compile without NGINX assistance.",
+                "B": "Because client-side routes (e.g. `/dashboard/settings`) do not exist as physical files or folders on the server's disk; without `try_files`, reloading the browser returns a 404 Not Found.",
+                "C": "Because browsers refuse to execute JavaScript without an index.html wrapper.",
+                "D": "To prevent cross-site request forgery attacks."
+              },
+              "answer": "B",
+              "explanation": "In client-side routing, JavaScript handles navigation in the browser. If a user refreshes the page on `/dashboard/settings`, the server looks for a physical directory `/dashboard/settings/`. Since it doesn't exist, NGINX returns 404 unless `try_files` falls back to serving `/index.html`, allowing the client JS bundle to load and route."
+            },
+            {
+              "id": "s1d2q10",
+              "type": "scenario",
+              "category": "SPA Routing & try_files",
+              "question": "What is the consequence of configuring `try_files $uri $uri/ /index.html;` without a location block capable of serving `/index.html`?",
+              "options": {
+                "A": "An HTTP 500 Internal Server Error due to an internal redirect loop (rewrite cycle).",
+                "B": "An HTTP 403 Forbidden error.",
+                "C": "A segmentation fault in the worker process.",
+                "D": "The client hangs indefinitely."
+              },
+              "answer": "A",
+              "explanation": "If the fallback URI in `try_files` triggers an internal redirect that loops back into the same failing `try_files` rule without resolving to a physical file, NGINX detects the recursion (after 10 internal redirects) and terminates the request with HTTP 500 Internal Server Error."
+            },
+            {
+              "id": "s1d2q11",
+              "type": "config",
+              "category": "Context Inheritance & Directives",
+              "question": "You define `add_header X-Frame-Options \"DENY\";` in the `http` context. Inside `server { location /app/ { ... } }`, you add `add_header X-Custom \"1\";`. What headers will a response from `/app/` contain?",
+              "options": {
+                "A": "Both `X-Frame-Options` and `X-Custom`.",
+                "B": "Only `X-Custom`. In NGINX, array/list directives defined in a child block completely override and clear all parent declarations.",
+                "C": "Only `X-Frame-Options` because parent directives take precedence over child directives.",
+                "D": "Neither; NGINX logs a duplicate header collision error."
+              },
+              "answer": "B",
+              "explanation": "This is one of the most famous NGINX gotchas. Directives like 'add_header', 'access_log', and 'proxy_set_header' are array directives. If defined in a child context, all occurrences from the parent contexts are completely ignored. To keep the parent headers, you must explicitly re-declare them in the child context."
+            },
+            {
+              "id": "s1d2q12",
+              "type": "config",
+              "category": "Context Inheritance & Directives",
+              "question": "If `access_log /var/log/nginx/access.log;` is defined in `http`, and `location /static/ { access_log off; }` is defined, what happens to requests for `/static/image.png`?",
+              "options": {
+                "A": "They are logged to both the main access log and a static access log.",
+                "B": "They are not logged to any access log because `access_log off;` in the location context disables logging for that specific location.",
+                "C": "NGINX throws a configuration error because logging cannot be disabled per location.",
+                "D": "Only 4xx and 5xx errors are logged."
+              },
+              "answer": "B",
+              "explanation": "Defining 'access_log off;' inside a location block disables access logging specifically for requests matching that location, saving disk I/O on high-frequency static assets."
+            },
+            {
+              "id": "s1d2q13",
+              "type": "scenario",
+              "category": "Static Delivery Optimization",
+              "question": "How does enabling `sendfile on;` improve performance when delivering static files?",
+              "options": {
+                "A": "It enables Gzip compression in kernel space.",
+                "B": "It invokes the OS `sendfile()` system call, transferring file bytes directly from page cache to the network socket descriptor within the kernel, avoiding copying data into user-space memory.",
+                "C": "It pre-loads all static files into RAM at startup.",
+                "D": "It strips HTTP headers to make packets smaller."
+              },
+              "answer": "B",
+              "explanation": "`sendfile on;` performs a zero-copy data transfer. Instead of reading file data into an NGINX user-space buffer and then writing it back down to the socket, the kernel copies data directly from the page cache to the network interface socket buffer, eliminating context switches and user-space buffer allocation."
+            },
+            {
+              "id": "s1d2q14",
+              "type": "scenario",
+              "category": "Static Delivery Optimization",
+              "question": "Why should `tcp_nopush on;` typically be enabled alongside `sendfile on;` in Linux?",
+              "options": {
+                "A": "It disables TCP checksum validation for higher speed.",
+                "B": "It instructs NGINX to send the HTTP response headers and the beginning of the file in a single full TCP packet (using `TCP_CORK`), reducing packet overhead and latency.",
+                "C": "It keeps the TCP connection alive forever.",
+                "D": "It prioritizes mobile client connections."
+              },
+              "answer": "B",
+              "explanation": "On Linux, `tcp_nopush on;` enables the `TCP_CORK` socket option. When combined with `sendfile`, it forces the kernel to accumulate headers and file chunks into full-sized TCP Maximum Segment Size (MSS) packets before sending them out onto the wire, preventing tiny packets from flooding the network."
+            },
+            {
+              "id": "s1d2q15",
+              "type": "scenario",
+              "category": "Static Delivery Optimization",
+              "question": "What happens if you omit `include /etc/nginx/mime.types;` and `default_type application/octet-stream;`?",
+              "options": {
+                "A": "NGINX fails to start with a fatal syntax error.",
+                "B": "NGINX serves all static files without a `Content-Type` header (or as `text/plain`), causing modern browsers to treat `.css` and `.js` files as untyped text and refuse to render or execute them due to strict MIME sniffing policies.",
+                "C": "Files are automatically converted to HTML before delivery.",
+                "D": "All files are downloaded as `.bin` files automatically."
+              },
+              "answer": "B",
+              "explanation": "Without `mime.types`, NGINX cannot map file extensions (like `.js`, `.css`, `.svg`) to proper MIME types. Browsers enforcing strict MIME type checking (e.g. `X-Content-Type-Options: nosniff` or CSS/module imports) will block stylesheets and scripts that lack `text/css` or `application/javascript`."
+            },
+            {
+              "id": "s1d2q16",
+              "type": "recall",
+              "category": "Edge Hardening & Security",
+              "question": "What is the purpose of setting `server_tokens off;` in the `http` context?",
+              "options": {
+                "A": "It prevents API authentication tokens from expiring.",
+                "B": "It hides the specific NGINX version number from the `Server:` response header and default error pages, reducing reconnaissance info available to attackers.",
+                "C": "It disables HTTP cookies completely.",
+                "D": "It enables rate-limiting tokens per client IP."
+              },
+              "answer": "B",
+              "explanation": "By default, NGINX returns headers like `Server: nginx/1.27.2`. Setting `server_tokens off;` strips the version number, returning only `Server: nginx`. This prevents opportunistic attackers from querying CVE databases for version-specific vulnerabilities."
+            },
+            {
+              "id": "s1d2q17",
+              "type": "recall",
+              "category": "Edge Hardening & Security",
+              "question": "Which location block configuration correctly blocks unauthorized access to hidden files and directories (like `.git`, `.env`, or `.htaccess`) across your entire web root?",
+              "options": {
+                "A": "`location = /.env { return 404; }`",
+                "B": "`location ~ /\\. { deny all; access_log off; log_not_found off; }`",
+                "C": "`location /hidden/ { autoindex off; }`",
+                "D": "`location *.* { return 403; }`"
+              },
+              "answer": "B",
+              "explanation": "The regex `location ~ /\\.` matches any URI component beginning with a dot anywhere in the path (e.g. `/.git/config`, `/.env`, `/subdir/.secrets`). Applying `deny all;` returns an immediate HTTP 403 Forbidden."
+            },
+            {
+              "id": "s1d2q18",
+              "type": "recall",
+              "category": "Edge Hardening & Security",
+              "question": "When defining custom error pages with `error_page 404 /custom_404.html;`, how do you prevent clients from directly requesting `GET /custom_404.html` under normal browsing?",
+              "options": {
+                "A": "By setting the file permissions on `custom_404.html` to `0000`.",
+                "B": "By marking the location as `internal;`: `location = /custom_404.html { internal; root /var/www/errors; }`.",
+                "C": "By naming the file `.custom_404.html`.",
+                "D": "NGINX automatically prevents direct access to error pages."
+              },
+              "answer": "B",
+              "explanation": "The `internal;` directive specifies that a location block can ONLY be accessed by internal requests (such as redirects from `error_page`, `try_files`, or `rewrite`). If an external client requests `/custom_404.html` directly, NGINX returns 404 Not Found."
+            },
+            {
+              "id": "s1d2q19",
+              "type": "recall",
+              "category": "Edge Hardening & Security",
+              "question": "What is the clean, high-performance way to issue a permanent 301 redirect from `/old-page` to `/new-page`?",
+              "options": {
+                "A": "`location = /old-page { return 301 /new-page; }`",
+                "B": "`location /old-page { rewrite ^ /new-page permanent; }`",
+                "C": "`location /old-page { proxy_pass http://new-page; }`",
+                "D": "`location /old-page { try_files /new-page =301; }`"
+              },
+              "answer": "A",
+              "explanation": "Using `location = /old-page { return 301 /new-page; }` is faster and cleaner than regular expression `rewrite` rules because exact match (`=`) terminates immediately without regex engine overhead."
+            },
+            {
+              "id": "s1d2q20",
+              "type": "recall",
+              "category": "Static Delivery Optimization",
+              "question": "What is the effect of setting `autoindex on;` inside a location block?",
+              "options": {
+                "A": "NGINX automatically indexes all files into an Elasticsearch database.",
+                "B": "NGINX generates an automatic HTML directory listing of files if no `index.html` file is found in the requested directory.",
+                "C": "NGINX automatically creates missing subdirectories on disk.",
+                "D": "NGINX compresses static files with Brotli."
+              },
+              "answer": "B",
+              "explanation": "`autoindex on;` instructs NGINX to produce an automated directory listing when a requested directory does not contain an index file. In production public web servers, this is typically set to `off` to prevent information disclosure."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sprint": 2,
+      "title": "Reverse Proxy & Load Balancing",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-10-06",
+          "title": "How proxy_pass Builds the Request",
+          "questions": [
+            {
+              "id": "s2d1q01",
+              "type": "config",
+              "category": "URI Mapping",
+              "question": "Given:\n```nginx\nlocation /api/ {\n    proxy_pass http://127.0.0.1:8001;\n}\n```\nA client requests `GET /api/v1/stats?page=2`. What request line does the backend receive?",
+              "options": {
+                "A": "`GET /v1/stats?page=2`",
+                "B": "`GET /api/v1/stats?page=2`",
+                "C": "`GET /api/v1/stats` (the query string is dropped)",
+                "D": "`GET /stats?page=2`"
+              },
+              "answer": "B",
+              "explanation": "`proxy_pass` has no URI part after `host:port`, so NGINX passes the original request URI through unchanged, query string included. Nothing is stripped."
+            },
+            {
+              "id": "s2d1q02",
+              "type": "config",
+              "category": "URI Mapping",
+              "question": "Given:\n```nginx\nlocation /api/ {\n    proxy_pass http://127.0.0.1:8001/;\n}\n```\nA client requests `GET /api/v1/stats`. What path does the backend receive?",
+              "options": {
+                "A": "`/v1/stats`",
+                "B": "`/api/v1/stats`",
+                "C": "`//v1/stats`",
+                "D": "`/api//v1/stats`"
+              },
+              "answer": "A",
+              "explanation": "The trailing `/` is a URI part. When `proxy_pass` has a URI, NGINX replaces the part of the request URI that matched the location (`/api/`) with that URI (`/`), giving `/v1/stats`."
+            },
+            {
+              "id": "s2d1q03",
+              "type": "config",
+              "category": "URI Mapping",
+              "question": "Given:\n```nginx\nlocation /api {\n    proxy_pass http://127.0.0.1:8001/;\n}\n```\nA client requests `GET /api/v1/stats`. What path does the backend receive?",
+              "options": {
+                "A": "`/v1/stats`",
+                "B": "`/api/v1/stats`",
+                "C": "NGINX returns 404, because `/api` without a trailing slash doesn't match `/api/v1/stats`",
+                "D": "`//v1/stats`"
+              },
+              "answer": "D",
+              "explanation": "The matched prefix is `/api` (no slash). NGINX replaces it with `/`, and the remainder `/v1/stats` keeps its own leading slash, so the result is `//v1/stats`. Many frameworks silently normalize this (Python's `http.server` does), which hides the bug. Keep the slashes symmetric: `location /api/` with `proxy_pass .../`."
+            },
+            {
+              "id": "s2d1q04",
+              "type": "config",
+              "category": "URI Mapping",
+              "question": "Given:\n```nginx\nlocation /api/ {\n    proxy_pass http://127.0.0.1:8001/v2;\n}\n```\nA client requests `GET /api/users`. What path does the backend receive?",
+              "options": {
+                "A": "`/v2/users`",
+                "B": "`/v2/api/users`",
+                "C": "`/v2users`",
+                "D": "`/api/users`"
+              },
+              "answer": "C",
+              "explanation": "NGINX does plain string replacement: the matched `/api/` becomes `/v2`, and the remainder `users` is appended directly, giving `/v2users`. If the location ends in `/`, the URI in `proxy_pass` should end in `/` too (`/v2/`)."
+            },
+            {
+              "id": "s2d1q05",
+              "type": "config",
+              "category": "URI Mapping",
+              "question": "Given:\n```nginx\nlocation ~ ^/api/(.*)$ {\n    proxy_pass http://127.0.0.1:8001/$1;\n}\n```\nA client requests `GET /api/v1/items?page=2`. What does the backend receive?",
+              "options": {
+                "A": "`/v1/items`, because the query string is lost",
+                "B": "`/v1/items?page=2`",
+                "C": "`/api/v1/items?page=2`",
+                "D": "Nothing: `nginx -t` rejects any `proxy_pass` inside a regex location"
+              },
+              "answer": "A",
+              "explanation": "Regex locations match against the normalized URI *without* the query string, so `$1` is `v1/items`. Because `proxy_pass` contains variables, the URI you build replaces the original completely, and the query string is gone. Append `$is_args$args` to keep it. A *literal* URI such as `proxy_pass http://127.0.0.1:8001/;` in a regex location is the case `nginx -t` rejects."
+            },
+            {
+              "id": "s2d1q06",
+              "type": "config",
+              "category": "Header Inheritance",
+              "question": "Given:\n```nginx\nupstream lumina_api_nodes { server 127.0.0.1:8001; }\nserver {\n    server_name lumina.local;\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n\n    location /api/ {\n        proxy_pass http://lumina_api_nodes;\n        proxy_set_header X-Request-ID $request_id;\n    }\n}\n```\nWhat does the backend see for a request to `lumina.local/api/x`?",
+              "options": {
+                "A": "`Host: lumina.local`, `X-Real-IP`, and `X-Request-ID`. The lists are merged.",
+                "B": "`Host: lumina.local` and `X-Request-ID`, but no `X-Real-IP`",
+                "C": "`nginx -t` fails because `proxy_set_header` is declared at two levels",
+                "D": "`Host: lumina_api_nodes` and `X-Request-ID`, but no `X-Real-IP`"
+              },
+              "answer": "D",
+              "explanation": "`proxy_set_header` is inherited only when the current level defines none of its own. The location defines one, so both server-level headers are discarded and `Host` reverts to its default, `$proxy_host`, which is the upstream name `lumina_api_nodes`. This is the same all-or-nothing rule as `add_header` from Sprint 1."
+            },
+            {
+              "id": "s2d1q07",
+              "type": "diagnose",
+              "category": "URI Mapping",
+              "question": "During a refactor, this:\n```nginx\nlocation /api/ { proxy_pass http://127.0.0.1:8001/; }\n```\nbecomes this:\n```nginx\nlocation /api/ {\n    set $api_backend 127.0.0.1:8001;\n    proxy_pass http://$api_backend/;\n}\n```\nNow every API call returns the backend's home page, and the backend log shows `GET /` for every request. What changed?",
+              "options": {
+                "A": "With variables in `proxy_pass`, the URI you specify (`/`) replaces the entire original request URI. There is no prefix replacement anymore.",
+                "B": "`set` runs after `proxy_pass`, so the variable is empty and NGINX falls back to `/`.",
+                "C": "Variables in `proxy_pass` require a `resolver`. Without one, NGINX routes everything to `/`.",
+                "D": "NGINX lowercases variables, so the location prefix no longer matches."
+              },
+              "answer": "A",
+              "explanation": "Prefix replacement only happens when the `proxy_pass` URI is literal. With variables, NGINX sends exactly the URI you wrote. To strip `/api` dynamically, use `rewrite ^/api/(.*)$ /$1 break;` and `proxy_pass http://$api_backend;` (no URI). A `resolver` is only needed when the variable holds a *hostname*. This one is an IP literal."
+            },
+            {
+              "id": "s2d1q08",
+              "type": "diagnose",
+              "category": "Forwarded Headers",
+              "question": "NGINX terminates HTTPS for `lumina.example.com` and proxies to a Django app over plain HTTP. After login, the app redirects browsers to `http://lumina.example.com/dashboard`, and secure cookies are never set. What is the most likely cause?",
+              "options": {
+                "A": "`proxy_redirect` is missing, so NGINX rewrites the `Location` header to `http`",
+                "B": "The backend only sees a plain-HTTP connection from NGINX. Nothing tells it the client used HTTPS, so it needs `X-Forwarded-Proto $scheme` (and to trust that header).",
+                "C": "HSTS is not enabled on NGINX",
+                "D": "`proxy_http_version` is still 1.0, which cannot carry HTTPS URLs"
+              },
+              "answer": "B",
+              "explanation": "The app builds absolute URLs and decides cookie security from the scheme it *thinks* the request used. Behind a TLS-terminating proxy, that is `http` unless NGINX forwards `X-Forwarded-Proto: https` and the framework is told to trust it (Django: `SECURE_PROXY_SSL_HEADER`, Spring: `forward-headers-strategy`)."
+            },
+            {
+              "id": "s2d1q09",
+              "type": "diagnose",
+              "category": "Upstream Addressing",
+              "question": "Config: `proxy_pass http://api.internal:8001;`. Ten minutes ago the DNS record for `api.internal` moved to a new IP (TTL 30s). NGINX still sends traffic to the old IP, and the error log shows `connect() failed (111: Connection refused)` to that address. Why?",
+              "options": {
+                "A": "NGINX caches DNS answers for the TTL multiplied by `worker_processes`",
+                "B": "The OS resolver cache on the host has not expired yet",
+                "C": "A literal hostname in `proxy_pass` is resolved once, when the configuration loads, and kept until the next reload or restart",
+                "D": "`proxy_next_upstream` is retrying the old IP because it was the last one that worked"
+              },
+              "answer": "C",
+              "explanation": "Hostnames written directly in `proxy_pass` (or in an `upstream` `server` line without `resolve`) are resolved at config load. Fixes: reload, use a variable plus a `resolver` directive (which re-resolves and honors the TTL), or use `server ... resolve` in a `zone`-enabled upstream (OSS since 1.27.3). Day 4 compares this with NGINX Plus."
+            },
+            {
+              "id": "s2d1q10",
+              "type": "scenario",
+              "category": "Proxy Fundamentals",
+              "question": "A location contains only `proxy_pass http://127.0.0.1:8001;`, with no `proxy_set_header` anywhere. Which statement best describes what the backend receives?",
+              "options": {
+                "A": "An exact copy of the client's request, including its original `Host` header and the client's IP as the TCP source",
+                "B": "A fresh request from NGINX. Client headers such as `User-Agent` and `Cookie` are passed through, `Host` is replaced with `127.0.0.1:8001`, and the TCP peer is NGINX, with no header carrying the client IP.",
+                "C": "Only the request line and `Host`. All other client headers are dropped unless listed in `proxy_set_header`.",
+                "D": "The client's headers plus an automatically added `X-Forwarded-For`"
+              },
+              "answer": "B",
+              "explanation": "NGINX opens its own connection and writes a new request. Most client headers are copied, but `Host` defaults to `$proxy_host`, hop-by-hop headers are not forwarded, and nothing about the client's IP is added unless you add it. To the backend, every request comes from NGINX."
+            },
+            {
+              "id": "s2d1q11",
+              "type": "scenario",
+              "category": "Forwarded Headers",
+              "question": "Your internet-facing NGINX sets `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`. The app behind it rate-limits by the **first** (leftmost) IP in `X-Forwarded-For`. Why is that dangerous?",
+              "options": {
+                "A": "The leftmost entry is whatever the client sent. NGINX only *appends* the real peer IP, so an attacker can forge a new leftmost IP on every request.",
+                "B": "`$proxy_add_x_forwarded_for` reverses the list, so the leftmost IP is NGINX itself",
+                "C": "It isn't dangerous: NGINX strips any client-supplied `X-Forwarded-For` before appending",
+                "D": "The header is limited to 64 bytes, so the leftmost IP is truncated under load"
+              },
+              "answer": "A",
+              "explanation": "`$proxy_add_x_forwarded_for` is the incoming header plus `, $remote_addr`. Only the entries added by proxies you control can be trusted. At the edge, use `X-Real-IP $remote_addr` for decisions. Deeper in, use the realip module with `set_real_ip_from` to pick the right hop."
+            },
+            {
+              "id": "s2d1q12",
+              "type": "scenario",
+              "category": "Forwarded Headers",
+              "question": "Traffic flows: client `198.51.100.7` → CDN `203.0.113.10` → NGINX → app. The CDN sends `X-Forwarded-For: 198.51.100.7`. NGINX sets `X-Real-IP $remote_addr` and `X-Forwarded-For $proxy_add_x_forwarded_for`. What does the app receive?",
+              "options": {
+                "A": "`X-Real-IP: 198.51.100.7`, `X-Forwarded-For: 198.51.100.7`",
+                "B": "`X-Real-IP: 198.51.100.7`, `X-Forwarded-For: 198.51.100.7, 203.0.113.10`",
+                "C": "`X-Real-IP: 203.0.113.10`, `X-Forwarded-For: 198.51.100.7, 203.0.113.10`",
+                "D": "`X-Real-IP: 203.0.113.10`, `X-Forwarded-For: 203.0.113.10`"
+              },
+              "answer": "C",
+              "explanation": "`$remote_addr` is the TCP peer, which here is the CDN, so `X-Real-IP` names the CDN. The XFF chain keeps the CDN's entry and appends the CDN's IP. To make `$remote_addr` the real client, configure the realip module to trust the CDN's ranges."
+            },
+            {
+              "id": "s2d1q13",
+              "type": "scenario",
+              "category": "Forwarded Headers",
+              "question": "Why do most guides use `proxy_set_header Host $host;` rather than `proxy_set_header Host $http_host;`?",
+              "options": {
+                "A": "`$http_host` is deprecated and logs a warning",
+                "B": "`$host` is normalized: lowercase, port removed, and it falls back to the `server_name` when the client sent no `Host`. `$http_host` is the raw header, which may include a port or be empty.",
+                "C": "`$host` always contains the upstream's address, which backends require",
+                "D": "There is no difference. They are aliases."
+              },
+              "answer": "B",
+              "explanation": "`$host` is the request line's host, else the `Host` header lowercased without a port, else the server name. `$http_host` is the header exactly as sent. If it is missing, the empty value isn't forwarded, and the backend sees NGINX's default (`$proxy_host`) instead. Use `$http_host` only when the backend genuinely needs the original port."
+            },
+            {
+              "id": "s2d1q14",
+              "type": "scenario",
+              "category": "Forwarded Headers",
+              "question": "A backend serves several sites using name-based virtual hosts. Behind `proxy_pass http://lumina_api_nodes;` with no `Host` override, every request lands on the backend's default site. Why?",
+              "options": {
+                "A": "Virtual hosting requires HTTP/2 between NGINX and the backend",
+                "B": "NGINX strips the `Host` header entirely on proxied requests",
+                "C": "The backend sees NGINX's IP and routes unknown IPs to the default site",
+                "D": "By default `Host` is `$proxy_host`, here `lumina_api_nodes`, which matches none of the backend's site names"
+              },
+              "answer": "D",
+              "explanation": "The default `proxy_set_header Host $proxy_host;` sends the name used in `proxy_pass`. For an upstream group, that is the group name. Name-based backends then fall through to their default site. `proxy_set_header Host $host;` restores the client-facing name."
+            },
+            {
+              "id": "s2d1q15",
+              "type": "scenario",
+              "category": "Proxy Fundamentals",
+              "question": "A browser talks HTTP/2 to NGINX. On the lab's nginx 1.31 with no `proxy_http_version` set, what protocol does NGINX use to talk to an HTTP backend?",
+              "options": {
+                "A": "HTTP/2. NGINX mirrors the client's protocol.",
+                "B": "HTTP/1.1. The two connections are independent, and since nginx 1.29.7 the proxy default is 1.1 (it was 1.0 before).",
+                "C": "HTTP/1.0, always, unless TLS is used",
+                "D": "HTTP/3 if the backend advertises it via `Alt-Svc`"
+              },
+              "answer": "B",
+              "explanation": "The client-side and upstream-side connections are separate, each with its own protocol. `proxy_http_version` controls the upstream side. Its default changed from 1.0 to 1.1 in nginx 1.29.7, which also turned on upstream keepalive by default (Day 2)."
+            },
+            {
+              "id": "s2d1q16",
+              "type": "scenario",
+              "category": "Header Control",
+              "question": "Clients send an `Authorization` header that must never reach a legacy backend. Which configuration removes it from proxied requests?",
+              "options": {
+                "A": "`proxy_set_header Authorization \"\";`",
+                "B": "`proxy_hide_header Authorization;`",
+                "C": "`proxy_pass_request_headers off;`",
+                "D": "`more_clear_headers Authorization;`"
+              },
+              "answer": "A",
+              "explanation": "A `proxy_set_header` with an empty value means the header is not sent upstream. `proxy_hide_header` works on the *response* coming back from the backend. `proxy_pass_request_headers off` drops every client header. `more_clear_headers` is a third-party module. Remember inheritance: adding this line in a location discards any server-level `proxy_set_header`s there."
+            },
+            {
+              "id": "s2d1q17",
+              "type": "scenario",
+              "category": "Header Control",
+              "question": "A client sends the header `X_Tenant_Id: 42`, but the backend never receives it, even though other custom headers arrive fine. What is happening?",
+              "options": {
+                "A": "NGINX converts underscores to dashes, so the backend gets `X-Tenant-Id`",
+                "B": "Headers starting with `X_` are reserved and stripped by every HTTP proxy",
+                "C": "By default NGINX treats header names containing underscores as invalid and ignores them (`underscores_in_headers off`)",
+                "D": "Custom headers must be listed in `proxy_pass_header` to be forwarded"
+              },
+              "answer": "C",
+              "explanation": "Underscores in header names are ambiguous in CGI-style environments, where `X-Tenant-Id` and `X_Tenant_Id` collapse to the same variable. NGINX drops them unless `underscores_in_headers on;` is set in the `server` (or `http`) context. Renaming the header with dashes is usually the better fix."
+            },
+            {
+              "id": "s2d1q18",
+              "type": "recall",
+              "category": "Forwarded Headers",
+              "question": "Which variable produces the incoming `X-Forwarded-For` value with the client's IP appended?",
+              "options": {
+                "A": "`$http_x_forwarded_for`",
+                "B": "`$realip_remote_addr`",
+                "C": "`$remote_addr`",
+                "D": "`$proxy_add_x_forwarded_for`"
+              },
+              "answer": "D",
+              "explanation": "`$proxy_add_x_forwarded_for` is the client's `X-Forwarded-For` header plus `, $remote_addr`, or just `$remote_addr` when the client sent none. `$http_x_forwarded_for` is the raw incoming header with nothing appended."
+            },
+            {
+              "id": "s2d1q19",
+              "type": "recall",
+              "category": "Forwarded Headers",
+              "question": "Which variable holds `http` or `https` for the client's request, typically used for `X-Forwarded-Proto`?",
+              "options": {
+                "A": "`$server_protocol`",
+                "B": "`$scheme`",
+                "C": "`$https`",
+                "D": "`$proxy_protocol`"
+              },
+              "answer": "B",
+              "explanation": "`$scheme` is `http` or `https`. `$server_protocol` is the HTTP version (for example `HTTP/1.1`). `$https` is `on` or empty. There is no `$proxy_protocol` variable, though `$proxy_protocol_addr` exists for the PROXY protocol."
+            },
+            {
+              "id": "s2d1q20",
+              "type": "recall",
+              "category": "Forwarded Headers",
+              "question": "What is the default value NGINX sends in the `Host` header to a proxied backend?",
+              "options": {
+                "A": "`$proxy_host`: the host (and port, if not the default) from the `proxy_pass` directive",
+                "B": "`$host`",
+                "C": "`$http_host`",
+                "D": "`$server_name`"
+              },
+              "answer": "A",
+              "explanation": "The built-in default is `proxy_set_header Host $proxy_host;`. For `proxy_pass http://127.0.0.1:8001` that is `127.0.0.1:8001`. For an upstream group, it is the group's name."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "date": "2026-10-07",
+          "title": "Upstream Pools, Balancing & Connection Reuse",
+          "questions": [
+            {
+              "id": "s2d2q01",
+              "type": "config",
+              "category": "Balancing Methods",
+              "question": "Given:\n```nginx\nupstream api {\n    server 127.0.0.1:8001 weight=3;\n    server 127.0.0.1:8002;\n}\n```\nAbout how do 100 sequential requests split?",
+              "options": {
+                "A": "50 / 50: weights only apply under `least_conn`",
+                "B": "75 / 25",
+                "C": "100 / 0: the higher weight always wins until it fails",
+                "D": "60 / 40: weights are a hint, not a ratio"
+              },
+              "answer": "B",
+              "explanation": "Weighted round-robin gives each server a share proportional to its weight: 3/(3+1) = 75%. The lab box measured exactly 75/25, even with two workers balancing independently."
+            },
+            {
+              "id": "s2d2q02",
+              "type": "config",
+              "category": "Balancing Methods",
+              "question": "Given:\n```nginx\nupstream cache_tier {\n    hash $request_uri consistent;\n    server 10.0.0.1;\n    server 10.0.0.2;\n    server 10.0.0.3 backup;\n}\n```\nWhat happens when you run `nginx -t`?",
+              "options": {
+                "A": "It passes, and 10.0.0.3 receives keys only when both primaries are down",
+                "B": "It passes, but `backup` is silently ignored",
+                "C": "It fails: `balancing method does not support parameter \"backup\"`",
+                "D": "It passes, and the backup joins the hash ring with weight 0"
+              },
+              "answer": "C",
+              "explanation": "`backup` cannot be combined with `hash`, `ip_hash`, or `random`. Those methods map keys or clients to specific servers and have no concept of standby capacity, so `nginx -t` rejects the configuration with an `emerg`."
+            },
+            {
+              "id": "s2d2q03",
+              "type": "config",
+              "category": "Balancing Methods",
+              "question": "An `ip_hash` pool has three servers, and 10.0.0.2 needs maintenance. Which change keeps every other client on the server it already uses?",
+              "options": {
+                "A": "Delete the `server 10.0.0.2;` line and reload",
+                "B": "Change it to `server 10.0.0.2 backup;`",
+                "C": "Add `weight=0` to 10.0.0.2",
+                "D": "Change it to `server 10.0.0.2 down;` and reload"
+              },
+              "answer": "D",
+              "explanation": "`ip_hash` maps a client to a server position. Deleting a line changes the server count and reshuffles everyone. `down` keeps the slot, so only 10.0.0.2's clients move. `backup` is rejected with `ip_hash`, and `weight=0` is invalid."
+            },
+            {
+              "id": "s2d2q04",
+              "type": "config",
+              "category": "Keepalive",
+              "question": "On **nginx 1.24**, a team writes:\n```nginx\nupstream api { server 10.0.0.5:8080; keepalive 16; }\nlocation /api/ { proxy_pass http://api; }\n```\nDo connections to the backend get reused?",
+              "options": {
+                "A": "No. NGINX still speaks HTTP/1.0 with `Connection: close`, so each connection closes after one request. It also needs `proxy_http_version 1.1;` and `proxy_set_header Connection \"\";`.",
+                "B": "Yes. `keepalive 16` is all that's needed on any version.",
+                "C": "Yes, but only for `GET` requests",
+                "D": "No, because `keepalive` must appear before the `server` lines"
+              },
+              "answer": "A",
+              "explanation": "Before 1.29.7, the proxy defaulted to HTTP/1.0 and sent `Connection: close`, so every response ended the connection no matter what `keepalive` said. Leaving out either of the two proxy lines silently disables reuse. Since 1.29.7, both are the defaults and `keepalive 32 local` is on automatically."
+            },
+            {
+              "id": "s2d2q05",
+              "type": "config",
+              "category": "Keepalive",
+              "question": "On the lab's nginx 1.31, a location adds `proxy_set_header Connection close;` while proxying to an upstream with default settings. What does the mock backend's `conn_requests` show?",
+              "options": {
+                "A": "It climbs (2, 3, 4...). The keepalive pool overrides the header.",
+                "B": "`nginx -t` fails because `Connection` is a reserved header",
+                "C": "Always 1. The backend honors `Connection: close`, so every request uses a fresh connection.",
+                "D": "It climbs, but only for HTTP/2 clients"
+              },
+              "answer": "C",
+              "explanation": "Upstream reuse is a negotiation. NGINX can keep a connection idle in its pool only if the backend leaves it open. Sending `Connection: close` asks the backend to close after the response, which defeats the pool. Since 1.29.7 NGINX sends no `Connection` header by default, so don't add one back."
+            },
+            {
+              "id": "s2d2q06",
+              "type": "config",
+              "category": "Keepalive",
+              "question": "An NGINX instance runs `worker_processes 4;` with `upstream api { server 10.0.0.5:8080; keepalive 16; }`. Which statement is true?",
+              "options": {
+                "A": "NGINX opens at most 16 connections to 10.0.0.5 in total",
+                "B": "Each worker keeps up to 16 idle connections cached, so up to 64 idle. Active connections are not capped by this directive.",
+                "C": "The 16 connections are shared across all workers through the upstream zone",
+                "D": "Each worker opens exactly 16 connections at startup and never more"
+              },
+              "answer": "B",
+              "explanation": "`keepalive N` sizes each worker's idle cache. When more than N are idle, the least recently used ones are closed. It doesn't limit how many connections a worker opens under load; `max_conns` does that. The docs advise keeping N small enough that backends can still accept new connections."
+            },
+            {
+              "id": "s2d2q07",
+              "type": "diagnose",
+              "category": "Balancing Methods",
+              "question": "An LLM gateway uses `upstream llm { least_conn; server a; server b; }` with `worker_processes 4;`. During a spike, node `a` is serving 30 long streams and `b` only 5, yet new streams keep landing on `a`. What is the most likely cause?",
+              "options": {
+                "A": "`least_conn` ignores streaming responses",
+                "B": "The upstream has no `zone`, so each worker sees only its own active connections. A worker with no streams on `a` thinks `a` is idle.",
+                "C": "The weights default to the number of CPU cores per backend",
+                "D": "`least_conn` falls back to `ip_hash` when clients use HTTP/2"
+              },
+              "answer": "B",
+              "explanation": "Without `zone`, balancing state is private to each worker. In the lab, with one slow request in flight, `least_conn` without a zone still sent 6–8 of 20 requests to the busy node. With `zone lc 64k;` it sent 0. Shared counters make `least_conn` mean what it says."
+            },
+            {
+              "id": "s2d2q08",
+              "type": "diagnose",
+              "category": "Hashing",
+              "question": "A cache tier uses `hash $request_uri;` across 4 nodes. After adding a 5th node, the origin servers are hammered and the cache hit ratio collapses for an hour. Why?",
+              "options": {
+                "A": "A plain `hash` takes the key modulo the server count. Changing 4 to 5 remaps most URIs to a different node, whose cache is cold for them.",
+                "B": "New nodes always receive 100% of traffic until they warm up",
+                "C": "`hash` disables caching while a reload is in progress",
+                "D": "The new node's weight defaulted to 5"
+              },
+              "answer": "A",
+              "explanation": "Without `consistent`, roughly (N-1)/N of keys move when N changes. In the lab, going from 2 to 3 nodes moved 136 of 200 URIs. With `hash $request_uri consistent;` (ketama), about 1/N of keys move, all of them onto the new node: 79 of 200 in the lab."
+            },
+            {
+              "id": "s2d2q09",
+              "type": "diagnose",
+              "category": "Keepalive",
+              "question": "After putting an nginx 1.24 proxy in front of them, the app servers show tens of thousands of sockets in `TIME_WAIT` on their own listening ports, and their ephemeral and memory budgets are under pressure. The upstream block has no keepalive configuration. What's happening?",
+              "options": {
+                "A": "NGINX is opening duplicate connections for each request",
+                "B": "`TIME_WAIT` always appears on the server side and can't be avoided",
+                "C": "The backends are leaking file descriptors",
+                "D": "Every proxied request uses a new HTTP/1.0 connection that the backend closes after responding. The side that closes first holds `TIME_WAIT`."
+              },
+              "answer": "D",
+              "explanation": "Before 1.29.7 the proxy defaulted to HTTP/1.0 without reuse. The backend closes after each response, so each request leaves one `TIME_WAIT` socket on the backend. The lab reproduced it: 200 requests through `/no-reuse/` added 200 `TIME_WAIT` sockets on the backend side and none on the NGINX side. Upstream keepalive removes them."
+            },
+            {
+              "id": "s2d2q10",
+              "type": "scenario",
+              "category": "Balancing Methods",
+              "question": "Why is `least_conn` recommended over round-robin for LLM streaming or report-generation backends?",
+              "options": {
+                "A": "`least_conn` uses less CPU in the event loop",
+                "B": "Round-robin can't proxy chunked responses",
+                "C": "Request durations vary wildly. Round-robin keeps handing work to nodes stuck on long jobs, while `least_conn` sends new work to the node with the fewest in-flight requests.",
+                "D": "`least_conn` enables HTTP/2 multiplexing to the backends"
+              },
+              "answer": "C",
+              "explanation": "Round-robin assumes requests cost about the same. When some take 200 ms and others 45 s, it piles new requests behind slow ones. `least_conn` balances on concurrent load instead. In the lab, round-robin sent 10 of 20 requests to the busy node, while `least_conn` with a zone sent 0."
+            },
+            {
+              "id": "s2d2q11",
+              "type": "scenario",
+              "category": "Balancing Methods",
+              "question": "A company's 2,000 employees reach your site through one corporate NAT address. The upstream uses `ip_hash`. What happens?",
+              "options": {
+                "A": "All 2,000 employees land on the same backend, because they share one source IP (and therefore one /24 key)",
+                "B": "NGINX detects NAT and falls back to round-robin",
+                "C": "Each employee is spread evenly, because `ip_hash` uses the full TCP 4-tuple",
+                "D": "`ip_hash` uses `X-Forwarded-For`, so each employee gets their own node"
+              },
+              "answer": "A",
+              "explanation": "`ip_hash` keys on the first three octets of the client's IPv4 address (`$remote_addr`). Everyone behind one NAT, proxy, or CDN range shares that key and the same node. In the lab, all 100 requests from 127.0.0.1 hit one node. Cookie-based `sticky` or hashing a session cookie avoids this."
+            },
+            {
+              "id": "s2d2q12",
+              "type": "scenario",
+              "category": "Hashing",
+              "question": "When you add one server to a `hash $key consistent` pool of N servers, which keys move?",
+              "options": {
+                "A": "All keys are reshuffled evenly across N+1 servers",
+                "B": "About 1/(N+1) of keys move, and they all move onto the new server",
+                "C": "No keys move until the next reload",
+                "D": "Half the keys move, split between the old servers"
+              },
+              "answer": "B",
+              "explanation": "Ketama places each server at many points on a ring (160 per server). A key belongs to the next point clockwise. A new server claims arcs from the existing ones, so only keys in those arcs move, and only to the new server. In the lab, all 79 moved keys went to `api-node-3`."
+            },
+            {
+              "id": "s2d2q13",
+              "type": "scenario",
+              "category": "Shared State",
+              "question": "What does adding `zone lumina_api 64k;` to an `upstream` block change?",
+              "options": {
+                "A": "It caches backend responses in 64 KB of shared memory",
+                "B": "It limits the upstream to 64 KB of request bodies",
+                "C": "It keeps the group's configuration and runtime state (active connections, failure counts) in shared memory, so all workers balance and mark failures with the same view",
+                "D": "It enables DNS resolution for the servers"
+              },
+              "answer": "C",
+              "explanation": "Without a zone, each worker has a private copy of the upstream's state. A zone puts it in shared memory. That makes `least_conn` and `max_fails` accurate across workers, and it's required by `resolve`, the NGINX Plus API, and the `state` file."
+            },
+            {
+              "id": "s2d2q14",
+              "type": "scenario",
+              "category": "Failover",
+              "question": "Both primary servers in a pool with a `backup` crashed and came back within a few seconds. For a short while afterward, some requests still go to the backup. Why?",
+              "options": {
+                "A": "Backups always keep 10% of traffic after a failover",
+                "B": "The reload that marked them down hasn't happened yet",
+                "C": "`backup` servers are sticky per client",
+                "D": "With the defaults (`max_fails=1`, `fail_timeout=10s`), a failed server stays marked unavailable for `fail_timeout`, even if it has already recovered"
+              },
+              "answer": "D",
+              "explanation": "Passive health checks only learn about recovery when the timer expires and a real request succeeds. Until then NGINX treats the primary as unavailable. In the lab, traffic right after recovery was split between node-2 and the backup, and only returned fully to the primaries 11 s later. Day 3 tunes `max_fails` and `fail_timeout`."
+            },
+            {
+              "id": "s2d2q15",
+              "type": "scenario",
+              "category": "Balancing Methods",
+              "question": "With weights `a=5, b=1, c=1`, NGINX's default balancer sends the next seven requests in the order `a a b a c a a`, not `a a a a a b c`. Why?",
+              "options": {
+                "A": "NGINX uses *smooth* weighted round-robin, which interleaves picks so a heavy server never gets long bursts while others sit idle",
+                "B": "The order is random within each cycle",
+                "C": "Workers take turns, so the sequence depends on which worker accepted each request",
+                "D": "Weights are only applied after the first full cycle"
+              },
+              "answer": "A",
+              "explanation": "Each round, every server's current weight grows by its configured weight, the highest is picked, and the total is subtracted from the winner. Picks spread out evenly over time, which avoids sending a burst to one node."
+            },
+            {
+              "id": "s2d2q16",
+              "type": "scenario",
+              "category": "Balancing Methods",
+              "question": "You run 20 independent NGINX instances in front of the same backends, each with `least_conn`. Under load they all pick the same 'least loaded' node at once, overloading it. Which method is designed for this situation?",
+              "options": {
+                "A": "`ip_hash`",
+                "B": "`random two least_conn`: pick two servers at random, then send to the one with fewer connections",
+                "C": "`hash $request_uri consistent`",
+                "D": "Round-robin with `backup`"
+              },
+              "answer": "B",
+              "explanation": "\"Power of two choices\" avoids the herd: independent balancers rarely draw the same random pair, yet comparing two candidates still steers clearly away from overloaded nodes. It is intended for distributed setups where balancers can't share state."
+            },
+            {
+              "id": "s2d2q17",
+              "type": "scenario",
+              "category": "Keepalive",
+              "question": "Why does upstream keepalive matter for both latency and stability, not just efficiency?",
+              "options": {
+                "A": "It compresses responses between NGINX and the backend",
+                "B": "It lets NGINX skip TLS certificate checks",
+                "C": "It retries failed requests on the same connection",
+                "D": "Reusing a connection skips the TCP (and TLS) handshake on each request, and stops `TIME_WAIT` sockets accumulating on whichever side closes, so ports and memory aren't exhausted under load"
+              },
+              "answer": "D",
+              "explanation": "Each new connection costs at least one round trip, plus a full TLS handshake for HTTPS backends. Each close leaves a `TIME_WAIT` socket for 60 s on the side that closed first. At high request rates to one `ip:port`, that exhausts the 4-tuple space. Reuse removes both costs."
+            },
+            {
+              "id": "s2d2q18",
+              "type": "recall",
+              "category": "Balancing Methods",
+              "question": "Which part of an IPv4 client address does `ip_hash` use as its key?",
+              "options": {
+                "A": "The first three octets",
+                "B": "All four octets",
+                "C": "The last octet",
+                "D": "The address plus the client's source port"
+              },
+              "answer": "A",
+              "explanation": "`ip_hash` hashes the first three octets of an IPv4 address (effectively the /24), or the entire IPv6 address. That's why whole subnets and NAT pools stick to one node."
+            },
+            {
+              "id": "s2d2q19",
+              "type": "recall",
+              "category": "Keepalive",
+              "question": "Since nginx 1.29.7, what is the default upstream keepalive setting when the `upstream` block doesn't mention it?",
+              "options": {
+                "A": "Off",
+                "B": "`keepalive 16;`",
+                "C": "`keepalive 32 local;`",
+                "D": "Unlimited idle connections"
+              },
+              "answer": "C",
+              "explanation": "The documented default is `keepalive 32 local;`: up to 32 idle connections cached per worker, and not shared between different `location` blocks even when they point at the same server. `keepalive 0;` disables it. `keepalive off;` is a syntax error."
+            },
+            {
+              "id": "s2d2q20",
+              "type": "recall",
+              "category": "Hashing",
+              "question": "Which parameter switches `hash $key` to ketama consistent hashing?",
+              "options": {
+                "A": "`ring`",
+                "B": "`ketama=on`",
+                "C": "`stable`",
+                "D": "`consistent`"
+              },
+              "answer": "D",
+              "explanation": "`hash $key consistent;` uses ketama (160 points per server, compatible with `Cache::Memcached::Fast`). Without it, NGINX uses modulo hashing (compatible with `Cache::Memcached`)."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "date": "2026-10-08",
+          "title": "Failure Handling, WebSockets & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s2d3q01",
+              "type": "config",
+              "category": "Retries & Idempotency",
+              "question": "Given:\n```nginx\nproxy_next_upstream error timeout http_503;\n```\nA client sends `POST /api/orders`. The first backend receives it and answers `503`. What happens?",
+              "options": {
+                "A": "NGINX retries the POST on the next server, because 503 is listed",
+                "B": "NGINX returns the 503 to the client without retrying. A non-idempotent request that has already been sent to a backend is never passed to another server.",
+                "C": "NGINX buffers the POST and retries it after `fail_timeout`",
+                "D": "`nginx -t` rejects `http_503` for locations that accept POST"
+              },
+              "answer": "B",
+              "explanation": "Since 1.9.13, `POST`, `LOCK`, and `PATCH` aren't passed to the next server once the request has been sent, because the first backend may already have acted on it. The lab showed `ust=[503]` for POST and `ust=[503, 503]` for the same GET. Add `non_idempotent` only if backends deduplicate."
+            },
+            {
+              "id": "s2d3q02",
+              "type": "config",
+              "category": "Retries & Idempotency",
+              "question": "With the same `proxy_next_upstream error timeout http_502 http_503;`, a client sends `POST /api/orders`. The first server is down (`connect() failed (111: Connection refused)`), and the second is healthy. What does the client get?",
+              "options": {
+                "A": "`200` from the second server. The POST never reached a backend, so retrying it is safe.",
+                "B": "`502`, because POST is never retried",
+                "C": "`503`, because the pool is degraded",
+                "D": "`200`, but only after `fail_timeout` expires"
+              },
+              "answer": "A",
+              "explanation": "The idempotency rule only blocks retries *after* the request was sent. A refused connection means no backend saw the request, so NGINX tries the next server. The lab logged `up=[8001, 8002] ust=[502, 200]` for exactly this case."
+            },
+            {
+              "id": "s2d3q03",
+              "type": "config",
+              "category": "Timeouts",
+              "question": "Given:\n```nginx\nproxy_read_timeout 3s;\nproxy_next_upstream error timeout;\nproxy_next_upstream_timeout 4s;\n```\nBoth backends take 5 s to answer. Roughly when does the client receive its `504`?",
+              "options": {
+                "A": "After 3 s: `proxy_next_upstream_timeout` cancels the retry",
+                "B": "After 4 s: the retry is cut off when the 4 s budget expires",
+                "C": "After 5 s: the backend finally answers",
+                "D": "After about 6 s: the retry starts at 3 s (still under 4 s) and then runs its own full 3 s read timeout"
+              },
+              "answer": "D",
+              "explanation": "`proxy_next_upstream_timeout` is checked only when deciding whether to *start* another attempt. It doesn't interrupt one in progress. The lab measured `urt=[3.0, 3.0] rt=6.0` with a 4 s budget, and a single 3 s attempt with a 2 s budget."
+            },
+            {
+              "id": "s2d3q04",
+              "type": "config",
+              "category": "Passive Health",
+              "question": "Given `server 10.0.0.5:8080;` with no parameters, what are the passive health-check settings?",
+              "options": {
+                "A": "`max_fails=3 fail_timeout=30s`",
+                "B": "`max_fails=1 fail_timeout=10s`: one failed attempt marks the server unavailable for 10 s",
+                "C": "Passive checks are off unless `max_fails` is set",
+                "D": "`max_fails=0`: failures are counted but never acted on"
+              },
+              "answer": "B",
+              "explanation": "The defaults are `max_fails=1` and `fail_timeout=10s`. A single unsuccessful attempt takes the server out for 10 s. That is aggressive for flaky networks, and slow to notice recovery. `max_fails=0` disables accounting."
+            },
+            {
+              "id": "s2d3q05",
+              "type": "config",
+              "category": "WebSockets",
+              "question": "Given:\n```nginx\nlocation /ws/chat {\n    proxy_pass http://chat;\n    proxy_set_header Upgrade    $http_upgrade;\n    proxy_set_header Connection $connection_upgrade;\n    proxy_read_timeout 5s;\n}\n```\nA client completes the WebSocket handshake, exchanges two messages, then sends nothing. Neither side sends pings. What happens?",
+              "options": {
+                "A": "NGINX closes the tunnel about 5 s after the last frame, because `proxy_read_timeout` is the idle limit for an upgraded connection",
+                "B": "Nothing. Timeouts don't apply after a `101 Switching Protocols`.",
+                "C": "The connection closes after 60 s, because WebSockets use `keepalive_timeout`",
+                "D": "NGINX downgrades the connection to HTTP/1.1 polling"
+              },
+              "answer": "A",
+              "explanation": "Once upgraded, NGINX relays bytes in both directions, and the proxy timeouts measure the gap between reads. With 5 s, the lab client was disconnected after exactly 5.0 s of silence. Production chat relays use long values (`3600s`) and/or application-level pings."
+            },
+            {
+              "id": "s2d3q06",
+              "type": "config",
+              "category": "WebSockets",
+              "question": "A location for WebSockets has only `proxy_pass http://chat;`. What happens when a client sends a valid WebSocket handshake?",
+              "options": {
+                "A": "It works: NGINX detects `Upgrade` and switches automatically",
+                "B": "`nginx -t` fails because the `map` is missing",
+                "C": "The backend never sees `Upgrade`/`Connection: Upgrade` (hop-by-hop headers aren't forwarded), so it treats the request as plain HTTP and typically answers 400",
+                "D": "NGINX answers `426 Upgrade Required` itself"
+              },
+              "answer": "C",
+              "explanation": "`Upgrade` and `Connection` apply only to a single hop, so NGINX drops them unless you set them explicitly. In the lab, `/ws/broken` returned 400, and the backend logged `Upgrade=None Connection=None`."
+            },
+            {
+              "id": "s2d3q07",
+              "type": "diagnose",
+              "category": "Error Signatures",
+              "question": "Clients get intermittent 502s. The error log shows:\n```\nupstream prematurely closed connection while reading response header from upstream\n```\nWhat does this most likely mean?",
+              "options": {
+                "A": "The backend accepted the connection and then closed it without sending a response: a crash, OOM kill, or a worker restarting mid-request",
+                "B": "Nothing is listening on the backend port",
+                "C": "The backend took longer than `proxy_read_timeout`",
+                "D": "All servers in the pool are marked unavailable"
+              },
+              "answer": "A",
+              "explanation": "`prematurely closed ... reading response header` means TCP connected and the request was sent, but the connection closed before a status line arrived. Compare: `Connection refused` means no process, `timed out` means too slow, and `no live upstreams` means everything is marked down. The mock's `?drop=1` reproduces it."
+            },
+            {
+              "id": "s2d3q08",
+              "type": "diagnose",
+              "category": "Error Signatures",
+              "question": "During an incident, the access log shows `up=[lumina_api_nodes] ust=[502]`, and the error log says `no live upstreams while connecting to upstream`. Which statement is correct?",
+              "options": {
+                "A": "DNS failed to resolve the upstream name",
+                "B": "Every server in the group was marked unavailable (`max_fails` reached within `fail_timeout`), so NGINX returned 502 without opening any connection",
+                "C": "The upstream block is empty because of a config typo",
+                "D": "A backend returned a 502 whose body named the upstream group"
+              },
+              "answer": "B",
+              "explanation": "When no peer is eligible, `$upstream_addr` shows the group name instead of an address. NGINX didn't try any server. This often follows an earlier burst of failures, such as timeouts on one slow endpoint, that marked every node down for `fail_timeout`."
+            },
+            {
+              "id": "s2d3q09",
+              "type": "diagnose",
+              "category": "Passive Health",
+              "question": "With `worker_processes 4;` and `server a max_fails=2 fail_timeout=10s;` (no `zone`), a backend dies. The access log shows up to 8 client requests paid the failed-connect penalty before it stopped being tried. Why 8 and not 2?",
+              "options": {
+                "A": "`max_fails` is multiplied by the number of upstream servers",
+                "B": "Retries count double toward `max_fails`",
+                "C": "Without a `zone`, each worker keeps its own failure count, so each of the 4 workers needs its own 2 failures",
+                "D": "NGINX allows a grace period of `fail_timeout` / `max_fails` requests"
+              },
+              "answer": "C",
+              "explanation": "Failure accounting is per worker unless the upstream has a shared memory `zone`. In the lab with 2 workers, the dead node was tried 3 times without a zone and exactly 2 times with one."
+            },
+            {
+              "id": "s2d3q10",
+              "type": "scenario",
+              "category": "Passive Health",
+              "question": "What is the fundamental limitation of NGINX open source's passive health checks?",
+              "options": {
+                "A": "They only work with `least_conn`",
+                "B": "They require a reload to take effect",
+                "C": "They can't detect `Connection refused`",
+                "D": "A server is marked down only after real client requests to it fail, and recovery is noticed only when `fail_timeout` expires and live traffic succeeds"
+              },
+              "answer": "D",
+              "explanation": "Passive checks learn from live traffic. Some client always pays for discovering a failure, and a recovered server waits out `fail_timeout`. Active checks (NGINX Plus `health_check`, Sprint 12) probe out-of-band instead."
+            },
+            {
+              "id": "s2d3q11",
+              "type": "scenario",
+              "category": "Timeouts",
+              "question": "A report endpoint streams one CSV row every 30 s for 20 minutes. `proxy_read_timeout` is 60s. What happens?",
+              "options": {
+                "A": "The download completes: `proxy_read_timeout` is the maximum gap between reads, not a limit on the whole response",
+                "B": "NGINX returns 504 after 60 s",
+                "C": "NGINX buffers all 20 minutes before sending anything",
+                "D": "The client is disconnected after 60 s, but the backend keeps running"
+              },
+              "answer": "A",
+              "explanation": "`proxy_read_timeout` and `proxy_send_timeout` time the interval between two successive read or write operations. Each row resets the clock, so a slow-but-steady response never trips it. Use a different mechanism if you need a total-duration cap."
+            },
+            {
+              "id": "s2d3q12",
+              "type": "scenario",
+              "category": "Timeouts",
+              "question": "Which mapping of client status to cause is correct?",
+              "options": {
+                "A": "502 = backend too slow; 504 = backend refused",
+                "B": "502 = the backend's response was bad or missing (refused, reset, closed early); 504 = NGINX gave up waiting (connect/read/send timeout)",
+                "C": "502 and 504 are interchangeable in NGINX",
+                "D": "504 means no live upstreams"
+              },
+              "answer": "B",
+              "explanation": "502 Bad Gateway: NGINX couldn't get a valid response (`refused`, `prematurely closed`, `no live upstreams`). 504 Gateway Timeout: a proxy timeout fired (`upstream timed out`). The status points you to the right error-log line."
+            },
+            {
+              "id": "s2d3q13",
+              "type": "scenario",
+              "category": "Retries & Idempotency",
+              "question": "Your payments API sends an `Idempotency-Key` header, and the backend deduplicates on it. When is adding `non_idempotent` to `proxy_next_upstream` reasonable?",
+              "options": {
+                "A": "Never, because NGINX rejects retries of POST bodies",
+                "B": "Always: it makes POST behave like GET with no downside",
+                "C": "When retried POSTs can't cause duplicate effects, because the backend recognizes the repeat and returns the original result",
+                "D": "Only when `proxy_request_buffering off;` is set"
+              },
+              "answer": "C",
+              "explanation": "NGINX's default protects backends that can't tell a retry from a new request. If the application guarantees idempotency, opting in turns transient backend failures into invisible retries. Without that guarantee, it risks double charges or duplicate orders."
+            },
+            {
+              "id": "s2d3q14",
+              "type": "scenario",
+              "category": "Retries & Idempotency",
+              "question": "Why can't NGINX retry a request on another server after it has started sending the response body to the client?",
+              "options": {
+                "A": "Bytes already sent can't be taken back. Switching servers mid-response would splice two different responses together, so the upstream is committed once the response starts.",
+                "B": "HTTP forbids retries after the status line is generated",
+                "C": "The upstream connection is closed as soon as headers arrive",
+                "D": "It can, if `proxy_buffering off;` is set"
+              },
+              "answer": "A",
+              "explanation": "`proxy_next_upstream` only applies while nothing has been passed to the client yet. After that, a failure can only abort the client response (a truncated body). That's one reason streaming endpoints need careful timeouts."
+            },
+            {
+              "id": "s2d3q15",
+              "type": "scenario",
+              "category": "WebSockets",
+              "question": "Why does the WebSocket recipe use a `map` to set `Connection` instead of `proxy_set_header Connection upgrade;`?",
+              "options": {
+                "A": "`map` evaluates faster than a literal string",
+                "B": "Literal values in `proxy_set_header` are not allowed",
+                "C": "The `map` returns `upgrade` only when the client sent an `Upgrade` header, and `close` otherwise, so normal HTTP requests in the same location aren't told to upgrade",
+                "D": "`map` is required for HTTP/2 clients"
+              },
+              "answer": "C",
+              "explanation": "A fixed `Connection: upgrade` would be sent on every request through the location, even ordinary GETs, which confuses backends. The `map` sets it only for real upgrade attempts. On nginx 1.29.7+, mapping `''` to `''` instead of `close` sends no `Connection` header on ordinary requests, which keeps upstream keepalive working. The lab showed `conn_requests` stuck at 1 with `close`, and climbing with `''`."
+            },
+            {
+              "id": "s2d3q16",
+              "type": "scenario",
+              "category": "WebSockets",
+              "question": "You reload NGINX while 300 chat WebSockets are open. Afterwards `ps` still shows `nginx: worker process is shutting down` for minutes. Why?",
+              "options": {
+                "A": "The reload failed and NGINX is stuck",
+                "B": "Old workers stop accepting new connections but keep relaying their existing tunnels until those close, or until `worker_shutdown_timeout` forces them",
+                "C": "The new config has a syntax error, so the old workers are kept as a fallback",
+                "D": "WebSockets are migrated to the new workers one at a time"
+              },
+              "answer": "B",
+              "explanation": "A graceful reload never cuts live connections. Long-lived tunnels keep old workers (and their memory) alive. The OSS control API's `/1/control/processes` shows them as `\"exiting\": true`. Day 4 contrasts this with changing upstream membership through the NGINX Plus API, which needs no reload."
+            },
+            {
+              "id": "s2d3q17",
+              "type": "scenario",
+              "category": "Passive Health",
+              "question": "During a load test, one endpoint times out repeatedly. Soon unrelated, fast endpoints on the same upstream start returning 502 with `no live upstreams`. What connects the two?",
+              "options": {
+                "A": "Timeouts on any request count as failures for that server, so the slow endpoint pushed every node past `max_fails`, and the whole pool was marked unavailable for `fail_timeout`",
+                "B": "NGINX throttles all locations when one is slow",
+                "C": "The fast endpoints share a keepalive connection that got stuck",
+                "D": "`proxy_read_timeout` applies to the whole server block"
+              },
+              "answer": "A",
+              "explanation": "Failure accounting is per *server*, not per URL. Slow requests on one path mark servers down for every path. Fixes: separate upstreams for slow endpoints, timeouts matched to each endpoint, or `max_fails=0` where passive marking does more harm than good."
+            },
+            {
+              "id": "s2d3q18",
+              "type": "recall",
+              "category": "Retries & Idempotency",
+              "question": "What is the default value of `proxy_next_upstream`?",
+              "options": {
+                "A": "`off`",
+                "B": "`error timeout http_502 http_503 http_504`",
+                "C": "`error timeout`",
+                "D": "`any`"
+              },
+              "answer": "C",
+              "explanation": "By default NGINX moves to the next server only on a connection `error` or a `timeout`. HTTP status codes such as `http_502`/`http_503` must be listed explicitly. `off` disables retries."
+            },
+            {
+              "id": "s2d3q19",
+              "type": "recall",
+              "category": "Retries & Idempotency",
+              "question": "Which directive caps the **number of attempts** NGINX makes for one request across the upstream group?",
+              "options": {
+                "A": "`proxy_next_upstream_tries`",
+                "B": "`max_fails`",
+                "C": "`proxy_retries`",
+                "D": "`proxy_next_upstream_count`"
+              },
+              "answer": "A",
+              "explanation": "`proxy_next_upstream_tries N` limits total attempts (0 = no limit). `proxy_next_upstream_timeout` limits the time allowed to start new attempts. `max_fails` is about marking servers down, not per-request retries."
+            },
+            {
+              "id": "s2d3q20",
+              "type": "recall",
+              "category": "WebSockets",
+              "question": "Which status code does a backend return to accept a WebSocket upgrade?",
+              "options": {
+                "A": "`200 OK`",
+                "B": "`426 Upgrade Required`",
+                "C": "`204 No Content`",
+                "D": "`101 Switching Protocols`"
+              },
+              "answer": "D",
+              "explanation": "`101 Switching Protocols` with `Upgrade: websocket` and a correct `Sec-WebSocket-Accept` completes the RFC 6455 handshake. NGINX then relays raw frames in both directions. `426` is what a server sends when it *requires* an upgrade the client didn't request."
+            }
+          ]
+        },
+        {
+          "day": 4,
+          "date": "2026-10-09",
+          "title": "Enterprise: NGINX Plus Upstreams",
+          "track": "enterprise",
+          "questions": [
+            {
+              "id": "s2d4q01",
+              "type": "config",
+              "category": "Plus API",
+              "question": "An NGINX Plus upstream is defined as:\n```nginx\nupstream api {\n    least_conn;\n    server 10.0.0.1:8080;\n    server 10.0.0.2:8080;\n}\n```\nThe API location has `api write=on;`. You `POST` a new server to `/api/10/http/upstreams/api/servers`. What happens?",
+              "options": {
+                "A": "`201 Created`; the server is added in memory",
+                "B": "`201 Created`, but the change applies only after a reload",
+                "C": "`400` with `UpstreamStatic`: the upstream has no `zone`, so there is no shared-memory state the API can change",
+                "D": "`405 Method Disabled`"
+              },
+              "answer": "C",
+              "explanation": "The API changes upstream configuration in a shared memory zone. Without `zone api 64k;`, the group is static, and the API refuses changes with `UpstreamStatic`. Every API-managed upstream needs a `zone`."
+            },
+            {
+              "id": "s2d4q02",
+              "type": "config",
+              "category": "Plus API",
+              "question": "On NGINX Plus, the management location is configured as:\n```nginx\nlocation /api/ {\n    api;\n}\n```\nAn automation script sends `PATCH /api/10/http/upstreams/api/servers/2` with `{\"drain\":true}`. What is the result?",
+              "options": {
+                "A": "The server drains",
+                "B": "`405 Method Disabled`: the API is read-only unless `api write=on;` is set",
+                "C": "`404`: PATCH isn't supported by version 10",
+                "D": "The change is queued until the next reload"
+              },
+              "answer": "B",
+              "explanation": "`api;` defaults to `write=off`, so GET works for monitoring and every modifying method is refused. Use `write=on` only on a management listener restricted with `allow`/`deny` or auth."
+            },
+            {
+              "id": "s2d4q03",
+              "type": "config",
+              "category": "State Persistence",
+              "question": "On NGINX Plus:\n```nginx\nupstream api {\n    zone api 64k;\n    state /var/lib/nginx/state/api.state;\n    server 10.0.0.1:8080;\n}\n```\nWhat does `nginx -t` say?",
+              "options": {
+                "A": "OK: the `server` line is a seed, and the state file overrides it",
+                "B": "OK: the state file is ignored while `server` lines exist",
+                "C": "OK, but the API becomes read-only for this upstream",
+                "D": "It fails: `state` can't be used together with `server` directives in the same upstream"
+              },
+              "answer": "D",
+              "explanation": "With `state`, the state file is the single source of truth for membership. It's read at config load and rewritten on every API change, so `server` lines would conflict. Membership starts empty (or from the file) and is managed through the API."
+            },
+            {
+              "id": "s2d4q04",
+              "type": "config",
+              "category": "OSS vs Plus",
+              "question": "On **open source** nginx 1.31, someone copies a Plus snippet:\n```nginx\nupstream api {\n    zone api 64k;\n    least_conn;\n    server 10.0.0.1:8080 slow_start=30s;\n}\n```\nWhat happens?",
+              "options": {
+                "A": "`nginx -t` fails: `invalid parameter \"slow_start=30s\"`. It's still Plus-only.",
+                "B": "It works: `slow_start` moved to open source with `drain` in 1.29.6",
+                "C": "It loads, but `slow_start` is ignored with a warning",
+                "D": "It fails only because `least_conn` can't be combined with `slow_start`"
+              },
+              "answer": "A",
+              "explanation": "`slow_start` remains an NGINX Plus feature. OSS rejects it as an invalid parameter, as the lab showed. In Plus it can't be combined with `hash`, `ip_hash`, or `random`, but `least_conn` is fine."
+            },
+            {
+              "id": "s2d4q05",
+              "type": "config",
+              "category": "OSS vs Plus",
+              "question": "On open source nginx 1.31:\n```nginx\nupstream api {\n    zone api 64k;\n    resolver 127.0.0.53 valid=5s;\n    server api.lumina.test:8001 resolve;\n}\n```\nThe DNS record for `api.lumina.test` changes from 127.0.0.1 to 127.0.0.3. What happens?",
+              "options": {
+                "A": "Nothing until the next reload: hostnames resolve once at startup",
+                "B": "`nginx -t` fails: `resolve` requires NGINX Plus",
+                "C": "NGINX fails every request until it's restarted",
+                "D": "Within about 5 s NGINX re-resolves the name and sends new requests to 127.0.0.3, with no reload"
+              },
+              "answer": "D",
+              "explanation": "Since 1.27.3, OSS supports `resolve` (and `resolver` inside `upstream`) on servers in a zone-backed upstream. NGINX re-resolves according to TTL or `valid=`. In the lab, traffic switched to the new address within seconds with no reload. Compare Day 1, where a literal hostname in `proxy_pass` resolved only once."
+            },
+            {
+              "id": "s2d4q06",
+              "type": "config",
+              "category": "Draining",
+              "question": "Through the Plus API you send `PATCH .../servers/3` with `{\"drain\":true}`. The upstream uses `least_conn` with no `sticky`, and server 3 has one 20-second request in flight. What happens?",
+              "options": {
+                "A": "The in-flight request is cut off and retried elsewhere",
+                "B": "Server 3 stops receiving new requests, its in-flight request finishes normally, and its peer `state` shows `draining`",
+                "C": "Server 3 keeps receiving requests until its `fail_timeout` expires",
+                "D": "Server 3 is deleted immediately"
+              },
+              "answer": "B",
+              "explanation": "In draining mode, only requests *bound* to the server (via `sticky`) are still sent to it. Without `sticky`, that means no new requests. Existing requests complete. Once `active` reaches 0, it's safe to `DELETE` it."
+            },
+            {
+              "id": "s2d4q07",
+              "type": "diagnose",
+              "category": "Licensing",
+              "question": "A new NGINX Plus R3x container has `license.jwt` correctly mounted at `/etc/nginx/license.jwt`, and its config passes `nginx -t`. But it serves no traffic, and `docker logs` mentions the usage report. Egress firewall rules only allow traffic to the app subnets. Most likely cause?",
+              "options": {
+                "A": "The JWT must be passed in the `NGINX_LICENSE_JWT` variable, not as a file",
+                "B": "Plus requires a reload after the first start",
+                "C": "The initial usage report to `product.connect.nginx.com` can't get out. With the default `enforce_initial_report on`, NGINX Plus refuses traffic until it succeeds.",
+                "D": "The API is not enabled, so licensing can't be checked"
+              },
+              "answer": "C",
+              "explanation": "Since R33, each instance must report usage to F5, and by default the first report gates traffic. Allow HTTPS egress to `product.connect.nginx.com` (or report through NGINX Instance Manager via `usage_report endpoint=`). `enforce_initial_report off` enables a 180-day grace period instead."
+            },
+            {
+              "id": "s2d4q08",
+              "type": "diagnose",
+              "category": "Reload Cost",
+              "question": "An OSS gateway is reloaded every few minutes by a service-discovery script. Memory keeps climbing, and `ps` shows a dozen `nginx: worker process is shutting down` entries. The gateway relays long-lived WebSocket chats. What's going on?",
+              "options": {
+                "A": "A memory leak in the WebSocket module",
+                "B": "Each reload leaves the old workers serving their open tunnels. Long-lived connections keep several worker generations, and their memory, alive at once.",
+                "C": "Reloads failed, so NGINX keeps extra workers as a fallback",
+                "D": "`worker_processes auto` doubles on each reload"
+              },
+              "answer": "B",
+              "explanation": "Graceful reloads never cut live connections, so old workers persist until their last connection closes or `worker_shutdown_timeout` expires. In the Day 4 lab, a single held WebSocket kept an `\"exiting\": true` worker alive. Options: fewer reloads (`resolve` for DNS-based discovery, or the Plus API), and `worker_shutdown_timeout`."
+            },
+            {
+              "id": "s2d4q09",
+              "type": "diagnose",
+              "category": "Control API",
+              "question": "A script reloads OSS nginx 1.31 through the control API and gets back:\n```\n{\"logs\":[\"... [emerg] invalid parameter \\\"weight=x\\\" in /etc/nginx/nginx.conf:36\"]}\n```\nWhat state is NGINX in?",
+              "options": {
+                "A": "Stopped: an `emerg` during reload shuts down the master",
+                "B": "Running the new config with the bad server line skipped",
+                "C": "Half reloaded: some workers run the new config",
+                "D": "Still running the previous configuration. The reload was rejected, and the API returned the error that blocked it."
+              },
+              "answer": "D",
+              "explanation": "A reload that fails parsing never replaces the running config. `PATCH /1/control/config` returns the reload's log lines, an empty list on success. The lab reproduced this exact `invalid parameter \"weight=x\"` case."
+            },
+            {
+              "id": "s2d4q10",
+              "type": "scenario",
+              "category": "OSS vs Plus",
+              "question": "What is the key operational difference between adding a server through the NGINX Plus API and adding a `server` line in OSS followed by a reload?",
+              "options": {
+                "A": "The API change is applied in the upstream's shared memory zone by the running workers. No new workers start, so long-lived connections and runtime state are untouched.",
+                "B": "There is none; the API runs a reload internally",
+                "C": "The API change is faster only because it skips `nginx -t`",
+                "D": "OSS reloads drop in-flight requests; API changes don't"
+              },
+              "answer": "A",
+              "explanation": "An OSS reload is graceful: in-flight requests finish. But it spawns a new worker generation and leaves old ones draining. The Plus API mutates shared state in place, so worker PIDs stay the same and nothing restarts."
+            },
+            {
+              "id": "s2d4q11",
+              "type": "scenario",
+              "category": "OSS vs Plus",
+              "question": "Which of these, on nginx 1.31, still requires NGINX Plus?",
+              "options": {
+                "A": "Re-resolving upstream hostnames at runtime with `resolve`",
+                "B": "Cookie-based session affinity with `sticky cookie`",
+                "C": "Adding a server to a running upstream with no reload, through a REST API",
+                "D": "Choosing servers by response time with `least_time`"
+              },
+              "answer": "C",
+              "explanation": "`resolve` (1.27.3), `sticky` and `drain` (1.29.6), and `least_time` (1.31.0) are now in open source. The write API for upstream membership and parameters, along with `state` files, `slow_start`, live per-peer metrics, `queue`, and active health checks, remains Plus."
+            },
+            {
+              "id": "s2d4q12",
+              "type": "scenario",
+              "category": "Shared State",
+              "question": "Why does every API-managed upstream need a `zone`?",
+              "options": {
+                "A": "The zone stores cached responses for the API",
+                "B": "Upstream configuration and runtime state must live in shared memory that every worker reads. Otherwise a change made by one worker handling the API call would be invisible to the others.",
+                "C": "It holds the license token",
+                "D": "Zones are only needed for stream (TCP/UDP) upstreams"
+              },
+              "answer": "B",
+              "explanation": "Workers are separate processes. A zone is shared memory they all map, holding server lists, weights, states, and counters. The API writes there, and every worker sees the change on its next pick."
+            },
+            {
+              "id": "s2d4q13",
+              "type": "scenario",
+              "category": "State Persistence",
+              "question": "What problem does the upstream `state` file solve, and what is its main caveat?",
+              "options": {
+                "A": "It caches upstream responses; the caveat is disk usage",
+                "B": "It speeds up reloads; the caveat is it must be edited by hand",
+                "C": "It records active connections for billing; the caveat is privacy",
+                "D": "It persists API-made membership changes across restarts; the caveat is that changes made during a reload or binary upgrade can be lost, and the file shouldn't be edited directly"
+              },
+              "answer": "D",
+              "explanation": "Without `state`, API changes live only in memory and vanish on restart. With it, NGINX Plus rewrites the file on every change and reads it at config load. The docs warn against editing it by hand, and against relying on changes made mid-reload."
+            },
+            {
+              "id": "s2d4q14",
+              "type": "scenario",
+              "category": "Slow Start",
+              "question": "When does `slow_start=30s` ramp a server's weight from zero to nominal?",
+              "options": {
+                "A": "When the server recovers: from unavailable (after `fail_timeout`) to available, or from unhealthy to healthy with active checks",
+                "B": "Every time NGINX reloads",
+                "C": "Only when the server is first added through the API",
+                "D": "During the first 30 s after NGINX starts"
+              },
+              "answer": "A",
+              "explanation": "`slow_start` protects a server coming *back*, such as a JVM that just restarted with a cold cache, from a sudden full share. The upstream docs define its trigger as recovery from unhealthy or unavailable."
+            },
+            {
+              "id": "s2d4q15",
+              "type": "scenario",
+              "category": "Draining",
+              "question": "With `sticky cookie` sessions, why would you `drain` a server before maintenance instead of marking it `down`?",
+              "options": {
+                "A": "`down` is not allowed with `sticky`",
+                "B": "`drain` is faster",
+                "C": "`drain` keeps sending requests bound to that server by an existing session cookie, so active users finish their sessions, while new sessions go elsewhere. `down` would move everyone immediately.",
+                "D": "`drain` also clears the cookies from browsers"
+              },
+              "answer": "C",
+              "explanation": "Draining is a graceful handover: sticky-bound traffic continues while new traffic avoids the server. Once its sessions age out (watch `active` and `selected` in the API), remove it. `down` takes it out at once and breaks session affinity."
+            },
+            {
+              "id": "s2d4q16",
+              "type": "scenario",
+              "category": "Control API",
+              "question": "What does the open-source control API (nginx 1.31.5+, started with `-l`) let you do?",
+              "options": {
+                "A": "Add and remove upstream servers without a reload",
+                "B": "Inspect worker processes (including ones still exiting after a reload), read the running configuration, and trigger a reload over a socket and see its errors",
+                "C": "View per-upstream response statistics",
+                "D": "Apply a new NGINX Plus license"
+              },
+              "answer": "B",
+              "explanation": "The control API exposes `/1/nginx`, `/1/control/processes`, and `/1/control/config` (GET to read, PATCH to reload). It makes reloads scriptable and observable, but pool changes still mean a config edit plus a reload. F5 recommends a UNIX-domain socket and never exposing it publicly."
+            },
+            {
+              "id": "s2d4q17",
+              "type": "scenario",
+              "category": "OSS vs Plus",
+              "question": "Backends are Kubernetes pods behind a headless Service whose DNS A records change as pods scale. You run NGINX open source 1.31. What's the closest you can get to reload-free membership?",
+              "options": {
+                "A": "Nothing; OSS always needs a reload when backends change",
+                "B": "Use `ip_hash` so new pods are picked up automatically",
+                "C": "Set `proxy_next_upstream` to retry until a new pod answers",
+                "D": "A `zone`-backed upstream with `resolver ... valid=` and `server <service-name> resolve;`, so NGINX follows the A records at runtime"
+              },
+              "answer": "D",
+              "explanation": "Runtime DNS re-resolution (`resolve`, OSS since 1.27.3) adapts membership to DNS without reloads. What it can't do is per-server operations like draining one pod or `slow_start`. That's where the Plus API or an ingress controller comes in (Sprint 8)."
+            },
+            {
+              "id": "s2d4q18",
+              "type": "recall",
+              "category": "Plus API",
+              "question": "What is the current NGINX Plus API version used in request paths?",
+              "options": {
+                "A": "`8`",
+                "B": "`10`",
+                "C": "`9`",
+                "D": "`2`"
+              },
+              "answer": "B",
+              "explanation": "The `ngx_http_api_module` docs list `10` as the current version (`/api/10/...`). `GET /api/` returns the versions an instance supports, so check it rather than hard-coding older guides' `/api/8/`."
+            },
+            {
+              "id": "s2d4q19",
+              "type": "recall",
+              "category": "Licensing",
+              "question": "Where does NGINX Plus (R33+) look for its JWT license on Linux by default?",
+              "options": {
+                "A": "`/etc/nginx/license.jwt`",
+                "B": "`/etc/ssl/nginx/nginx-repo.crt`",
+                "C": "`/var/lib/nginx/license.jwt`",
+                "D": "`/usr/share/nginx/license.jwt`"
+              },
+              "answer": "A",
+              "explanation": "`license_token` defaults to `license.jwt` in `/etc/nginx/`, and can be overridden in the `mgmt` block. `nginx-repo.crt`/`.key` are package-repository credentials, a different thing."
+            },
+            {
+              "id": "s2d4q20",
+              "type": "recall",
+              "category": "Plus API",
+              "question": "Which API call removes server 4 from upstream `api`?",
+              "options": {
+                "A": "`PATCH /api/10/http/upstreams/api/servers/4` with `{\"down\":true}`",
+                "B": "`POST /api/10/http/upstreams/api/servers/4/remove`",
+                "C": "`DELETE /api/10/http/upstreams/api/servers/4`",
+                "D": "`PUT /api/10/http/upstreams/api/servers` with the remaining list"
+              },
+              "answer": "C",
+              "explanation": "`DELETE .../servers/{id}` removes the server and returns the remaining list (200). `PATCH` with `down` or `drain` changes its state but keeps it in the group. Get ids from `GET .../servers`."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

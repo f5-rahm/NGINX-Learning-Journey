@@ -1,6 +1,6 @@
 # NGINX Learning Journey
 **Timeframe:** FY27 Q1 (October 1 – December 31)  
-**Target Cadence:** 14 Weekly Sprints across 63 Business Days  
+**Target Cadence:** 14 Sprints, roughly one per week (days per sprint flex with the calendar)  
 **Primary Engine:** Open Source NGINX (OSS)  
 **Side Quests: Enterprise Trail:** NGINX Plus, F5 App Protect WAF, F5 NGINX Ingress Controller, and NGINX Gateway Fabric  
 
@@ -50,7 +50,7 @@ Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-
                                     ▼
   ┌──────────────────────────────────────────────────────────────────┐
   │ 3. Daily Concept Examination (10–15 Minutes)                     │
-  │    - Interactive, day-appropriate web exam (`dayXX_quiz.html`)   │
+  │    - Interactive, day-appropriate web exam (`quiz.html`)         │
   │    - 10 randomized scenario questions from a 20-question pool    │
   │    - Instant scoring, mistake highlighting & full rationale      │
   │    - Passing target: 80% (8 of 10)                               │
@@ -67,15 +67,15 @@ Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-
 
 ### Daily Components Defined
 1. **Dedicated Daily Guide (`DAY_XX.md`):** Standalone markdown document containing concise architectural diagrams, exact terminal commands, code snippets, and observation prompts.
-2. **Curated 20-Question Pool (`dayXX_quiz_pool.json`):** Rigorous, scenario-based multiple-choice questions focusing on production gotchas, directive interactions, and failure modes.
-3. **Interactive NGINX-Branded Quiz Engine (`dayXX_quiz.html`):** Clean single-page application styled with the official NGINX SVG logo and brand colors. Features true client-side randomization (10 of 20), immediate solution explanations, and offline `file:///` compatibility.
+2. **Curated 20-Question Pools ([`data/quizzes.json`](data/quizzes.json)):** One file holding every pool, organized by sprint, then by day. Each question is tagged with a `type`. From Sprint 2 on, each pool targets 8 `scenario`, 6 `config` (read a config, predict the result), 3 `diagnose` (symptom or log line to cause), and 3 `recall` questions.
+3. **Quiz Engine ([`quiz.html`](quiz.html)):** One page for every quiz (`quiz.html?sprint=2&day=1`). It draws 10 of 20 at random and shows explanations immediately. It reads `data/quizzes.json`, so serve the repo over HTTP (`python3 -m http.server 8090`). The learning dashboard will take this over.
 4. **Objective Test Suite (`test_sprintXX.sh`):** Zero-ambiguity assertion script checking HTTP status codes, headers, response payloads, and security boundaries.
 
 ---
 
 ## 3. The 14-Week Master Sprint Roadmap
 
-### Calendar Schedule Overview (FY27 Q1: 63 Business Days)
+### Calendar Schedule Overview (FY27 Q1)
 * **Start Date:** Thursday, October 1
 * **End Date:** Thursday, December 31
 * **Holiday Blackouts:**
@@ -85,7 +85,7 @@ Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-
 ```
 OCTOBER                                NOVEMBER                               DECEMBER
 S01: Oct 1-2   (2d - Web Serving)     S06: Nov 2-6   (5d - Programmability)  S10: Nov 30-Dec 4 (5d - Advanced Ingress)
-S02: Oct 5-9   (5d - Reverse Proxy)   S07: Nov 9-13  (5d - Security/JWT)     S11: Dec 7-11     (5d - Observability)
+S02: Oct 6-9   (4d - Reverse Proxy)   S07: Nov 9-13  (5d - Security/JWT)     S11: Dec 7-11     (5d - Observability)
 S03: Oct 12-16 (5d - TLS & HTTP/3)    S08: Nov 16-20 (5d - K8s Ingress CRDs) S12: Dec 14-18    (5d - High Availability)
 S04: Oct 19-23 (5d - Performance)     S09: Nov 23-25 (3d - Gateway API)      S13: Dec 21-23    (3d - Edge WAF)
 S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [Dec 24-25: Christmas Break]
@@ -99,7 +99,7 @@ S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 | Sprint | Dates | Days | Core Focus & Architecture | Lab Challenge Target | Enterprise / F5 Side Quest |
 | :--- | :--- | :---: | :--- | :--- | :--- |
 | **01** | Oct 1–2 | 2 | **Web Serving & Core Engine:** Master/worker model, Unix signals (`HUP`, `QUIT`), `epoll` loop, 5-step location precedence, `root` vs `alias`, SPA `try_files`. | Northwind Static Web Tier (`test_sprint01.sh`) | **Zero-Downtime Hot-Upgrade:** Live binary swap via `SIGUSR2` & `nginx.pid.oldbin` (Deck: Slides 10–13). |
-| **02** | Oct 5–9 | 5 | **Reverse Proxy & Load Balancing:** Trailing slash URI rules, header forwarding (`X-Forwarded-*`), balancing algorithms, passive health checks (`max_fails`), WebSocket proxying. | Multi-tier Load Balancer with WebSocket Relay (`test_sprint02.sh`) | **NGINX Plus Upstream API:** Real-time dynamic pool modification without reload & active application probes (Deck: Slide 54). |
+| **02** | Oct 6–9 | 4 | **Reverse Proxy & Load Balancing:** Trailing slash URI rules, header forwarding (`X-Forwarded-*`), balancing algorithms, passive health checks (`max_fails`), WebSocket proxying. | Multi-tier Load Balancer with WebSocket Relay (`test_sprint02.sh`) | **NGINX Plus Upstream API:** Real-time pool add/drain/remove without reload, `state` persistence, `slow_start` (Deck: Slide 54). Active probes: Sprint 12. |
 | **03** | Oct 12–16 | 5 | **TLS Termination & Edge Hardening:** TLS 1.3 cipher suites, session resumption, ALPN, HTTP/2 multiplexing, HTTP/3 (QUIC/UDP), strict security headers. | Zero-Trust TLS 1.3 / HTTP/3 Edge Gateway | **Automated Cert Management:** ACME vault integration & dual RSA/ECC cipher deployment. |
 | **04** | Oct 19–23 | 5 | **Performance, Caching & Kernel:** Dual-tier micro-caching (`proxy_cache`), cache locks, stale serving on error, Linux `sysctl` socket tuning (`somaxconn`, `tcp_tw_reuse`). | High-Throughput Cached API Gateway | **NGINX Plus Live Cache Purging:** Instant selective cache purge API without disk clearing. |
 | **05** | Oct 26–30 | 5 | **Traffic Shaping & Rate Limiting:** Leaky bucket rate limiting (`limit_req`), burst handling, two-stage delay, concurrency limits (`limit_conn`), IP allowlists/denylists. | DDoS-Resilient API Rate-Limiter | **Dynamic Bandwidth Control:** Client bandwidth slicing and progressive download throttling. |
@@ -120,15 +120,19 @@ S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 ### Sprint 1: Web Serving Mastery & Core Architecture (Oct 1–2, 2 Days)
 * **Focus:** Demystify the event loop and process hierarchy before touching reverse proxying.
 * **Daily Structure:**
-  * **Day 1:** Master/Worker least-privilege architecture, Unix signals (`HUP`, `QUIT`, `TERM`, `USR1`), `nginx -V`/`-t`/`-T`, zero-downtime hot-swap (`SIGUSR2`). Quiz: [Day 1 Quiz](file:///Users/j.rahm/.gemini/antigravity/scratch/nginx-journey/sprints/sprint-01/day01_quiz.html).
-  * **Day 2:** 5-step location precedence (`=`, `^~`, `~*`, prefix fallback), `root` vs `alias` path math, SPA `try_files` routing, dotfile blocking, `server_tokens off`. Quiz: [Day 2 Quiz](file:///Users/j.rahm/.gemini/antigravity/scratch/nginx-journey/sprints/sprint-01/day02_quiz.html).
-* **Lab:** Northwind Static Foundation validated by [`test_sprint01.sh`](file:///Users/j.rahm/.gemini/antigravity/scratch/nginx-journey/sprints/sprint-01/test_sprint01.sh) (12 assertions).
+  * **Day 1:** Master/Worker least-privilege architecture, Unix signals (`HUP`, `QUIT`, `TERM`, `USR1`), `nginx -V`/`-t`/`-T`, zero-downtime hot-swap (`SIGUSR2`). Quiz: [Day 1 Quiz](quiz.html?sprint=1&day=1).
+  * **Day 2:** 5-step location precedence (`=`, `^~`, `~*`, prefix fallback), `root` vs `alias` path math, SPA `try_files` routing, dotfile blocking, `server_tokens off`. Quiz: [Day 2 Quiz](quiz.html?sprint=1&day=2).
+* **Lab:** Northwind Static Foundation validated by [`test_sprint01.sh`](sprints/sprint-1/test_sprint01.sh) (12 assertions).
 
-### Sprint 2: Reverse Proxying & Load Balancing (Oct 5–9, 5 Days)
+### Sprint 2: Reverse Proxying & Load Balancing (Oct 6–9, 4 Days)
 * **Focus:** Layer 7 request routing, header management, upstream connection pooling, and balancing.
 * **Key Topics:** The trailing slash proxy rule (`proxy_pass http://backend/` vs `http://backend`), `proxy_set_header` inheritance gotchas, load balancing algorithms (`round_robin`, `least_conn`, `ip_hash`, `hash $request_uri consistent`), passive failover (`max_fails`, `fail_timeout`), upstream keepalive pooling, and WebSocket proxying (`Upgrade` / `Connection` hop-by-hop headers).
-* **Enterprise Side Quest:** NGINX Plus Upstream API for runtime zero-reload server draining and active synthetic probes.
-* **Lab:** Multi-tier load balancer proxying 3 mock backends with WebSocket streaming (`test_sprint02.sh`).
+* **Daily Structure:**
+  * **Day 1:** How `proxy_pass` builds the request: URI mapping, header rewriting, `proxy_set_header` inheritance.
+  * **Day 2:** Upstream pools, balancing algorithms, keepalive pooling (on by default since nginx 1.29.7).
+  * **Day 3:** Passive health checks, timeouts, retries & idempotency, WebSockets; Lumina lab completed.
+  * **Day 4 (Enterprise):** NGINX Plus upstream API (runtime add/drain/remove, `zone`, `slow_start`, `state` files). Active probes are deferred to Sprint 12.
+* **Lab:** Multi-tier load balancer proxying 3 mock backends with WebSocket streaming (`test_sprint02.sh`, 8 core assertions). Details: [`sprints/sprint-2/README.md`](sprints/sprint-2/README.md).
 
 ### Sprint 3: TLS Termination, HTTP/2, HTTP/3 & Edge Security (Oct 12–16, 5 Days)
 * **Focus:** Cryptographic termination, modern protocols, and transport layer security.
