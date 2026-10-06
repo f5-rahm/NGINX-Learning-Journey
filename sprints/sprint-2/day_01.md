@@ -84,7 +84,7 @@ cp day1_nginx.conf nginx.conf
 ngx -t && ngx                           # ngx helper from Sprint 1 Day 1; listens on 8082
 ```
 
-Add a helper that shows exactly what the backend received:
+Paste this helper into your terminal. It shows exactly what the backend received. It only lasts for the current shell, so paste it again if you open a new terminal. It's only used today, so it doesn't need to go in `~/.bashrc`.
 ```bash
 peek() {   # peek <path> [extra curl args...]
   curl -s -H 'Host: lumina.local' "${@:2}" "localhost:8082$1" | python3 -c '
@@ -106,7 +106,7 @@ The mock backend echoes the raw request line, so URI mistakes like `//v1/x` are 
 ## 3. Hands-on Guided Discovery Activities (35 Minutes)
 
 ### Activity 3.1: The URI Mapping Drill (12 min)
-`nginx.conf` has eight locations pointing at the same backend. **Write down your prediction for every row first**, then check each with `peek`.
+`nginx.conf` has eight locations pointing at the same backend (`grep location nginx.conf` shows them all). Apply the rules from 1.2 and **write down your prediction for every row first**, then check each with `peek`.
 
 | # | Location | `proxy_pass` | Request | Your prediction |
 | :--- | :--- | :--- | :--- | :--- |
@@ -117,8 +117,8 @@ The mock backend echoes the raw request line, so URI mistakes like `//v1/x` are 
 | d | `/d/` | `http://127.0.0.1:8001/v2` | `/d/users` | |
 | e | `/e/` | `http://127.0.0.1:8001/v2/` | `/e/users` | |
 | f | `~ ^/f/(.*)$` | `http://127.0.0.1:8001/$1` | `/f/v1/items?page=2` | |
-| g | `/g/` | `http://$be/` (variable) | `/g/v1/stats` | |
-| h | `/h/` | `rewrite` + `http://$be` | `/h/v1/items?page=2` | |
+| g | `/g/` | `set $be 127.0.0.1:8001;`<br>`proxy_pass http://$be/;` | `/g/v1/stats` | |
+| h | `/h/` | `set $be 127.0.0.1:8001;`<br>`rewrite ^/h/(.*)$ /$1 break;`<br>`proxy_pass http://$be;` | `/h/v1/items?page=2` | |
 
 ```bash
 for p in '/a/v1/stats?page=2' /b/v1/stats /c/v1/stats /catalog /d/users /e/users \
