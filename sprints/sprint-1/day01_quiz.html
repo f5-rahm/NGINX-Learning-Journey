@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NGINX OSS Mastery &bull; Sprint 1 Day 1 Examination</title>
-  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
       --nginx-green: #009639;
@@ -435,7 +435,7 @@
                 if (!q.options[key]) return "";
                 return `
                   <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950/40 cursor-pointer transition-all text-xs text-slate-300" id="opt-label-${q.id}-${key}">
-                    <input type="radio" name="question_${q.id}" value="${key}" onchange="selectAnswer(${q.id}, )" class="mt-0.5 accent-[#009639]">
+					<input type="radio" name="question_${q.id}" value="${key}" onchange="selectAnswer(${q.id}, '${key}')" class="mt-0.5 accent-[#009639]">
                     <span><strong class="text-slate-200">${key})</strong> ${escapeHtml(q.options[key])}</span>
                   </label>
                 `;
