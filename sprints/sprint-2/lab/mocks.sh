@@ -7,12 +7,16 @@
 #   ./mocks.sh start 8001       # bring it back
 #   ./mocks.sh status
 #   ./mocks.sh logs 8001        # follow one node's request log
+#
+#   MOCK_BIND=0.0.0.0 ./mocks.sh restart   # listen on all interfaces (default 127.0.0.1)
 set -u
 
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_DIR="$LAB_DIR/run"
 LOG_DIR="$LAB_DIR/logs"
 mkdir -p "$RUN_DIR" "$LOG_DIR"
+BIND=${MOCK_BIND:-127.0.0.1}
+PROBE=$BIND; [ "$BIND" = 0.0.0.0 ] && PROBE=127.0.0.1
 
 declare -A NAMES=([8001]=api-node-1 [8002]=api-node-2 [8003]=chat-ws [8004]=api-node-3)
 DEFAULT_PORTS=(8001 8002 8003)      # what "start" brings up with no arguments
@@ -25,11 +29,11 @@ start_node() {
     [ -z "${NAMES[$port]:-}" ] && { echo "unknown port $port"; return 1; }
     if is_up "$port"; then echo "  $port ${NAMES[$port]} already running"; return 0; fi
     [ "$port" = 8003 ] && ws="--ws"
-    python3 "$LAB_DIR/mock_backend.py" --port "$port" --name "${NAMES[$port]}" $ws \
+    python3 "$LAB_DIR/mock_backend.py" --port "$port" --name "${NAMES[$port]}" --bind "$BIND" $ws \
         >> "$LOG_DIR/mock-$port.log" 2>&1 &
     echo $! > "$RUN_DIR/mock-$port.pid"
     for _ in $(seq 20); do
-        (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && { echo "  $port ${NAMES[$port]} up"; return 0; }
+        (exec 3<>"/dev/tcp/$PROBE/$port") 2>/dev/null && { echo "  $port ${NAMES[$port]} up on $BIND"; return 0; }
         sleep 0.1
     done
     echo "  $port ${NAMES[$port]} FAILED to start (see logs/mock-$port.log)"; return 1

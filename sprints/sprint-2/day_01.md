@@ -79,10 +79,12 @@ proxy_set_header X-Forwarded-Proto $scheme;                     # http / https, 
 ```bash
 cd /srv/nginx-journey/sprints/sprint-2/lab
 mkdir -p logs temp/{client,proxy,fastcgi,uwsgi,scgi}
+export MOCK_BIND=0.0.0.0                # mocks on all interfaces (default: loopback only)
 ./mocks.sh start                        # api-node-1 :8001, api-node-2 :8002, chat-ws :8003
 cp day1_nginx.conf nginx.conf
 ngx -t && ngx                           # ngx helper from Sprint 1 Day 1; listens on 8082
 ```
+`MOCK_BIND=0.0.0.0` makes the mocks reachable from off the box, so you can hit them directly as well as through NGINX. It's exported because later `./mocks.sh start` and `restart` commands (Day 2 stops and restarts nodes) read it too. If you open a new shell, export it again or the nodes come back on loopback only. Your security group still has to allow 8001-8003.
 
 Paste this helper into your terminal. It shows exactly what the backend received. It only lasts for the current shell, so paste it again if you open a new terminal. It's only used today, so it doesn't need to go in `~/.bashrc`.
 ```bash
@@ -107,6 +109,8 @@ The mock backend echoes the raw request line, so URI mistakes like `//v1/x` are 
 
 ### Activity 3.1: The URI Mapping Drill (12 min)
 `nginx.conf` has eight locations pointing at the same backend (`grep location nginx.conf` shows them all). Apply the rules from 1.2 and **write down your prediction for every row first**, then check each with `peek`.
+
+Stuck after checking? [`day_01_uri_surgery.html`](day_01_uri_surgery.html) walks through every row visually. Open it in a browser; GitHub shows it as source.
 
 | # | Location | `proxy_pass` | Request | Your prediction |
 | :--- | :--- | :--- | :--- | :--- |

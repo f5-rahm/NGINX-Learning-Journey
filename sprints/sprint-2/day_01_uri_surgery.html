@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>proxy_pass URI Surgery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one study column. Decision map first, then one card per drill row showing the URI being cut and rebuilt. */
+:root {
+  --bg: #f4f6f3;
+  --panel: #ffffff;
+  --fg: #18201b;
+  --muted: #5b675f;
+  --line: #d5ddd6;
+  --accent: #0d6e55;
+  --accent-soft: #e0efe8;
+  --del: #b42a2f;
+  --del-bg: #fbe4e3;
+  --ins: #1f4fb5;
+  --ins-bg: #e2eafb;
+  --cap: #8a5a00;
+  --cap-bg: #fbefd4;
+  --lost: #7c857f;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111613; --panel: #19201c; --fg: #e3ebe5; --muted: #9aa79e; --line: #2c3730;
+    --accent: #4cc39c; --accent-soft: #173027;
+    --del: #ff8a86; --del-bg: #3d1d1d; --ins: #8fb2ff; --ins-bg: #1b2747;
+    --cap: #f0c066; --cap-bg: #3a2d12; --lost: #78837c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111613; --panel: #19201c; --fg: #e3ebe5; --muted: #9aa79e; --line: #2c3730;
+  --accent: #4cc39c; --accent-soft: #173027;
+  --del: #ff8a86; --del-bg: #3d1d1d; --ins: #8fb2ff; --ins-bg: #1b2747;
+  --cap: #f0c066; --cap-bg: #3a2d12; --lost: #78837c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+h2 { font-size: 24px; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.intro { display: grid; gap: 14px; }
+.intro p { color: var(--muted); }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+
+/* URI segments */
+.seg { font-family: var(--font-mono); font-size: 15px; padding: 2px 3px; border-radius: 3px; white-space: pre; }
+.keep { color: var(--fg); }
+.del { color: var(--del); background: var(--del-bg); text-decoration: line-through; text-decoration-thickness: 2px; }
+.ins { color: var(--ins); background: var(--ins-bg); font-weight: 600; }
+.cap { color: var(--cap); background: var(--cap-bg); }
+.lost { color: var(--lost); border: 1px dashed var(--lost); text-decoration: line-through; }
+
+/* decision map */
+.map { display: grid; gap: 14px; }
+.flow { display: grid; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; }
+.q { display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: start; }
+.q + .q { margin-top: 0; }
+.qnum { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; }
+.qbody { display: grid; gap: 10px; padding-bottom: 22px; min-width: 0; }
+.qtext { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.qtext code { font-weight: 400; }
+.branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.leaf { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; background: var(--bg); }
+.leaf .ans { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.leaf .res { font-weight: 600; }
+.leaf .rows { display: flex; gap: 6px; flex-wrap: wrap; }
+.leaf.next { border-style: dashed; color: var(--muted); align-content: center; }
+.rowchip { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-decoration: none; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 1px 8px; }
+.rowchip:hover, .rowchip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.spine { border-left: 2px solid var(--line); margin-left: 16px; height: 0; }
+.flow .q:not(:last-child) .qnum { position: relative; }
+.flow .q:not(:last-child) .qnum::after { content: ""; position: absolute; top: 36px; left: 14px; width: 2px; height: 200px; background: var(--line); z-index: 0; }
+.q { position: relative; overflow: hidden; }
+
+/* drill cards */
+.cards { display: grid; gap: 22px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; display: grid; gap: 14px; scroll-margin-top: 16px; min-width: 0; }
+.card-head { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: baseline; }
+.letter { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1; color: var(--accent); grid-row: span 2; }
+.cfg { font-family: var(--font-mono); font-size: 14px; color: var(--fg); overflow-x: auto; white-space: pre; }
+.path { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; font-family: var(--font-mono); color: var(--muted); }
+.path b { color: var(--fg); font-weight: 600; }
+.path .arr { color: var(--line); }
+.rule { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.surgery { display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; align-items: center; overflow-x: auto; padding: 12px 14px; background: var(--bg); border-radius: 8px; }
+.surgery .lbl { font-size: 13px; color: var(--muted); }
+.surgery .result { font-weight: 600; }
+.surgery .sep { grid-column: 1 / -1; border-top: 1px solid var(--line); }
+.why { color: var(--fg); }
+.fix { font-size: 15px; color: var(--muted); }
+.fix code { color: var(--fg); }
+.ok { color: var(--accent); font-weight: 600; }
+.trap { color: var(--del); font-weight: 600; }
+
+/* summary */
+.summary { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+td { font-family: var(--font-mono); font-size: 14px; }
+td:first-child { font-weight: 600; color: var(--accent); }
+tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .flow, .card { padding: 16px; }
+  .surgery { grid-template-columns: 1fr; gap: 2px 0; }
+  .surgery .lbl { margin-top: 6px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+
+  <header class="intro">
+    <div class="eyebrow">Sprint 2 · Day 1 · Activity 3.1</div>
+    <h1>proxy_pass URI Surgery</h1>
+    <p>Each drill row comes down to one decision path. Find the branch first, then do the string surgery: cut what the location matched, paste what <code>proxy_pass</code> says, and keep the rest exactly as it was. Nginx copies characters. It doesn't know about path segments and doesn't tidy slashes.</p>
+    <div class="legend" aria-label="Legend">
+      <span><span class="seg del">/cut</span> removed from the request</span>
+      <span><span class="seg ins">/v2/</span> added by proxy_pass</span>
+      <span><span class="seg keep">users</span> carried over unchanged</span>
+      <span><span class="seg cap">v1/items</span> regex capture</span>
+      <span><span class="seg lost">?page=2</span> dropped</span>
+    </div>
+  </header>
+
+  <section class="map" aria-labelledby="map-h">
+    <h2 id="map-h">Which rule applies?</h2>
+    <p>Ask these in order and stop at the first branch that ends with a result.</p>
+    <div class="flow">
+      <div class="q">
+        <div class="qnum">1</div>
+        <div class="qbody">
+          <div class="qtext">Is the location a regex (<code>~</code> or <code>~*</code>)?</div>
+          <div class="branches">
+            <div class="leaf">
+              <div class="ans">Yes</div>
+              <div class="res">There's no fixed prefix to cut. You write the whole URI from captures. The query string is not in the captures.</div>
+              <div class="rows"><a class="rowchip" href="#f">f</a></div>
+            </div>
+            <div class="leaf next"><div class="ans">No</div>Go to question 2</div>
+          </div>
+        </div>
+      </div>
+      <div class="q">
+        <div class="qnum">2</div>
+        <div class="qbody">
+          <div class="qtext">Does <code>proxy_pass</code> contain a variable (<code>$be</code>)?</div>
+          <div class="branches">
+            <div class="leaf">
+              <div class="ans">Yes, with a URI after it</div>
+              <div class="res">That URI replaces the entire request URI. No prefix cutting.</div>
+              <div class="rows"><a class="rowchip" href="#g">g</a></div>
+            </div>
+            <div class="leaf">
+              <div class="ans">Yes, no URI</div>
+              <div class="res">The current URI is sent as-is, including any changes a <code>rewrite</code> made.</div>
+              <div class="rows"><a class="rowchip" href="#h">h</a></div>
+            </div>
+            <div class="leaf next"><div class="ans">No</div>Go to question 3</div>
+          </div>
+        </div>
+      </div>
+      <div class="q">
+        <div class="qnum">3</div>
+        <div class="qbody">
+          <div class="qtext">Is there anything after <code>host:port</code>, even one <code>/</code>?</div>
+          <div class="branches">
+            <div class="leaf">
+              <div class="ans">No</div>
+              <div class="res">The request URI is passed through unchanged.</div>
+              <div class="rows"><a class="rowchip" href="#a">a</a></div>
+            </div>
+            <div class="leaf">
+              <div class="ans">Yes</div>
+              <div class="res">Cut the matched location string, paste the URI. Then check that the slashes line up.</div>
+              <div class="rows"><a class="rowchip" href="#b">b</a><a class="rowchip" href="#c">c</a><a class="rowchip" href="#c2">c2</a><a class="rowchip" href="#d">d</a><a class="rowchip" href="#e">e</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cards" aria-labelledby="cards-h">
+    <h2 id="cards-h">The drill, row by row</h2>
+
+    <!-- a -->
+    <article class="card" id="a">
+      <div class="card-head">
+        <div class="letter">a</div>
+        <div class="cfg">location /a/ { proxy_pass http://127.0.0.1:8001; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>no</b></span><span class="arr">→</span><span>URI after host? <b>no</b></span></div>
+      </div>
+      <div class="rule">Pass-through</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg keep">/a/v1/stats?page=2</span></span>
+        <span class="lbl">Cut / paste</span><span class="lbl">nothing cut, nothing pasted</span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/a/v1/stats?page=2</span></span>
+      </div>
+      <p class="why">With no URI in <code>proxy_pass</code>, nginx doesn't touch the URI at all. The location only decides <em>where</em> the request goes, not what it looks like.</p>
+    </article>
+
+    <!-- b -->
+    <article class="card" id="b">
+      <div class="card-head">
+        <div class="letter">b</div>
+        <div class="cfg">location /b/ { proxy_pass http://127.0.0.1:8001/; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>no</b></span><span class="arr">→</span><span>URI after host? <b>yes: /</b></span></div>
+      </div>
+      <div class="rule">Prefix replace</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/b/</span><span class="seg keep">v1/stats</span></span>
+        <span class="lbl">Cut <code>/b/</code>, paste <code>/</code></span><span><span class="seg ins">/</span><span class="seg keep">v1/stats</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/v1/stats</span></span>
+      </div>
+      <p class="why"><span class="ok">Clean strip.</span> The location ends in <code>/</code> and the URI is <code>/</code>, so exactly one slash goes out and one comes back.</p>
+    </article>
+
+    <!-- c -->
+    <article class="card" id="c">
+      <div class="card-head">
+        <div class="letter">c</div>
+        <div class="cfg">location /c { proxy_pass http://127.0.0.1:8001/; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>no</b></span><span class="arr">→</span><span>URI after host? <b>yes: /</b></span></div>
+      </div>
+      <div class="rule">Prefix replace</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/c</span><span class="seg keep">/v1/stats</span></span>
+        <span class="lbl">Cut <code>/c</code>, paste <code>/</code></span><span><span class="seg ins">/</span><span class="seg keep">/v1/stats</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">//v1/stats</span></span>
+      </div>
+      <p class="why"><span class="trap">Double slash.</span> The location is <code>/c</code> with no trailing slash, so the cut stops before the next <code>/</code>. That slash stays on the remainder, and <code>proxy_pass</code> adds its own.</p>
+      <p class="fix">Fix: make both sides end in a slash, <code>location /c/</code> with <code>proxy_pass …/;</code> (same as row b).</p>
+    </article>
+
+    <!-- c2 -->
+    <article class="card" id="c2">
+      <div class="card-head">
+        <div class="letter">c2</div>
+        <div class="cfg">location /c { proxy_pass http://127.0.0.1:8001/; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>no</b></span><span class="arr">→</span><span>URI after host? <b>yes: /</b></span></div>
+      </div>
+      <div class="rule">Prefix replace</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/c</span><span class="seg keep">atalog</span></span>
+        <span class="lbl">Cut <code>/c</code>, paste <code>/</code></span><span><span class="seg ins">/</span><span class="seg keep">atalog</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/atalog</span></span>
+      </div>
+      <p class="why"><span class="trap">Wrong location matched.</span> <code>/catalog</code> starts with the characters <code>/c</code>, so <code>location /c</code> matches it. A prefix location compares characters, not path segments. This is the same trap as Sprint 1 Day 2.</p>
+      <p class="fix">Fix: <code>location /c/</code> no longer matches <code>/catalog</code> at all.</p>
+    </article>
+
+    <!-- d -->
+    <article class="card" id="d">
+      <div class="card-head">
+        <div class="letter">d</div>
+        <div class="cfg">location /d/ { proxy_pass http://127.0.0.1:8001/v2; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>no</b></span><span class="arr">→</span><span>URI after host? <b>yes: /v2</b></span></div>
+      </div>
+      <div class="rule">Prefix replace</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/d/</span><span class="seg keep">users</span></span>
+        <span class="lbl">Cut <code>/d/</code>, paste <code>/v2</code></span><span><span class="seg ins">/v2</span><span class="seg keep">users</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/v2users</span></span>
+      </div>
+      <p class="why"><span class="trap">Slashes glued.</span> This is the mirror image of row c. The trailing slash of <code>/d/</code> was part of the cut, and <code>/v2</code> doesn't put one back.</p>
+      <p class="fix">Fix: <code>proxy_pass http://127.0.0.1:8001/v2/;</code> (row e).</p>
+    </article>
+
+    <!-- e -->
+    <article class="card" id="e">
+      <div class="card-head">
+        <div class="letter">e</div>
+        <div class="cfg">location /e/ { proxy_pass http://127.0.0.1:8001/v2/; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>no</b></span><span class="arr">→</span><span>URI after host? <b>yes: /v2/</b></span></div>
+      </div>
+      <div class="rule">Prefix replace</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/e/</span><span class="seg keep">users</span></span>
+        <span class="lbl">Cut <code>/e/</code>, paste <code>/v2/</code></span><span><span class="seg ins">/v2/</span><span class="seg keep">users</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/v2/users</span></span>
+      </div>
+      <p class="why"><span class="ok">Clean replace.</span> Both sides end in <code>/</code>. The rule of thumb: <strong>if the location ends in a slash, the <code>proxy_pass</code> URI should too.</strong></p>
+    </article>
+
+    <!-- f -->
+    <article class="card" id="f">
+      <div class="card-head">
+        <div class="letter">f</div>
+        <div class="cfg">location ~ ^/f/(.*)$ { proxy_pass http://127.0.0.1:8001/$1; }</div>
+        <div class="path"><span>regex? <b>yes</b></span><span class="arr">→</span><span>stop here</span></div>
+      </div>
+      <div class="rule">Build from captures</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg keep">/f/v1/items</span><span class="seg keep">?page=2</span></span>
+        <span class="lbl">Regex sees path only</span><span><span class="seg keep">/f/</span><span class="seg cap">v1/items</span>   <span class="lbl">$1 = v1/items</span></span>
+        <span class="lbl">Build <code>/</code> + <code>$1</code></span><span><span class="seg ins">/</span><span class="seg cap">v1/items</span><span class="seg lost">?page=2</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/v1/items</span></span>
+      </div>
+      <p class="why"><span class="trap">Query string lost.</span> A regex has no fixed prefix, so there is nothing to cut. Whatever you write after the host <em>is</em> the full URI. The regex only runs against the path, so <code>$1</code> never contains <code>?page=2</code>, and nothing adds it back.</p>
+      <p class="fix">Fix: <code>proxy_pass http://127.0.0.1:8001/$1$is_args$args;</code></p>
+    </article>
+
+    <!-- g -->
+    <article class="card" id="g">
+      <div class="card-head">
+        <div class="letter">g</div>
+        <div class="cfg">location /g/ { set $be 127.0.0.1:8001; proxy_pass http://$be/; }</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>yes, with URI /</b></span><span class="arr">→</span><span>stop here</span></div>
+      </div>
+      <div class="rule">Variable + URI: full replace</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/g/v1/stats</span></span>
+        <span class="lbl">Replace all with <code>/</code></span><span><span class="seg ins">/</span></span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/</span></span>
+      </div>
+      <p class="why"><span class="trap">Everything goes to <code>/</code>.</span> Once <code>proxy_pass</code> has a variable, nginx turns prefix replacement off. The URI you wrote replaces the <em>entire</em> request URI, for every request. It looks like row b but behaves completely differently.</p>
+      <p class="fix">Fix: drop the URI from <code>proxy_pass</code> and strip the prefix with <code>rewrite</code> instead (row h).</p>
+    </article>
+
+    <!-- h -->
+    <article class="card" id="h">
+      <div class="card-head">
+        <div class="letter">h</div>
+        <div class="cfg">location /h/ {
+    set $be 127.0.0.1:8001;
+    rewrite ^/h/(.*)$ /$1 break;
+    proxy_pass http://$be;
+}</div>
+        <div class="path"><span>regex? <b>no</b></span><span class="arr">→</span><span>variable? <b>yes, no URI</b></span><span class="arr">→</span><span>stop here</span></div>
+      </div>
+      <div class="rule">Rewrite first, then pass as-is</div>
+      <div class="surgery">
+        <span class="lbl">Request</span><span><span class="seg del">/h/</span><span class="seg keep">v1/items</span><span class="seg keep">?page=2</span></span>
+        <span class="lbl">Step 1: <code>rewrite</code></span><span><span class="seg ins">/</span><span class="seg cap">v1/items</span><span class="seg keep">?page=2</span></span>
+        <span class="lbl">Step 2: <code>proxy_pass</code></span><span class="lbl">no URI, so nothing cut or pasted</span>
+        <span class="sep"></span>
+        <span class="lbl">Backend gets</span><span class="result"><span class="seg keep">/v1/items?page=2</span></span>
+      </div>
+      <p class="why"><span class="ok">The correct way to strip a prefix with a variable backend.</span> <code>rewrite</code> does the surgery, and it keeps the original query string by default. <code>break</code> stops further rewrite processing but stays in this location. Then <code>proxy_pass</code> has no URI, so it sends the rewritten URI exactly as it is.</p>
+    </article>
+  </section>
+
+  <section class="map" aria-labelledby="sum-h">
+    <h2 id="sum-h">Answer key</h2>
+    <div class="summary">
+      <table>
+        <thead><tr><th>Row</th><th>Request</th><th>Backend gets</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td>a</td><td>/a/v1/stats?page=2</td><td>/a/v1/stats?page=2</td><td>pass-through</td></tr>
+          <tr><td>b</td><td>/b/v1/stats</td><td>/v1/stats</td><td>prefix replace</td></tr>
+          <tr><td>c</td><td>/c/v1/stats</td><td>//v1/stats</td><td>prefix replace</td></tr>
+          <tr><td>c2</td><td>/catalog</td><td>/atalog</td><td>prefix replace</td></tr>
+          <tr><td>d</td><td>/d/users</td><td>/v2users</td><td>prefix replace</td></tr>
+          <tr><td>e</td><td>/e/users</td><td>/v2/users</td><td>prefix replace</td></tr>
+          <tr><td>f</td><td>/f/v1/items?page=2</td><td>/v1/items</td><td>build from captures</td></tr>
+          <tr><td>g</td><td>/g/v1/stats</td><td>/</td><td>variable + URI</td></tr>
+          <tr><td>h</td><td>/h/v1/items?page=2</td><td>/v1/items?page=2</td><td>rewrite, then pass</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fix">Results confirmed against the Day 1 lab (nginx 1.31.6, api-node-1 on :8001).</p>
+  </section>
+
+</main>
+</body>
+</html>
