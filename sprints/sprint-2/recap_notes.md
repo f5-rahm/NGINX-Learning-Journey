@@ -35,7 +35,7 @@ Test: 8001 `weight=3` vs 8002 default, 400 requests each.
   * `backup`: round-robin, `least_conn`, `least_time` accept it. `hash`, `ip_hash`, `random` fail `nginx -t` with `balancing method does not support parameter "backup"`.
   * `slow_start` (Plus): same restriction set. OSS rejects it entirely as `invalid parameter`.
 * Layered modules wrap whatever method is configured. Before 1.29.7 the docs required the balancing method to be declared *before* `keepalive`; that ordering rule is moot now that keepalive is on by default.
-* From memory of the source, unverified: `hash`/`ip_hash` fall back to round-robin after about 20 failed peer attempts.
+* Unverified and **not in the docs**: `hash`/`ip_hash` falling back to round-robin after about 20 failed peer attempts (from memory of the source). The `ip_hash` docs only say failed requests pass to the next server until all functioning servers have been tried. Left out of the recap.
 * **BIG-IP contrast:** LB method, priority groups, ratio, and OneConnect are independent, freely combinable settings. In NGINX, combinations depend on the method module, so check with `nginx -t`.
 
 ### `backup` vs BIG-IP priority groups
@@ -63,7 +63,7 @@ Same idea. The nuances:
 * **Reuse scope:** always shared across all clients (the backend only sees NGINX's address), like a `0.0.0.0` source mask.
 * **Pool scope:** per worker, per server, and since 1.29.7 per `location` by default (`keepalive 32 local`). OneConnect pools are per TMM.
 * **Size:** `keepalive N` caps *idle* connections per worker (LRU eviction). Active connections are capped separately by `max_conns`.
-* **Lifecycle knobs** in `upstream` ≈ OneConnect max age / max reuse / idle timeout: `keepalive_time` (1h), `keepalive_requests` (1000), `keepalive_timeout` (60s). Defaults are from memory; confirm against the docs in the recap.
+* **Lifecycle knobs** in `upstream` ≈ OneConnect max age / max reuse / idle timeout: `keepalive_time` (1h), `keepalive_requests` (1000), `keepalive_timeout` (60s). Defaults confirmed in the nginx.org upstream docs.
 * **NTLM:** the same trap as OneConnect. NGINX Plus `ntlm` pins a server connection to one client connection.
 * **Defaults:** before 1.29.7, the NGINX default (HTTP/1.0 + `Connection: close`, no reuse) was the equivalent of running HTTP without OneConnect, which is a misconfiguration by BIG-IP standards. Since 1.29.7, reuse is on with zero config.
 
