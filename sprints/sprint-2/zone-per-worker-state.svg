@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="680" viewBox="0 0 760 680" font-family="Lato">
+  <defs>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#D9603B"/>
+    </marker>
+    <marker id="an" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3D8B4A"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="680" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="24" y="40" font-size="22" font-weight="bold" fill="#1F1F1F">Without a zone, every worker is its own load balancer</text>
+  <text x="24" y="65" font-size="14" fill="#555555">NGINX upstream state · Sprint 2, Day 2 of my NGINX learning journey</text>
+
+  <!-- Legend -->
+  <rect x="24" y="86" width="16" height="16" rx="3" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="48" y="99" font-size="13" fill="#333">Worker process</text>
+  <rect x="170" y="86" width="16" height="16" rx="3" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+  <text x="194" y="99" font-size="13" fill="#333">Private per-worker state</text>
+  <rect x="370" y="86" width="16" height="16" rx="3" fill="#E2F0E3" stroke="#3D8B4A" stroke-width="2"/>
+  <text x="394" y="99" font-size="13" fill="#333">Shared memory zone</text>
+  <rect x="550" y="86" width="16" height="16" rx="3" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="574" y="99" font-size="13" fill="#333">Busy node (slow request)</text>
+
+  <!-- ============ Left panel: no zone ============ -->
+  <rect x="20" y="120" width="352" height="382" rx="8" fill="#F4F4F1" stroke="#9A9A96" stroke-width="1.5"/>
+  <text x="196" y="148" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="middle">No zone</text>
+  <text x="196" y="167" font-size="13" fill="#555555" text-anchor="middle">Each worker balances from its own private counts</text>
+
+  <!-- Worker 1 -->
+  <rect x="38" y="182" width="150" height="112" rx="8" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="113" y="204" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Worker 1</text>
+  <rect x="50" y="214" width="126" height="68" rx="5" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.2"/>
+  <text x="113" y="232" font-size="12" fill="#6A6A66" text-anchor="middle">Its own counts</text>
+  <text x="113" y="251" font-size="13" fill="#1F1F1F" text-anchor="middle">node-1 · 1 active</text>
+  <text x="113" y="270" font-size="13" fill="#1F1F1F" text-anchor="middle">node-2 · 0 active</text>
+
+  <!-- Worker 2 -->
+  <rect x="204" y="182" width="150" height="112" rx="8" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="279" y="204" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Worker 2</text>
+  <rect x="216" y="214" width="126" height="68" rx="5" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.2"/>
+  <text x="279" y="232" font-size="12" fill="#6A6A66" text-anchor="middle">Its own counts</text>
+  <text x="279" y="251" font-size="13" fill="#D9603B" font-weight="bold" text-anchor="middle">node-1 · 0 active</text>
+  <text x="279" y="270" font-size="13" fill="#1F1F1F" text-anchor="middle">node-2 · 0 active</text>
+
+  <!-- Arrows left -->
+  <line x1="113" y1="294" x2="113" y2="384" stroke="#8A8A86" stroke-width="2" marker-end="url(#ag)"/>
+  <text x="121" y="330" font-size="12" fill="#6A6A66">slow request</text>
+  <line x1="250" y1="294" x2="160" y2="384" stroke="#D9603B" stroke-width="2.5" marker-end="url(#ar)"/>
+  <line x1="330" y1="294" x2="330" y2="384" stroke="#8A8A86" stroke-width="2" marker-end="url(#ag)"/>
+  <text x="264" y="336" font-size="12" fill="#D9603B" text-anchor="middle" font-weight="bold">thinks node-1</text>
+  <text x="264" y="351" font-size="12" fill="#D9603B" text-anchor="middle" font-weight="bold">is idle</text>
+
+  <!-- Nodes left -->
+  <rect x="48" y="386" width="130" height="54" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="113" y="408" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">node-1</text>
+  <text x="113" y="428" font-size="12" fill="#555555" text-anchor="middle">busy: 6 s request</text>
+  <rect x="235" y="386" width="130" height="54" rx="8" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+  <text x="300" y="408" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">node-2</text>
+  <text x="300" y="428" font-size="12" fill="#555555" text-anchor="middle">idle</text>
+
+  <!-- Result left -->
+  <rect x="38" y="454" width="316" height="34" rx="6" fill="#FBE3DA" stroke="#D9603B" stroke-width="1.5"/>
+  <text x="196" y="476" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">6–8 of 20 new requests hit the busy node</text>
+
+  <!-- ============ Right panel: zone ============ -->
+  <rect x="388" y="120" width="352" height="382" rx="8" fill="#F4F4F1" stroke="#9A9A96" stroke-width="1.5"/>
+  <text x="564" y="148" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="middle">With zone</text>
+  <text x="564" y="167" font-size="13" fill="#555555" text-anchor="middle">Every worker balances from one shared view</text>
+
+  <!-- Workers right -->
+  <rect x="406" y="182" width="150" height="50" rx="8" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="481" y="212" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Worker 1</text>
+  <rect x="572" y="182" width="150" height="50" rx="8" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="647" y="212" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Worker 2</text>
+  <line x1="481" y1="234" x2="481" y2="262" stroke="#3D8B4A" stroke-width="2" marker-start="url(#an)" marker-end="url(#an)"/>
+  <line x1="647" y1="234" x2="647" y2="262" stroke="#3D8B4A" stroke-width="2" marker-start="url(#an)" marker-end="url(#an)"/>
+  <text x="564" y="252" font-size="12" fill="#3D8B4A" text-anchor="middle" font-weight="bold">read + update</text>
+
+  <!-- Zone -->
+  <rect x="406" y="264" width="316" height="70" rx="8" fill="#E2F0E3" stroke="#3D8B4A" stroke-width="2"/>
+  <text x="564" y="288" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">zone lc_zone_pool · shared memory</text>
+  <text x="500" y="310" font-size="13" fill="#1F1F1F" text-anchor="middle">node-1 · 1 active</text>
+  <text x="628" y="310" font-size="13" fill="#1F1F1F" text-anchor="middle">node-2 · 0 active</text>
+  <text x="564" y="327" font-size="12" fill="#555555" text-anchor="middle">one set of counts for all workers</text>
+
+  <!-- Arrows right -->
+  <line x1="481" y1="334" x2="481" y2="384" stroke="#8A8A86" stroke-width="2" marker-end="url(#ag)"/>
+  <text x="489" y="364" font-size="12" fill="#6A6A66">slow request only</text>
+  <line x1="668" y1="334" x2="668" y2="384" stroke="#3D8B4A" stroke-width="3" marker-end="url(#an)"/>
+  <text x="676" y="364" font-size="12" fill="#3D8B4A" font-weight="bold">all 20</text>
+
+  <!-- Nodes right -->
+  <rect x="416" y="386" width="130" height="54" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="481" y="408" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">node-1</text>
+  <text x="481" y="428" font-size="12" fill="#555555" text-anchor="middle">busy: 6 s request</text>
+  <rect x="603" y="386" width="130" height="54" rx="8" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+  <text x="668" y="408" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">node-2</text>
+  <text x="668" y="428" font-size="12" fill="#555555" text-anchor="middle">takes the new work</text>
+
+  <!-- Result right -->
+  <rect x="406" y="454" width="316" height="34" rx="6" fill="#E2F0E3" stroke="#3D8B4A" stroke-width="1.5"/>
+  <text x="564" y="476" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">0 of 20 new requests hit the busy node</text>
+
+  <!-- ============ Bottom: what lives where ============ -->
+  <rect x="20" y="520" width="720" height="112" rx="8" fill="#F4F4F1" stroke="#9A9A96" stroke-width="1.5"/>
+  <text x="40" y="546" font-size="14" font-weight="bold" fill="#3D8B4A">Shared once you add a zone</text>
+  <text x="40" y="568" font-size="13" fill="#1F1F1F">Round-robin position</text>
+  <text x="40" y="586" font-size="13" fill="#1F1F1F">Active connections (least_conn)</text>
+  <text x="40" y="604" font-size="13" fill="#1F1F1F">Failure marks (max_fails)</text>
+  <text x="40" y="622" font-size="13" fill="#1F1F1F">Response times (least_time)</text>
+
+  <text x="300" y="546" font-size="14" font-weight="bold" fill="#2F6FD6">Still per worker, even with a zone</text>
+  <text x="300" y="568" font-size="13" fill="#1F1F1F">Idle keepalive connections</text>
+  <text x="300" y="586" font-size="13" fill="#555555">Sockets belong to a process</text>
+
+  <text x="550" y="546" font-size="14" font-weight="bold" fill="#1F1F1F">Requires a zone</text>
+  <text x="550" y="568" font-size="13" fill="#1F1F1F">server … resolve</text>
+  <text x="550" y="586" font-size="13" fill="#1F1F1F">NGINX Plus API</text>
+  <text x="550" y="604" font-size="13" fill="#1F1F1F">state files (Plus)</text>
+
+  <!-- Footnote -->
+  <text x="24" y="660" font-size="12" fill="#6A6A66">Measured on nginx 1.31.6 · 2 workers · least_conn · one 6 s request in flight, then 20 fast requests</text>
+</svg>

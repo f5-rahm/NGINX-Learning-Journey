@@ -14,6 +14,8 @@ Where my BIG-IP habits would have misled me:
 
 The biggest concept of the day was `zone`. Workers share nothing unless the upstream has a shared memory zone, so without one you're running a separate load balancer per worker. It showed up all over the lab:
 
+![Without a zone, every worker is its own load balancer](zone-per-worker-state.png)
+
 - `least_conn` with one slow request in flight: without a zone, 6 to 8 of 20 new requests still went to the busy node. With a zone, 0 of 20.
 - Right after the primaries recovered, the split between primary and backup varied from run to run without a zone (6/4, 8/2, 10/0). With a zone it was identical every time.
 - `resolve` won't even load without one.
