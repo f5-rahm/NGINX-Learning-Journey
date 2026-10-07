@@ -18,21 +18,52 @@ upstream lumina_api_nodes {
 }
 ```
 
-**Per-worker state**
-* Each worker process keeps its **own** balancing state and failure counters unless the upstream has a `zone`.
-* A `zone` puts that state in shared memory, so every worker sees the same counts.
-* That matters most for `least_conn` (Activity 3.3) and for `max_fails` (Day 3).
-
 **Parameters covered on other days**
 * `max_fails` / `fail_timeout`: Day 3.
 * `drain`, `resolve`, `slow_start`: Day 4.
 
-### 1.2 Balancing Methods and How Each Goes Wrong
+### 1.2 Per-Worker State and the `zone` Directive
+```nginx
+upstream lumina_api_nodes {
+    zone lumina_api_nodes 64k;    # name + shared memory size
+    least_conn;
+    server 127.0.0.1:8001;
+    server 127.0.0.1:8002;
+}
+```
+**The problem it solves**
+* Workers are separate processes that share nothing by default.
+* Without a `zone`, every worker holds its **own private copy** of each upstream (inherited from the master) and keeps its own runtime state.
+* NGINX therefore runs `worker_processes` independent load balancers that never compare notes.
+
+| Upstream state | Without `zone` | With `zone` |
+| :--- | :--- | :--- |
+| Round-robin position | Per worker | Shared |
+| Active connections (`least_conn`) | Per worker: a worker sees only its own in-flight requests | Shared: true totals |
+| Failure counts and "unavailable" marks (`max_fails` / `fail_timeout`) | Per worker: a dead server is retried until **each** worker has seen `max_fails` failures | Shared: marked down once, for everyone |
+| Response-time averages (`least_time`) | Per worker | Shared |
+| Idle keepalive connections | Per worker | **Still per worker.** Sockets belong to a process; `zone` doesn't change that. |
+
+**What you'll see when there's no zone**
+* `least_conn` sends new work to a node that's already busy. You'll measure this in Activity 3.3.
+* Recovery after a failure is inconsistent: some workers still treat a node as down while others use it. You'll see this in Activity 3.5.
+* A dead node gets hit more times than `max_fails` before it's skipped. Day 3 measures this.
+* The more workers you run (`worker_processes auto` on a 32-core box), the worse all three get.
+
+**What requires a zone**
+* `server ... resolve` refuses to load without one.
+* The NGINX Plus API and `state` files (Day 4) also need it.
+
+**Cost:** a small fixed block of shared memory (`64k` is the usual starting size in the docs) and brief locking when state is updated. Nearly every production upstream should have one.
+
+*BIG-IP lens:* don't assume BIG-IP-style box-wide member status. In NGINX OSS, even passively learned "this server is down" is private to each worker unless the upstream has a `zone`.
+
+### 1.3 Balancing Methods and How Each Goes Wrong
 
 | Method | How it picks | Best for | Failure mode |
 | :--- | :--- | :--- | :--- |
 | *(default)* round-robin | Smooth weighted rotation | Uniform, short requests | Ignores how busy a node is. Slow requests pile up on whichever node got them. |
-| `least_conn` | Fewest active connections (weighted), round-robin on ties | Variable-duration work: LLM streams, reports, uploads | Without a `zone`, each worker only counts its own connections. |
+| `least_conn` | Fewest active connections (weighted), round-robin on ties | Variable-duration work: LLM streams, reports, uploads | Without a `zone`, each worker only counts its own connections (1.2). |
 | `ip_hash` | First **three octets** of the IPv4 client (whole IPv6 address) | Legacy stateful apps without cookies | Everyone behind one NAT, corporate proxy, CDN, or `/24` lands on one node. |
 | `hash $key` | `hash(key) mod N` | Routing by tenant, user, or URI | Adding or removing a node remaps **most** keys. |
 | `hash $key consistent` | Ketama ring (160 points per server) | Caches and sharded data | Adding one node moves only about 1/N of keys, all onto the new node. |
@@ -42,12 +73,12 @@ Also available, and covered in the quizzes rather than the lab:
 * `least_time`: open source since 1.31.0, previously Plus-only.
 * `sticky`: cookie-based session affinity, open source since 1.29.6 (Day 4).
 
-### 1.3 Restrictions Worth Memorizing
+### 1.4 Restrictions Worth Memorizing
 * **`backup`** can't be combined with `hash`, `ip_hash`, or `random`. `nginx -t` fails with `balancing method does not support parameter "backup"`.
 * **`slow_start`** has the same restriction in NGINX Plus. In open source, `nginx -t` rejects it outright as an `invalid parameter`, because it is still Plus-only (Day 4).
 * **With `ip_hash`, take a node out using `down`, never by deleting the line.** Deleting it changes N and reshuffles every client.
 
-### 1.4 Upstream Keepalive: Connection Reuse
+### 1.5 Upstream Keepalive: Connection Reuse
 **Why reuse matters**
 * Without reuse, every proxied request costs a TCP handshake to the backend.
 * Every closed connection then leaves a socket in `TIME_WAIT` (60 s on Linux) on **whichever side closed first**.
@@ -154,9 +185,23 @@ tally /backup/x 10                       # node-1 and node-2 only
 ./mocks.sh start 8001 8002; tally /backup/x 10  # immediately after recovery...
 sleep 11;                  tally /backup/x 10   # ...and after fail_timeout expires
 ```
-* Right after the primaries come back, some traffic **still goes to the backup**.
-* With the defaults (`max_fails=1`, `fail_timeout=10s`), a failed node stays marked unavailable for 10 s even if it's already healthy.
-* Day 3 tunes this. Day 4 shows how NGINX Plus active checks avoid waiting for a client to fail.
+Expected counts per 10-request tally (measured on the lab box over several runs):
+
+| Step | Expected | Why |
+| :--- | :--- | :--- |
+| Baseline | ~5 node-1 / ~5 node-2 (4/6 is normal) | Round-robin; the backup is idle |
+| 8001 stopped | 10 node-2 | 8001 fails once per worker and is marked unavailable there. The retry on node-2 hides the failure from the client. |
+| 8002 stopped | 10 node-3 | No primary is available, so the backup serves |
+| Right after recovery | **Varies: 10 node-3, 8 node-2 + 2 node-3, 6 + 4, or 10 node-2** | Both primaries are healthy, but still marked unavailable for `fail_timeout` (10 s by default) |
+| After 11 s | ~5 / ~5 again, backup idle | `fail_timeout` expired |
+
+**Why "right after recovery" varies:** `backup_pool` has no `zone`, so each worker keeps its own failure marks (1.2). A worker that saw 8002 fail still treats it as down; a worker that didn't uses it. How the 10 requests split between workers decides the count.
+
+*Try it:* add `zone backup_pool 64k;` to `backup_pool`, reload, and repeat the sequence. Compare the "right after recovery" step.
+
+**Takeaways**
+* Passive health checks only learn about recovery when `fail_timeout` expires, even if the node is already healthy.
+* Day 3 tunes `max_fails` and `fail_timeout`. Active health checks, which probe nodes instead of waiting for a client to fail, are in Sprint 12.
 
 ### Activity 3.6: Measuring Connection Reuse (6 min)
 The mock reports `conn_requests`: how many requests the TCP connection it arrived on has carried.
@@ -196,7 +241,7 @@ tw; for i in $(seq 200); do curl -s -o /dev/null localhost:8082/rr/x; done;     
   * `ip_hash` collapses behind NAT.
   * Plain `hash` reshuffles on scale events.
   * `least_conn` is only as good as its counters.
-* **Give upstreams a `zone`.** Without one, each worker balances and counts failures on its own.
+* **Give upstreams a `zone`.** Without one, NGINX runs one independent load balancer per worker: `least_conn` can't see other workers' load, failure marks aren't shared, and recovery is inconsistent.
 * **Consistent hashing moves about 1/N of keys, and only onto the new node.** Plain hashing moves most of them.
 * **Backups and recovered nodes follow `fail_timeout`.** A healthy node can sit idle until its timer expires.
 * **Keepalive is on by default since 1.29.7.** On older builds you need all three lines (`keepalive`, `proxy_http_version 1.1`, `Connection ""`).
