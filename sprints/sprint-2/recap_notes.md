@@ -13,6 +13,26 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
   * It's a silent copy-paste hazard, so lint for it or fail CI on warnings.
 * Default `weight=1` is implicit and invisible in config and `nginx -T`. The only place it shows explicitly is the NGINX Plus API server objects (`"weight": 1`). BIG-IP shows ratio in config.
 
+### Balancing method redefinition: full test (isolated ports, 2 workers, zone)
+Probes per scenario: 10 sequential requests, then 10 fast requests while one node holds a 4 s request.
+
+| Upstream lines | `nginx -t` | Traffic behaved like |
+| :--- | :--- | :--- |
+| *(none)* | ok | round-robin: `1 2 1 2...`, busy node still got 5/10 |
+| `round_robin;` | **`[emerg] unknown directive "round_robin"`**, config rejected | n/a: there is no directive for round-robin; it is only "no method" |
+| `round_robin;` + `least_conn;` (either order) | same `emerg`, rejected before ordering matters | n/a |
+| `least_conn;` | ok | least_conn: busy node got 0/10 |
+| `ip_hash;` then `least_conn;` | `[warn] load balancing method redefined in nginx.conf:8` | **least_conn** (last wins) |
+| `least_conn;` then `ip_hash;` | same warn | **ip_hash**: all 10 to one node, even the busy one |
+| `least_conn;` twice | same warn, even for the identical method | least_conn |
+| `least_conn; random; ip_hash;` | **one warn per redefinition** (lines 8 and 9) | ip_hash |
+| `ip_hash;` placed after the `server` lines | ok, no warn | ip_hash (position relative to `server` lines doesn't matter) |
+
+* **Rule: the last method directive wins.** Every earlier one is silently discarded apart from the warn.
+* **The warning points at the line of the overriding directive** (the later one), not the original.
+* **Where it shows up:** only at config load (`nginx -t`, start, reload), never at runtime. On `nginx -s reload` it appears twice in `error.log`, from two different PIDs: the short-lived `nginx -s reload` process, which parses the config before signaling, and the master, when it re-reads it. It is also printed to the terminal on `-t`/`-s reload`.
+* **Nothing hints at it in traffic or the access log.** Only careful testing or the config-load warning reveals which method is active, so fail CI on `[warn]` from `nginx -t`.
+
 ### Weight across methods
 Test: 8001 `weight=3` vs 8002 default, 400 requests each.
 
