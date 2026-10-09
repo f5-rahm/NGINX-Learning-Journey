@@ -101,7 +101,7 @@ Same idea. The nuances:
 
 ### Lab build experience (learner feedback)
 * **The starter config gave too much advice.** The TODO comments did too much of the thinking. For future sprint exercises, write TODOs as the requirement only and leave the directives out.
-* **The test checked something the requirements didn't ask for.** The README requires only "`/healthz` answered by NGINX itself with `200` JSON". `test_sprint02.sh` also greps for `healthy`, so `{"status": "ok"}` with `application/json` failed. The test or the requirement needs fixing.
+* **The test checked something the requirements didn't ask for.** The README requires only "`/healthz` answered by NGINX itself with `200` JSON". `test_sprint02.sh` also greps for `healthy`, so `{"status": "ok"}` with `application/json` failed. **Fixed:** the README spec, the test table, and the starter TODO now require `"status": "healthy"`. The test parses the JSON and checks that field instead of grepping, so `unhealthy` no longer passes.
 * **Personal syntax gotchas:**
   * Missing closing `;`: I missed 5 of them.
   * Time units: time values take a suffix (`proxy_read_timeout 3s`, `fail_timeout=5s`), and a bare number means seconds. Counts must not have one (`max_fails=2`, `proxy_next_upstream_tries 2`, `keepalive 32`).

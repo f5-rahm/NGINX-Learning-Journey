@@ -77,10 +77,10 @@ fi
 
 echo -e "\n${BLUE}--- Edge health ---${NC}"
 RESP=$(curl -s -w '\n%{http_code}' -H "$HOST" "$TARGET/healthz")
-if [ "$(tail -n1 <<<"$RESP")" = 200 ] && grep -q healthy <<<"$RESP"; then
-    record core 1 "/healthz answered by NGINX with 200 JSON"
+if [ "$(tail -n1 <<<"$RESP")" = 200 ] && [ "$(sed '$d' <<<"$RESP" | field '["status"]')" = healthy ]; then
+    record core 1 "/healthz answered by NGINX with 200 JSON, status healthy"
 else
-    record core 0 "/healthz should return 200 JSON from NGINX" "Got: $RESP"
+    record core 0 "/healthz should return 200 JSON from NGINX with \"status\": \"healthy\"" "Got: $RESP"
 fi
 
 echo -e "\n${BLUE}--- Routing & URI mapping ---${NC}"

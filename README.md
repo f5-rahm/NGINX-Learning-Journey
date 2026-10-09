@@ -20,6 +20,7 @@ By the conclusion of this 14-week journey, the engineer will possess deep, low-l
 ### 1.2 The Dual-Track Curriculum Model
 * **The OSS Baseline (Primary Track):** Built entirely on free, open-source software (NGINX OSS, Linux kernel tools, standard Docker, and local `kind` Kubernetes clusters). Every core sprint is 100% executable without commercial licenses.
 * **The Enterprise Side Quests (Opt-In Paid Track):** Mapped directly from official training decks (`NGINX Full Training.pptx`, 81 slides) and hands-on lab repositories (`NGINX-Ingress-Controller-Lab-main`, `NGINX-Gateway-Fabric-Lab-main`). These quests clearly demonstrate where enterprise capabilities (active health monitoring, on-the-fly upstream APIs, WAF inspection engines, GenAI inference extensions, and BIG-IP CIS integration) either replace complex OSS workarounds or unlock capabilities unavailable in pure OSS.
+  * **How NGINX Plus runs in the lab:** OSS stays on the host; NGINX Plus runs in a container with the license mounted from `~/plus/`. Every side quest follows [`docs/nginx-plus-lab.md`](docs/nginx-plus-lab.md).
 
 ---
 

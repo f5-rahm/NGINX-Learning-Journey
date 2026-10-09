@@ -1,0 +1,81 @@
+# Running NGINX Plus in the Lab (Side Quest Convention)
+
+Every Enterprise Side Quest that needs NGINX Plus runs it the same way. Open source NGINX stays on the host, and NGINX Plus runs in a container next to it. Day guides link here instead of re-explaining the setup.
+
+---
+
+## 1. Two Engines, One Box
+
+| | NGINX OSS (core track) | NGINX Plus (side quests) |
+| :--- | :--- | :--- |
+| **Runs as** | Host binary `/usr/sbin/nginx`, started from the sprint's `lab/` directory | Docker container from `private-registry.nginx.com/nginx-plus/base` |
+| **Start** | `ngx` (shell function: `-p $PWD -c $PWD/nginx.conf`) | `docker run -d --name <lab>-plus ...` (template in 3) |
+| **Config** | `lab/nginx.conf` | `lab/plus/nginx.conf`, mounted read-only at `/etc/nginx/nginx.conf` |
+| **License** | None | `~/plus/license.jwt` on the host, mounted read-only at `/etc/nginx/license.jwt` |
+| **Test / reload** | `ngx -t` / `ngx -s reload` | `docker exec <lab>-plus nginx -t` / `docker exec <lab>-plus nginx -s reload` |
+| **Logs** | `lab/logs/` | `docker logs <lab>-plus` (Plus configs log to stdout/stderr) |
+| **Persistent state** | n/a | `lab/plus/state/`, mounted at `/var/lib/nginx/state` |
+| **Network** | Host | `--network host`, so the container reaches the mocks on `127.0.0.1:800x` |
+| **Stop** | `ngx -s quit` | `docker rm -f <lab>-plus` |
+
+**Ports:** each sprint picks its Plus traffic port (never the OSS lab's port). The Plus API and dashboard are always on **`127.0.0.1:8085`**.
+
+**Why a container:** the OSS install on the host is never touched, the license only exists inside the Plus process, and changing Plus versions means changing one image tag.
+
+---
+
+## 2. One-Time Setup (Once per Lab Box)
+
+The license file stays **outside the repo**, so it can never be committed. All side quests reuse it.
+
+```bash
+mkdir -p -m 700 ~/plus
+cp /path/to/downloaded/license.jwt ~/plus/license.jwt     # from MyF5 (a trial is fine)
+chmod 600 ~/plus/license.jwt
+
+# The same JWT is your registry credential
+docker login private-registry.nginx.com --username="$(cat ~/plus/license.jwt)" --password=none
+
+# Pin the image once; every side quest sources this file
+echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r37-debian' > ~/plus/plus.env
+source ~/plus/plus.env && docker pull "$PLUS_IMAGE"
+```
+* F5 image tags look like `rNN-debian` or `rNN-alpine`. Use the newest your license can pull, and update `plus.env` when you move to a new release.
+* The pull takes a few minutes, so you can do it ahead of time.
+
+| Host path | What it is | In git? |
+| :--- | :--- | :--- |
+| `~/plus/license.jwt` | Your license and registry credential | **Never** |
+| `~/plus/plus.env` | `PLUS_IMAGE=...`, the pinned image | No |
+| `sprints/sprint-N/lab/plus/nginx.conf` | That side quest's Plus config | Yes |
+| `sprints/sprint-N/lab/plus/state/` | Upstream `state` files and Plus licensing state written at runtime | Only `.gitkeep` |
+
+---
+
+## 3. Starting a Side Quest Container
+
+From the sprint's `lab/` directory:
+```bash
+source ~/plus/plus.env
+chmod 777 plus/state                                    # the container's nginx user writes here
+docker run -d --name <lab>-plus --network host \
+  -v "$PWD/plus/nginx.conf:/etc/nginx/nginx.conf:ro" \
+  -v "$HOME/plus/license.jwt:/etc/nginx/license.jwt:ro" \
+  -v "$PWD/plus/state:/var/lib/nginx/state" \
+  "$PLUS_IMAGE"
+docker logs <lab>-plus 2>&1 | tail -20                  # licensing / usage report lines
+curl -s http://127.0.0.1:8085/api/                      # API answers: Plus is up
+```
+`/etc/nginx/license.jwt` is NGINX Plus's default `license_token` path, so the Plus configs don't need an `mgmt` block.
+
+---
+
+## 4. When Something Is Wrong
+
+| Symptom | Check |
+| :--- | :--- |
+| `docker login` or `pull` fails | The JWT is expired or for a different product. Download it again from MyF5. |
+| Container exits right away | `docker logs <lab>-plus`. A config error or a missing license file. |
+| Container runs, but traffic is refused | First usage report hasn't succeeded (`enforce_initial_report on` is the default). Look for licensing lines in `docker logs`, and check outbound HTTPS to `product.connect.nginx.com`. |
+| `port already in use` | The OSS instance or another container holds the port. `ss -ltnp \| grep <port>`. |
+| API answers, but writes fail with `UpstreamStatic` | The upstream has no `zone`. |

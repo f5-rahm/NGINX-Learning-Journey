@@ -226,4 +226,8 @@ __marimo__/
 
 # Sprint 2 mock backend pidfiles
 sprints/*/lab/run/
-sprints/*/lab/plus/state/*.state
+sprints/*/lab/plus/state/*
+!sprints/*/lab/plus/state/.gitkeep
+
+# NGINX Plus license (lives in ~/plus, never in the repo; see docs/nginx-plus-lab.md)
+*.jwt

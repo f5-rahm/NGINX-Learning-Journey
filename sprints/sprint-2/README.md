@@ -142,7 +142,7 @@ mkdir -p logs temp/{client,proxy,fastcgi,uwsgi,scgi}
 
 Copy `lab/starter_nginx.conf` to `lab/nginx.conf` and configure NGINX on **8082** (`server_name lumina.local`) as the edge for three tiers:
 
-1. **`/healthz`**: answered by NGINX itself with `200` JSON.
+1. **`/healthz`**: answered by NGINX itself with `200` JSON containing `"status": "healthy"`.
 2. **Frontend SPA**: `/` serves `lab/html/` with a `try_files` fallback to `/index.html`.
 3. **Core API**: `/api/v1/` proxies to upstream `lumina_api_nodes`.
    * Nodes `127.0.0.1:8001` and `127.0.0.1:8002`, `least_conn`, `max_fails=2 fail_timeout=5s`.
@@ -164,7 +164,7 @@ The suite starts any mock backends that aren't running (and stops them afterward
 
 | # | Core assertion (gate: 8/8) |
 | :--- | :--- |
-| 1 | `/healthz` returns 200 JSON from NGINX |
+| 1 | `/healthz` returns 200 JSON from NGINX with `"status": "healthy"` |
 | 2 | `/api/v1/` reaches an api node |
 | 3 | URI and query string arrive unchanged |
 | 4 | Backend sees `Host: lumina.local`, `X-Real-IP`, `X-Forwarded-Proto: http` |
