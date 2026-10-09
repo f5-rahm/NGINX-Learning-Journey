@@ -118,7 +118,7 @@ mkdir -p logs temp/{client,proxy,fastcgi,uwsgi,scgi}
 * **The OSS control API** (1.31.5+, `nginx -l`) makes reloads scriptable and observable. It doesn't make pool changes reload-free.
 * **What OSS has absorbed:** `resolve`/`service=` (1.27.3), `sticky` and `drain` (1.29.6), keepalive by default (1.29.7), and `least_time` (1.31.0).
 * **Still NGINX Plus:**
-  * The REST API (versioned; R36 serves up to **version 9**) to add, modify, drain, and delete servers in shared memory with no reload.
+  * The REST API (versioned: R37 serves up to **version 10**, R36 only 9) to add, modify, drain, and delete servers in shared memory with no reload.
   * `state` files.
   * `slow_start`.
   * Live per-peer metrics, `queue`.

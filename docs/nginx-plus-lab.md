@@ -37,14 +37,18 @@ chmod 600 ~/plus/license.jwt
 docker login private-registry.nginx.com --username="$(cat ~/plus/license.jwt)" --password=none
 
 # Pin the image once; every side quest sources this file
-echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r36-debian' > ~/plus/plus.env
+echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r37.1-debian' > ~/plus/plus.env
 source ~/plus/plus.env && docker pull "$PLUS_IMAGE"
 ```
-* F5 image tags look like `rNN`, `rNN-debian` or `rNN-alpine`. Those tags are rebuilt with OS patches, and dated builds (`rNN-debian-trixie-YYYYMMDDhhmm`) pin an exact image. List what your license can pull, then update `plus.env` when you move to a new release:
+* **Pin a release tag.** Up to R36, tags were `rNN-debian` (`r36-debian`). From R37 on, releases have a point number: `r37.1-debian`, with an identical alias `nginx-plus-r37.1-debian`. There's no plain `r37`. Release tags are rebuilt with OS patches but never change release.
+* **Avoid floating tags** (`debian`, `alpine`, `nginx-plus`, `nginx-plus-YYYYMMDD`). They jump to the next release on your next pull and can silently change the NGINX base and the API version under a guide.
+* **Use `nginx-plus/base`, not `nginx-plus/agent`.** The `agent` image adds the NGINX Agent for NGINX One / Instance Manager. The labs don't use a management plane.
+* List the release tags your license can pull, then update `plus.env` when you move to a new release:
   ```bash
   curl -s -u "$(cat ~/plus/license.jwt):none" https://private-registry.nginx.com/v2/nginx-plus/base/tags/list \
-    | jq -r '.tags[]' | grep -E '^r[0-9]+(-debian|-alpine)?$' | sort -V | tail -6
+    | jq -r '.tags[]' | grep -E '^r[0-9]+(\.[0-9]+)?-(debian|alpine)$' | sort -V | tail -6
   ```
+* Check what an image contains without a license: `docker run --rm --entrypoint nginx "$PLUS_IMAGE" -v`.
 * The pull takes a few minutes, so you can do it ahead of time.
 * `docker login` warns about `--password` on the command line and about unencrypted storage. On a single-user lab box both are fine: the password is literally `none`, and `/root/.docker/config.json` is `600` root, the same protection as the license file. You only need to be logged in to **pull**, so `docker logout private-registry.nginx.com` afterward removes the stored token.
 

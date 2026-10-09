@@ -3,7 +3,7 @@
 **Estimated Time:** 60–75 Minutes (15 concepts, 10 setup, 40 hands-on, 10 quiz)  
 **Theme:** Changing a pool in open source means editing config and reloading. NGINX Plus changes it in shared memory through an API. Learn what each costs, and what open source has quietly gained.
 
-> **Status:** The open-source activity was run on the lab box (nginx 1.31.6). The NGINX Plus activities are being run for the first time on R36 (`nginx-plus-r36-p8`, built on open source 1.29.3). Setup through Activity 3.2 is confirmed. The later activities follow F5 docs, so expect small output differences and note them in your journal.
+> **Status:** The open-source activity was run on the lab box (nginx 1.31.6). NGINX Plus runs as **R37.1** (`nginx-plus-r37.1.1`, built on open source 1.31.3), serving API versions 1 to 10. Setup and Activity 3.2 were confirmed on R36 and the R37.1 startup; the later activities follow F5 docs, so expect small output differences and note them in your journal.
 
 ---
 
@@ -50,7 +50,7 @@ Since 1.31.5, open source NGINX can be built with a control API (`--with-control
 * **No zone, no API.** An upstream without a `zone` is static. The API refuses to change it.
 * **Without a `state` file, API changes live only in memory.** A restart rebuilds the pool from the config. With a `state` file, NGINX Plus writes every change to disk and reads it back at startup, so the file becomes the source of truth for that upstream.
 * **Write access is opt-in.** The API is read-only unless write access is turned on, and it belongs on a management-only listener, never on the traffic port.
-* **The API is versioned in the URL, and each release supports a range.** Asking the instance which versions it serves is part of the API. The nginx.org docs describe version 10, but R36 serves only 1 to 9. Scripts should ask the instance instead of hard-coding a version.
+* **The API is versioned in the URL, and each release supports a range.** Asking the instance which versions it serves is part of the API. R37 serves 1 to 10, while R36 served only 1 to 9, so a guide that hard-coded 10 broke on R36. Scripts should ask the instance instead of hard-coding a version.
 
 **BIG-IP lens**
 
@@ -94,10 +94,10 @@ The license stays outside the repo and is reused by every side quest.
 mkdir -p -m 700 ~/plus
 cp /path/to/license.jwt ~/plus/license.jwt && chmod 600 ~/plus/license.jwt
 docker login private-registry.nginx.com --username="$(cat ~/plus/license.jwt)" --password=none
-echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r36-debian' > ~/plus/plus.env
+echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r37.1-debian' > ~/plus/plus.env
 source ~/plus/plus.env && docker pull "$PLUS_IMAGE"
 ```
-R36 was the newest release on Oct 9, 2026. To see what your license can pull, use the tag listing in [`docs/nginx-plus-lab.md`](../../docs/nginx-plus-lab.md).
+R37.1 was the newest release on Oct 9, 2026. From R37 on, tags carry a point release (`r37.1-debian`); there's no plain `r37`. Pin a release tag, not a floating one like `debian`. The tag listing and naming rules are in [`docs/nginx-plus-lab.md`](../../docs/nginx-plus-lab.md).
 
 ### 2.3 Start Both Engines
 ```bash
@@ -131,9 +131,9 @@ otally() { for i in $(seq "${1:-20}"); do curl -s -H 'Host: lumina.local' localh
 
 ## 3. Hands-on Guided Discovery Activities (40 Minutes)
 
-**Plus API quick reference** (`<v>` is the newest version from `GET /api/`: 9 on R36)
+**Plus API quick reference** (`<v>` is the newest version from `GET /api/`: 10 on R37)
 ```
-GET    /api/                                            → supported versions, e.g. [1,...,9]
+GET    /api/                                            → supported versions, e.g. [1,...,10]
 GET    /api/<v>/nginx                                   → version and build
 GET    /api/<v>/license                                 → license / usage-report status
 GET    /api/<v>/http/upstreams/<name>                   → live peer stats
@@ -194,16 +194,16 @@ sed -i 's| weight=x;| drain;|' nginx.conf && ctl /1/control/config -X PATCH   # 
 ### Activity 3.2 (Plus): Is the License Working? (3 min)
 ```bash
 docker logs lumina-plus 2>&1 | grep -E 'nginx/|emerg|crit|license'   # startup banner, any license errors
-curl -s http://127.0.0.1:8085/api/; echo                            # supported versions: [1,...,9] on R36
-curl -s http://127.0.0.1:8085/api/10/nginx; echo                    # what a hard-coded newer version gets
+curl -s http://127.0.0.1:8085/api/; echo                            # supported versions: [1,...,10] on R37
+curl -s http://127.0.0.1:8085/api/11/nginx; echo                    # what a version this release doesn't serve gets
 api /nginx | jq '{version, build}'
 api /license | jq .
 ```
 **What you'll see**
 * **The logs say nothing about the usage report when it succeeds.** NGINX Plus logs licensing only when something is wrong, such as `License file is required`. The API is where you confirm it.
-* `/api/10/...` returns `404 UnknownVersion` on R36, even though the nginx.org docs describe version 10. That's why the `api` helper asks the instance for its newest version.
-* `/license` shows `reporting.healthy: true` and `fails: 0` once the first report went through. `eval: true` marks a trial, `active_till` is the expiry as a Unix time (`date -d @<value>`), and `grace` is how long, in seconds, the instance keeps serving if reporting later fails.
-* *Journal:* which open source version is this Plus release built on? Compare it with the host's 1.31.6. Which Day 2 defaults does that change?
+* `/api/11/...` returns `404 UnknownVersion`. On R36 the same happened to `/api/10/`, because R36 serves only up to 9. That's why the `api` helper asks the instance for its newest version.
+* `/license` shows `reporting.healthy: true` and `fails: 0` once the first report went through. `eval: true` marks a trial, `active_till` is the expiry as a Unix time (`date -d @<value>`), `grace` is how long, in seconds, the instance keeps serving if reporting later fails, and `pending_renewal` (new in R37) flags a license due for renewal.
+* *Journal:* which open source version is this Plus release built on? Compare it with the host's 1.31.6. Is it new enough for the 1.29.7 keepalive defaults from Day 2?
 
 ### Activity 3.3: Start From an Empty Pool (5 min)
 ```bash
