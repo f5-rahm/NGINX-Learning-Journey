@@ -94,10 +94,10 @@ The license stays outside the repo and is reused by every side quest.
 mkdir -p -m 700 ~/plus
 cp /path/to/license.jwt ~/plus/license.jwt && chmod 600 ~/plus/license.jwt
 docker login private-registry.nginx.com --username="$(cat ~/plus/license.jwt)" --password=none
-echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r37-debian' > ~/plus/plus.env
+echo 'PLUS_IMAGE=private-registry.nginx.com/nginx-plus/base:r36-debian' > ~/plus/plus.env
 source ~/plus/plus.env && docker pull "$PLUS_IMAGE"
 ```
-F5 tags look like `rNN-debian` or `rNN-alpine`. Use the newest your license can pull.
+R36 was the newest release on Oct 9, 2026. To see what your license can pull, use the tag listing in [`docs/nginx-plus-lab.md`](../../docs/nginx-plus-lab.md).
 
 ### 2.3 Start Both Engines
 ```bash
@@ -123,6 +123,7 @@ ctl() { curl -s --unix-socket "$PWD/run/control.sock" "http://localhost$1" "${@:
 api() { curl -s "http://127.0.0.1:8085/api/10$1" "${@:2}"; echo; }                              # Plus API
 U=/http/upstreams/lumina_api_nodes
 tally() { for i in $(seq "${2:-20}"); do curl -s -H 'Host: lumina.local' "localhost:8084$1" | jq -r .node; done | sort | uniq -c; }
+otally() { for i in $(seq "${1:-20}"); do curl -s -H 'Host: lumina.local' localhost:8082/api/v1/x | jq -r .node; done | sort | uniq -c; }   # OSS gateway
 ```
 
 ---
@@ -143,25 +144,42 @@ DELETE /api/10/http/upstreams/<name>/servers/<id>       → remove → 200
 **Dashboard:** `http://127.0.0.1:8085/dashboard.html`. From your workstation, use `ssh -L 8085:127.0.0.1:8085 <lab-host>`.
 
 ### Activity 3.1 (OSS): The Cost of a Reload (10 min)
-Look at the running instance through the control socket:
+**a. Before:** look at the running instance and where traffic goes.
 ```bash
 ctl /1/nginx
-ctl /1/control/processes
+ctl /1/control/processes | jq -c '.[]'                              # two workers, "exiting": false
+otally                                                              # api-node-1 and api-node-2 only
 ```
-Open a long-lived chat in the background, then "scale out" the OSS way:
+
+**b. Scale out the OSS way** while a long-lived chat is open:
 ```bash
 ./ws_client.py ws://localhost:8082/ws/chat hello --idle 30 &      # holds a tunnel for 30 s
 sleep 1
 sed -i 's|server 127.0.0.1:8002 max_fails=2 fail_timeout=5s;|&\n        server 127.0.0.1:8004 max_fails=2 fail_timeout=5s;|' nginx.conf
+grep -c 8004 nginx.conf                                             # must be 1; this sed adds a line every time it runs
 ctl /1/control/config -X PATCH                                      # reload; prints {"logs":[]} on success
-ctl /1/control/processes | jq -c '.[]'                              # one worker "exiting": true
-ps -o pid,args --ppid "$(cat logs/nginx.pid)"                       # "worker process is shutting down"
-wait; sleep 1; ctl /1/control/processes | jq -c '.[]'               # gone once the tunnel closes
+ctl /1/control/processes | jq -c '.[]'
+ps -o pid,args --ppid "$(cat logs/nginx.pid)"
+otally                                                              # api-node-3 now appears
+wait; sleep 1; ctl /1/control/processes | jq -c '.[]'               # after the chat closes
 ```
-**What happens**
-* The new node took traffic only after a reload, and an old worker stayed alive as long as the WebSocket did.
-* Reload with a typo (try `weight=x`): `PATCH` returns the `emerg` text in `logs`, and the old config keeps running.
-* *Try it:* change the 8004 line to end in `drain;` and `PATCH` again. OSS 1.29.6+ accepts it, and node-3 stops receiving new requests. It's the same effect as Plus's drain, delivered by a reload.
+**What you'll see**
+* **Every old worker is marked `"exiting": true`**, and two new workers start.
+* In `ps`, the old worker holding the chat shows `worker process is shutting down`. An old worker with no open connections exits right away and may briefly show as `[nginx]` until the master cleans it up.
+* api-node-3 takes traffic only after the reload.
+* When the chat closes, the last old worker exits, and only the two new workers are left.
+
+**c. Drain node-3 with a reload:** change the *existing* 8004 line instead of adding one.
+```bash
+sed -i 's|\(server 127.0.0.1:8004 max_fails=2 fail_timeout=5s\);|\1 drain;|' nginx.conf
+grep -n 8004 nginx.conf                                             # exactly one line, ending in "drain;"
+ctl /1/control/config -X PATCH
+otally                                                              # no api-node-3
+```
+* OSS 1.29.6+ accepts `drain`, with or without a `zone`. It's the same effect as Plus's drain, delivered by a reload.
+* Two lines for the same address count as two separate servers, and NGINX doesn't warn about it. A plain duplicate line keeps taking traffic while its `drain` twin sits idle.
+
+**d. Break it on purpose:** change `drain` to `weight=x` and `PATCH` again. The response carries the `emerg` text in `logs`, and `otally` shows the old config still serving. Put `drain` back and `PATCH` once more.
 
 *Journal:* with an autoscaler adding a node every minute and chats lasting an hour, how many worker generations could be alive at once?
 

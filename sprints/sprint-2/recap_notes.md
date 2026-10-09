@@ -113,6 +113,27 @@ Same idea. The nuances:
 
 ---
 
+## Day 4: NGINX Plus Upstreams (Enterprise Side Quest)
+
+### The OSS control socket (verified on an isolated 1.31.6 instance)
+* `nginx -l unix:/path/control.sock` makes the **master** open one extra Unix socket that serves a small JSON API: `/1/nginx` (version), `/1/control/processes` (workers only, with `exiting`), `/1/control/config` (GET returns the config files, PATCH reloads).
+* **Nothing changes in the traffic path.** Same workers, same listeners, no TCP port. The socket is `srw------- root`, so it's local-only and root-only.
+* `-l` is a **command-line flag, not a directive.** It applies only to that run, which is why the lab restarts NGINX instead of reloading. The socket survives reloads (the master holds it) and is removed on quit.
+* **A PATCH reload does the same thing as `nginx -s reload`.** The difference is the feedback: `{"logs":[]}` on success, or the `emerg` text in the response on failure, while the old config keeps serving. `-s reload` only sends a signal, and you have to read `error.log` to find out what happened.
+* BIG-IP lens: a tiny local iControl that can show processes and do `tmsh load sys config`. It can't change pool members.
+
+### Activity 3.1 findings
+* **A reload retires every old worker**, not just one. All of them show `"exiting": true`. Workers with no connections exit right away (`ps` briefly shows `[nginx]` until the master reaps them). Only the worker holding the WebSocket stays, as `worker process is shutting down`.
+* **OSS `drain` works with or without a `zone`.** Isolated test with 30 requests: 3 servers 11/10/9, 9004 `drain` without a zone 16/14/0, with a zone 15/15/0.
+* **Duplicate `server` lines are separate servers, and NGINX doesn't warn.** Running the "add 8004" `sed` a second time left a `drain` line *and* a plain 8004 line. The plain one kept taking traffic (11/10/9), so the drain did nothing. BIG-IP won't let you add the same member to a pool twice.
+* Guide fixes made during testing: the "one worker exiting" comment was wrong, the activity never checked that 8004 took traffic (`otally` added), and the drain step now edits the existing line instead of adding one.
+
+### Plus setup findings
+* `r37-debian` didn't exist. On Oct 9, 2026 the newest release was **R36** (`r36`, `r36-debian`, `r36-alpine`). Those tags are rebuilt almost daily with OS patches. Dated tags (`r36-debian-trixie-YYYYMMDDhhmm`) pin an exact image. The registry's `/v2/nginx-plus/base/tags/list` lists what a license can pull (basic auth with the JWT as the username, `none` as the password).
+* `docker login` warnings: `--password` on the CLI is harmless (the password is literally `none`; the secret is the JWT username). The token is stored base64-encoded in `/root/.docker/config.json`, which is `600` root, the same protection as `~/plus/license.jwt`. Optionally run `docker logout` after pulling.
+
+---
+
 ## Findings From Building the Sprint (all days)
 * **1.29.7 defaults change:** upstream `keepalive 32 local` on, `proxy_http_version 1.1`, no `Connection` header sent. The classic three-line recipe is only needed on older builds.
 * **`TIME_WAIT` lands on whoever closes first.** 200 non-reused HTTP/1.0 requests added 200 `TIME_WAIT` sockets on the *backend* side and 0 on NGINX.
