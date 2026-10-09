@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1290" viewBox="0 0 800 1290" font-family="Lato">
+  <defs>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#D9603B"/>
+    </marker>
+    <marker id="an" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3D8B4A"/>
+    </marker>
+  </defs>
+
+  <rect width="800" height="1290" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="24" y="40" font-size="22" font-weight="bold" fill="#1F1F1F">Will NGINX retry on the next server?</text>
+  <text x="24" y="65" font-size="14" fill="#555555">proxy_next_upstream decision path · Sprint 2, Day 3 of my NGINX learning journey</text>
+
+  <!-- Legend -->
+  <path d="M32,86 L40,94 L32,102 L24,94 z" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="48" y="99" font-size="13" fill="#333">Decision</text>
+  <rect x="130" y="86" width="16" height="16" rx="3" fill="#E2F0E3" stroke="#3D8B4A" stroke-width="2"/>
+  <text x="154" y="99" font-size="13" fill="#333">Retry on another server</text>
+  <rect x="330" y="86" width="16" height="16" rx="3" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="354" y="99" font-size="13" fill="#333">Stop: client gets this attempt's result</text>
+
+  <!-- ============ Start ============ -->
+  <rect x="150" y="128" width="240" height="56" rx="28" fill="#F4F4F1" stroke="#9A9A96" stroke-width="1.5"/>
+  <text x="270" y="152" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">An attempt fails</text>
+  <text x="270" y="171" font-size="12" fill="#555555" text-anchor="middle">connect error · timeout · bad status</text>
+  <line x1="270" y1="184" x2="270" y2="203" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+
+  <!-- ============ D1: response already sent ============ -->
+  <path d="M270,205 L430,260 L270,315 L110,260 z" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="270" y="256" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Any of the response already</text>
+  <text x="270" y="274" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">sent to the client?</text>
+
+  <line x1="430" y1="260" x2="488" y2="260" stroke="#D9603B" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="458" y="252" font-size="12" font-weight="bold" fill="#D9603B" text-anchor="middle">Yes</text>
+  <rect x="490" y="230" width="290" height="60" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="635" y="254" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">No retry: too late</text>
+  <text x="635" y="274" font-size="12" fill="#444" text-anchor="middle">The client already has part of the response</text>
+
+  <line x1="270" y1="315" x2="270" y2="353" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+  <text x="280" y="338" font-size="12" font-weight="bold" fill="#555">No</text>
+
+  <!-- ============ D2: listed in proxy_next_upstream ============ -->
+  <path d="M270,355 L430,410 L270,465 L110,410 z" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="270" y="398" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Failure type listed in</text>
+  <text x="270" y="416" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">proxy_next_upstream?</text>
+  <text x="270" y="434" font-size="12" fill="#555555" text-anchor="middle">default: error timeout</text>
+
+  <line x1="430" y1="410" x2="488" y2="410" stroke="#D9603B" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="458" y="402" font-size="12" font-weight="bold" fill="#D9603B" text-anchor="middle">No</text>
+  <rect x="490" y="372" width="290" height="76" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="635" y="396" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">No retry</text>
+  <text x="635" y="416" font-size="12" fill="#444" text-anchor="middle">An unlisted status (e.g. 500) passes through as is</text>
+  <text x="635" y="434" font-size="12" fill="#444" text-anchor="middle">error → 502 · timeout → 504</text>
+
+  <line x1="270" y1="465" x2="270" y2="503" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+  <text x="280" y="488" font-size="12" font-weight="bold" fill="#555">Yes</text>
+
+  <!-- ============ D3: request already sent ============ -->
+  <path d="M270,505 L430,560 L270,615 L110,560 z" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="270" y="556" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Was the request already</text>
+  <text x="270" y="574" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">sent to the backend?</text>
+
+  <!-- D3 "No" bypass: skips the method check -->
+  <polyline points="110,560 82,560 82,860 108,860" fill="none" stroke="#3D8B4A" stroke-width="1.8" marker-end="url(#an)"/>
+  <text x="96" y="552" font-size="12" font-weight="bold" fill="#3D8B4A" text-anchor="middle">No</text>
+  <text x="72" y="710" font-size="11" fill="#3D8B4A" text-anchor="middle" transform="rotate(-90 72 710)">never reached a backend: any method may retry</text>
+
+  <line x1="270" y1="615" x2="270" y2="653" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+  <text x="280" y="638" font-size="12" font-weight="bold" fill="#555">Yes</text>
+
+  <!-- ============ D4: non-idempotent ============ -->
+  <path d="M270,655 L430,710 L270,765 L110,710 z" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="270" y="698" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Non-idempotent method?</text>
+  <text x="270" y="716" font-size="13" fill="#1F1F1F" text-anchor="middle">POST · LOCK · PATCH</text>
+  <text x="270" y="734" font-size="12" fill="#555555" text-anchor="middle">and no non_idempotent flag</text>
+
+  <line x1="430" y1="710" x2="488" y2="710" stroke="#D9603B" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="458" y="702" font-size="12" font-weight="bold" fill="#D9603B" text-anchor="middle">Yes</text>
+  <rect x="490" y="664" width="290" height="92" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="635" y="688" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">No retry: not safe</text>
+  <text x="635" y="708" font-size="12" fill="#444" text-anchor="middle">The backend may have acted on it (charged a card)</text>
+  <text x="635" y="726" font-size="12" fill="#444" text-anchor="middle">Override only if the backend deduplicates:</text>
+  <text x="635" y="744" font-size="11" fill="#444" text-anchor="middle" font-family="IBM Plex Mono, monospace">proxy_next_upstream ... non_idempotent</text>
+
+  <line x1="270" y1="765" x2="270" y2="803" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+  <text x="280" y="788" font-size="12" font-weight="bold" fill="#555">No</text>
+
+  <!-- ============ D5: budget ============ -->
+  <path d="M270,805 L430,860 L270,915 L110,860 z" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+  <text x="270" y="848" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Retry budget left?</text>
+  <text x="270" y="866" font-size="12" fill="#555555" text-anchor="middle">an untried server · tries left</text>
+  <text x="270" y="882" font-size="12" fill="#555555" text-anchor="middle">within next_upstream_timeout</text>
+
+  <line x1="430" y1="860" x2="488" y2="860" stroke="#D9603B" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="458" y="852" font-size="12" font-weight="bold" fill="#D9603B" text-anchor="middle">No</text>
+  <rect x="490" y="822" width="290" height="76" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+  <text x="635" y="846" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Stop: out of budget</text>
+  <text x="635" y="866" font-size="12" fill="#444" text-anchor="middle">Client gets the last attempt's result</text>
+  <text x="635" y="884" font-size="12" fill="#444" text-anchor="middle">every attempt 503 → the last 503, not a 502</text>
+
+  <line x1="270" y1="915" x2="270" y2="953" stroke="#3D8B4A" stroke-width="1.8" marker-end="url(#an)"/>
+  <text x="280" y="938" font-size="12" font-weight="bold" fill="#3D8B4A">Yes</text>
+
+  <!-- ============ Retry ============ -->
+  <rect x="150" y="955" width="240" height="56" rx="8" fill="#E2F0E3" stroke="#3D8B4A" stroke-width="2"/>
+  <text x="270" y="979" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Try the next server</text>
+  <text x="270" y="998" font-size="12" fill="#444" text-anchor="middle">never the same server twice</text>
+
+  <!-- Loop back to the top -->
+  <polyline points="150,983 40,983 40,156 148,156" fill="none" stroke="#3D8B4A" stroke-width="1.8" marker-end="url(#an)"/>
+  <text x="54" y="400" font-size="11" fill="#3D8B4A" text-anchor="middle" transform="rotate(-90 54 400)">if this attempt fails too, start over</text>
+
+  <!-- ============ Lab results ============ -->
+  <rect x="20" y="1040" width="760" height="230" rx="8" fill="#F4F4F1" stroke="#9A9A96" stroke-width="1.5"/>
+  <text x="36" y="1066" font-size="16" font-weight="bold" fill="#1F1F1F">Activity 3.3 on the lab box</text>
+  <text x="36" y="1085" font-size="12" fill="#555555">retry_pool: 2 servers, max_fails=0 · proxy_next_upstream error timeout http_502 http_503</text>
+
+  <text x="36" y="1112" font-size="12" font-weight="bold" fill="#555">Request</text>
+  <text x="180" y="1112" font-size="12" font-weight="bold" fill="#555">Attempts (ust=)</text>
+  <text x="330" y="1112" font-size="12" font-weight="bold" fill="#555">Client</text>
+  <text x="400" y="1112" font-size="12" font-weight="bold" fill="#555">Where it exits</text>
+  <line x1="36" y1="1120" x2="764" y2="1120" stroke="#C8C8C4" stroke-width="1"/>
+
+  <g font-size="13" fill="#1F1F1F">
+    <text x="36" y="1142">GET + 503</text>
+    <text x="180" y="1142" font-family="IBM Plex Mono, monospace" font-size="12">[503, 503]</text>
+    <text x="330" y="1142">503</text>
+    <text x="400" y="1142"><tspan fill="#3D8B4A">Retried</tspan>, then out of budget (both servers used)</text>
+
+    <text x="36" y="1168">POST + 503</text>
+    <text x="180" y="1168" font-family="IBM Plex Mono, monospace" font-size="12">[503]</text>
+    <text x="330" y="1168">503</text>
+    <text x="400" y="1168"><tspan fill="#D9603B">Not safe</tspan>: the request had been sent</text>
+
+    <text x="36" y="1194">GET + dropped</text>
+    <text x="180" y="1194" font-family="IBM Plex Mono, monospace" font-size="12">[502, 502]</text>
+    <text x="330" y="1194">502</text>
+    <text x="400" y="1194"><tspan fill="#3D8B4A">Retried</tspan>, then out of budget</text>
+
+    <text x="36" y="1220">POST + dropped</text>
+    <text x="180" y="1220" font-family="IBM Plex Mono, monospace" font-size="12">[502]</text>
+    <text x="330" y="1220">502</text>
+    <text x="400" y="1220"><tspan fill="#D9603B">Not safe</tspan>: the backend may have processed it</text>
+
+    <text x="36" y="1246">POST + refused</text>
+    <text x="180" y="1246" font-family="IBM Plex Mono, monospace" font-size="12">[502, 200]</text>
+    <text x="330" y="1246" font-weight="bold">200</text>
+    <text x="400" y="1246"><tspan fill="#3D8B4A">Never sent</tspan>: skips the method check, retried</text>
+  </g>
+</svg>

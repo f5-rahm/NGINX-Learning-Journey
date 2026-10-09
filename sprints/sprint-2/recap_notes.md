@@ -89,6 +89,30 @@ Same idea. The nuances:
 
 ---
 
+## Day 3: Failure Handling, Retries & the Sprint Lab
+
+### Retry decision flow
+* Flowchart for Activity 3.3: `retry-decision-flow.png` (source `.svg`). Embed it in the Day 3 recap the same way the zone diagram is embedded in Day 2.
+* Error log `*N` is the connection serial number. It comes from a counter shared by all workers, and upstream connections seem to use numbers from it too, so the numbers jump (`*3, *8, *11`). Use `grep '\*11 '` to follow one connection.
+
+### Worst-case latency (Activity 3.2 journal) vs BIG-IP 3n+1
+* They're not the same concept. 3n+1 is how long it takes to *detect* a down member. NGINX's tries × timeout is how long *one request* can wait.
+* Worst case ≈ min(tries, servers) × (connect time + read timeout). NGINX never tries the same server twice, so `tries 3` on the 2-server `retry_pool` is 30 s, not 45 s. A blackholed backend costs `proxy_connect_timeout` (60 s) per attempt. A trickling backend has no upper limit.
+
+### Lab build experience (learner feedback)
+* **The starter config gave too much advice.** The TODO comments did too much of the thinking. For future sprint exercises, write TODOs as the requirement only and leave the directives out.
+* **The test checked something the requirements didn't ask for.** The README requires only "`/healthz` answered by NGINX itself with `200` JSON". `test_sprint02.sh` also greps for `healthy`, so `{"status": "ok"}` with `application/json` failed. The test or the requirement needs fixing.
+* **Personal syntax gotchas:**
+  * Missing closing `;`: I missed 5 of them.
+  * Time units: time values take a suffix (`proxy_read_timeout 3s`, `fail_timeout=5s`), and a bare number means seconds. Counts must not have one (`max_fails=2`, `proxy_next_upstream_tries 2`, `keepalive 32`).
+  * `nginx -t` catches both, but the error points at the line *after* a missing `;`.
+
+### Quiz
+* 7/10 first pass, 8/10 on the retake.
+* Missed: why NGINX picks 502 vs 504, and WebSocket `Upgrade` (the request header) vs `101 Switching Protocols` (the response status).
+
+---
+
 ## Findings From Building the Sprint (all days)
 * **1.29.7 defaults change:** upstream `keepalive 32 local` on, `proxy_http_version 1.1`, no `Connection` header sent. The classic three-line recipe is only needed on older builds.
 * **`TIME_WAIT` lands on whoever closes first.** 200 non-reused HTTP/1.0 requests added 200 `TIME_WAIT` sockets on the *backend* side and 0 on NGINX.
