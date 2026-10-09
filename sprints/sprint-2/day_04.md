@@ -3,7 +3,7 @@
 **Estimated Time:** 60–75 Minutes (15 concepts, 10 setup, 40 hands-on, 10 quiz)  
 **Theme:** Changing a pool in open source means editing config and reloading. NGINX Plus changes it in shared memory through an API. Learn what each costs, and what open source has quietly gained.
 
-> **Status:** The open-source activity was run on the lab box (nginx 1.31.6). The NGINX Plus activities follow current F5 docs (API version 10, R33+ licensing) but have **not yet been run end to end** in this repo, because no license was on the box when this was written. Expect to adjust image tags or output details on your first run, and note them in your journal.
+> **Status:** The open-source activity was run on the lab box (nginx 1.31.6). The NGINX Plus activities are being run for the first time on R36 (`nginx-plus-r36-p8`, built on open source 1.29.3). Setup through Activity 3.2 is confirmed. The later activities follow F5 docs, so expect small output differences and note them in your journal.
 
 ---
 
@@ -50,7 +50,7 @@ Since 1.31.5, open source NGINX can be built with a control API (`--with-control
 * **No zone, no API.** An upstream without a `zone` is static. The API refuses to change it.
 * **Without a `state` file, API changes live only in memory.** A restart rebuilds the pool from the config. With a `state` file, NGINX Plus writes every change to disk and reads it back at startup, so the file becomes the source of truth for that upstream.
 * **Write access is opt-in.** The API is read-only unless write access is turned on, and it belongs on a management-only listener, never on the traffic port.
-* **The API is versioned in the URL.** This lab uses version 10.
+* **The API is versioned in the URL, and each release supports a range.** Asking the instance which versions it serves is part of the API. The nginx.org docs describe version 10, but R36 serves only 1 to 9. Scripts should ask the instance instead of hard-coding a version.
 
 **BIG-IP lens**
 
@@ -112,17 +112,18 @@ ngx -l unix:$PWD/run/control.sock
 source ~/plus/plus.env
 chmod 777 plus/state && touch plus/state/lumina_api_nodes.state && chmod 666 plus/state/lumina_api_nodes.state
 docker run -d --name lumina-plus --network host \
-  -v "$PWD/plus/nginx.conf:/etc/nginx/nginx.conf:ro" \
-  -v "$HOME/plus/license.jwt:/etc/nginx/license.jwt:ro" \
-  -v "$PWD/plus/state:/var/lib/nginx/state" \
+  --mount type=bind,src="$PWD/plus/nginx.conf",dst=/etc/nginx/nginx.conf,readonly \
+  --mount type=bind,src="$HOME/plus/license.jwt",dst=/etc/nginx/license.jwt,readonly \
+  --mount type=bind,src="$PWD/plus/state",dst=/var/lib/nginx/state \
   "$PLUS_IMAGE"
 ```
 Shell helpers for the activities:
 ```bash
 ctl() { curl -s --unix-socket "$PWD/run/control.sock" "http://localhost$1" "${@:2}"; echo; }   # OSS control API
-api() { curl -s "http://127.0.0.1:8085/api/10$1" "${@:2}"; echo; }                              # Plus API
+V=$(curl -s http://127.0.0.1:8085/api/ | jq '.[-1]'); echo "Plus API version $V"              # newest version this instance serves
+api() { curl -s "http://127.0.0.1:8085/api/$V$1" "${@:2}"; echo; }                              # Plus API
 U=/http/upstreams/lumina_api_nodes
-tally() { for i in $(seq "${2:-20}"); do curl -s -H 'Host: lumina.local' "localhost:8084$1" | jq -r .node; done | sort | uniq -c; }
+tally() { for i in $(seq "${2:-20}"); do curl -s -H 'Host: lumina.local' "localhost:8084${1:-/api/v1/x}" | jq -r .node; done | sort | uniq -c; }   # Plus gateway
 otally() { for i in $(seq "${1:-20}"); do curl -s -H 'Host: lumina.local' localhost:8082/api/v1/x | jq -r .node; done | sort | uniq -c; }   # OSS gateway
 ```
 
@@ -130,16 +131,16 @@ otally() { for i in $(seq "${1:-20}"); do curl -s -H 'Host: lumina.local' localh
 
 ## 3. Hands-on Guided Discovery Activities (40 Minutes)
 
-**Plus API quick reference (version 10)**
+**Plus API quick reference** (`<v>` is the newest version from `GET /api/`: 9 on R36)
 ```
-GET    /api/                                            → supported versions, e.g. [1,...,10]
-GET    /api/10/nginx                                    → version and build
-GET    /api/10/license                                  → license / usage-report status
-GET    /api/10/http/upstreams/<name>                    → live peer stats
-GET    /api/10/http/upstreams/<name>/servers            → configured servers (with ids)
-POST   /api/10/http/upstreams/<name>/servers            → add   {"server":"127.0.0.1:8004", ...} → 201
-PATCH  /api/10/http/upstreams/<name>/servers/<id>       → modify {"drain":true} | {"down":true} | {"weight":3}
-DELETE /api/10/http/upstreams/<name>/servers/<id>       → remove → 200
+GET    /api/                                            → supported versions, e.g. [1,...,9]
+GET    /api/<v>/nginx                                   → version and build
+GET    /api/<v>/license                                 → license / usage-report status
+GET    /api/<v>/http/upstreams/<name>                   → live peer stats
+GET    /api/<v>/http/upstreams/<name>/servers           → configured servers (with ids)
+POST   /api/<v>/http/upstreams/<name>/servers           → add   {"server":"127.0.0.1:8004", ...} → 201
+PATCH  /api/<v>/http/upstreams/<name>/servers/<id>      → modify {"drain":true} | {"down":true} | {"weight":3}
+DELETE /api/<v>/http/upstreams/<name>/servers/<id>      → remove → 200
 ```
 **Dashboard:** `http://127.0.0.1:8085/dashboard.html`. From your workstation, use `ssh -L 8085:127.0.0.1:8085 <lab-host>`.
 
@@ -169,29 +170,40 @@ wait; sleep 1; ctl /1/control/processes | jq -c '.[]'               # after the 
 * api-node-3 takes traffic only after the reload.
 * When the chat closes, the last old worker exits, and only the two new workers are left.
 
-**c. Drain node-3 with a reload:** change the *existing* 8004 line instead of adding one.
+**c. Drain node-3 with a reload:** change the *existing* 8004 line instead of adding one. No chat is needed for c and d. They're about where traffic goes. (Optional: start the chat first, and you'll see the drain also leaves an old worker shutting down, because it's still a reload.)
 ```bash
 sed -i 's|\(server 127.0.0.1:8004 max_fails=2 fail_timeout=5s\);|\1 drain;|' nginx.conf
 grep -n 8004 nginx.conf                                             # exactly one line, ending in "drain;"
 ctl /1/control/config -X PATCH
-otally                                                              # no api-node-3
+sleep 1; otally                                                     # no api-node-3
 ```
+* Without the `sleep`, a request or two can still reach api-node-3. For a few milliseconds after `PATCH` returns, old workers running the old config may still accept connections. A reload isn't instant.
 * OSS 1.29.6+ accepts `drain`, with or without a `zone`. It's the same effect as Plus's drain, delivered by a reload.
 * Two lines for the same address count as two separate servers, and NGINX doesn't warn about it. A plain duplicate line keeps taking traffic while its `drain` twin sits idle.
 
-**d. Break it on purpose:** change `drain` to `weight=x` and `PATCH` again. The response carries the `emerg` text in `logs`, and `otally` shows the old config still serving. Put `drain` back and `PATCH` once more.
+**d. Break it on purpose:** a reload with an invalid config.
+```bash
+sed -i 's| drain;| weight=x;|' nginx.conf && grep -n 8004 nginx.conf     # now ends in "weight=x;"
+ctl /1/control/config -X PATCH                                            # "logs" carries the [emerg] text
+otally                                                                    # still no api-node-3: the old config keeps serving
+sed -i 's| weight=x;| drain;|' nginx.conf && ctl /1/control/config -X PATCH   # restore: {"logs":[]}
+```
 
 *Journal:* with an autoscaler adding a node every minute and chats lasting an hour, how many worker generations could be alive at once?
 
 ### Activity 3.2 (Plus): Is the License Working? (3 min)
 ```bash
-docker logs lumina-plus 2>&1 | tail -20                             # licensing / usage report lines
-curl -s http://127.0.0.1:8085/api/                                  # supported versions; confirm 10 is listed
+docker logs lumina-plus 2>&1 | grep -E 'nginx/|emerg|crit|license'   # startup banner, any license errors
+curl -s http://127.0.0.1:8085/api/; echo                            # supported versions: [1,...,9] on R36
+curl -s http://127.0.0.1:8085/api/10/nginx; echo                    # what a hard-coded newer version gets
 api /nginx | jq '{version, build}'
 api /license | jq .
 ```
-* Find the log line that shows the first usage report succeeded. Until it does, the instance refuses traffic (1.6).
-* *Journal:* which open source version is this Plus release built on? Compare it with the host's 1.31.6.
+**What you'll see**
+* **The logs say nothing about the usage report when it succeeds.** NGINX Plus logs licensing only when something is wrong, such as `License file is required`. The API is where you confirm it.
+* `/api/10/...` returns `404 UnknownVersion` on R36, even though the nginx.org docs describe version 10. That's why the `api` helper asks the instance for its newest version.
+* `/license` shows `reporting.healthy: true` and `fails: 0` once the first report went through. `eval: true` marks a trial, `active_till` is the expiry as a Unix time (`date -d @<value>`), and `grace` is how long, in seconds, the instance keeps serving if reporting later fails.
+* *Journal:* which open source version is this Plus release built on? Compare it with the host's 1.31.6. Which Day 2 defaults does that change?
 
 ### Activity 3.3: Start From an Empty Pool (5 min)
 ```bash

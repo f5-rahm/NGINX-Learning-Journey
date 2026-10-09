@@ -126,10 +126,15 @@ Same idea. The nuances:
 * **A reload retires every old worker**, not just one. All of them show `"exiting": true`. Workers with no connections exit right away (`ps` briefly shows `[nginx]` until the master reaps them). Only the worker holding the WebSocket stays, as `worker process is shutting down`.
 * **OSS `drain` works with or without a `zone`.** Isolated test with 30 requests: 3 servers 11/10/9, 9004 `drain` without a zone 16/14/0, with a zone 15/15/0.
 * **Duplicate `server` lines are separate servers, and NGINX doesn't warn.** Running the "add 8004" `sed` a second time left a `drain` line *and* a plain 8004 line. The plain one kept taking traffic (11/10/9), so the drain did nothing. BIG-IP won't let you add the same member to a pool twice.
+* **One request slipped through right after the drain reload.** On the lab gateway, the 3rd of 20 requests (about 20 ms after `PATCH` returned) still went to the drained 8004, and the rest skipped it. Likely cause: old workers briefly accepting connections before they close their listeners. It didn't reproduce on an isolated instance (0/20 in 5 runs), so it's unconfirmed. The guide now waits 1 s before checking.
 * Guide fixes made during testing: the "one worker exiting" comment was wrong, the activity never checked that 8004 took traffic (`otally` added), and the drain step now edits the existing line instead of adding one.
 
 ### Plus setup findings
 * `r37-debian` didn't exist. On Oct 9, 2026 the newest release was **R36** (`r36`, `r36-debian`, `r36-alpine`). Those tags are rebuilt almost daily with OS patches. Dated tags (`r36-debian-trixie-YYYYMMDDhhmm`) pin an exact image. The registry's `/v2/nginx-plus/base/tags/list` lists what a license can pull (basic auth with the JWT as the username, `none` as the password).
+* **The first container start failed:** `pread() "/etc/nginx/license.jwt" failed (21: Is a directory)`, then `License file is required`. `$HOME` was empty in that shell, so the `-v` source was `/plus/license.jwt`, and Docker silently created it as a directory. The guide now uses `--mount type=bind`, which refuses to start when the source path doesn't exist.
+* **R36 is `nginx/1.29.3 (nginx-plus-r36-p8)`**, older than the host's 1.31.6. It predates the 1.29.7 change to keepalive and HTTP/1.1 upstream defaults, so Day 2's zero-config connection reuse doesn't apply in this container.
+* **A successful usage report is silent in the logs.** Only `/api/<v>/license` confirms it: `reporting.healthy: true`, `fails: 0`. The trial showed `eval: true`, `active_till` (Unix time; Oct 20, 2026 here), and `grace` of 15552000 s (180 days).
+* **Container log noise is harmless:** `40-env-to-license.sh: NGINX_LICENSE_JWT ... not set` (the image can also take the license as an environment variable; we mount the file), the `default.conf differs` notice (our config doesn't include `conf.d/`), and supervisord's `CRIT ... without any HTTP authentication` about its own internal socket. Every line appears twice because supervisord logs to two places.
 * `docker login` warnings: `--password` on the CLI is harmless (the password is literally `none`; the secret is the JWT username). The token is stored base64-encoded in `/root/.docker/config.json`, which is `600` root, the same protection as `~/plus/license.jwt`. Optionally run `docker logout` after pulling.
 
 ---
@@ -148,5 +153,5 @@ Same idea. The nuances:
   * `least_time` (1.31.0)
   * control API (1.31.5)
 * **Still Plus:** the write API, `state`, `slow_start`, live per-peer metrics, `queue`, `ntlm`, active health checks.
-* **NGINX Plus API is version 10** (not 8). R33+ licensing gates traffic on the first usage report by default (`enforce_initial_report on`).
+* **NGINX Plus API version:** the nginx.org docs describe version 10, but R36 (newest on Oct 9, 2026) serves only 1 to 9, and `/api/10/` returns `404 UnknownVersion`. Ask `GET /api/` instead of hard-coding. R33+ licensing gates traffic on the first usage report by default (`enforce_initial_report on`).
 * **Python's `http.server` collapses a leading `//`**, which hid `proxy_pass` slash bugs until the mock echoed the raw request line.

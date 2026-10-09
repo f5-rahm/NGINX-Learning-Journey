@@ -64,14 +64,16 @@ From the sprint's `lab/` directory:
 source ~/plus/plus.env
 chmod 777 plus/state                                    # the container's nginx user writes here
 docker run -d --name <lab>-plus --network host \
-  -v "$PWD/plus/nginx.conf:/etc/nginx/nginx.conf:ro" \
-  -v "$HOME/plus/license.jwt:/etc/nginx/license.jwt:ro" \
-  -v "$PWD/plus/state:/var/lib/nginx/state" \
+  --mount type=bind,src="$PWD/plus/nginx.conf",dst=/etc/nginx/nginx.conf,readonly \
+  --mount type=bind,src="$HOME/plus/license.jwt",dst=/etc/nginx/license.jwt,readonly \
+  --mount type=bind,src="$PWD/plus/state",dst=/var/lib/nginx/state \
   "$PLUS_IMAGE"
 docker logs <lab>-plus 2>&1 | tail -20                  # licensing / usage report lines
 curl -s http://127.0.0.1:8085/api/                      # API answers: Plus is up
 ```
 `/etc/nginx/license.jwt` is NGINX Plus's default `license_token` path, so the Plus configs don't need an `mgmt` block.
+
+Use `--mount`, not `-v`. If a `-v` source path doesn't exist (for example, `$HOME` is empty in that shell), Docker silently creates it as a **directory** and mounts that. NGINX Plus then fails with `pread() "/etc/nginx/license.jwt" failed (21: Is a directory)` and `License file is required`. `--mount` refuses to start with `bind source path does not exist`.
 
 ---
 
@@ -80,7 +82,7 @@ curl -s http://127.0.0.1:8085/api/                      # API answers: Plus is u
 | Symptom | Check |
 | :--- | :--- |
 | `docker login` or `pull` fails | The JWT is expired or for a different product. Download it again from MyF5. |
-| Container exits right away | `docker logs <lab>-plus`. A config error or a missing license file. |
+| Container exits right away | `docker logs <lab>-plus`. A config error, or a missing license file. `license.jwt failed (21: Is a directory)` means a `-v` mount pointed at a path that didn't exist. |
 | Container runs, but traffic is refused | First usage report hasn't succeeded (`enforce_initial_report on` is the default). Look for licensing lines in `docker logs`, and check outbound HTTPS to `product.connect.nginx.com`. |
 | `port already in use` | The OSS instance or another container holds the port. `ss -ltnp \| grep <port>`. |
 | API answers, but writes fail with `UpstreamStatic` | The upstream has no `zone`. |
