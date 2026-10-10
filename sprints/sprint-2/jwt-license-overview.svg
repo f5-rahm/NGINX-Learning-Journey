@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1140" viewBox="0 0 900 1140" font-family="Lato" xml:space="preserve">
+<defs><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/></marker></defs>
+<rect width="900" height="1140" fill="#FFFFFF"/>
+<text x="24" y="40" font-size="22" font-weight="bold" fill="#1F1F1F" text-anchor="start">JWT: one signed token, three jobs in NGINX Plus</text>
+<text x="24" y="65" font-size="14" fill="#555555" text-anchor="start">license.jwt from MyF5 · Sprint 2, Day 4 of my NGINX learning journey</text>
+<text x="24" y="104" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">1  Anatomy: three parts, base64url-encoded, joined by dots</text>
+<text x="210" y="138" font-size="22" font-weight="bold" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">xxxxx</text>
+<text x="276.5" y="138" font-size="22" font-weight="bold" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">.</text>
+<text x="289.8" y="138" font-size="22" font-weight="bold" fill="#3D8B4A" text-anchor="start" font-family="IBM Plex Mono, monospace">yyyyy</text>
+<text x="356.3" y="138" font-size="22" font-weight="bold" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">.</text>
+<text x="369.6" y="138" font-size="22" font-weight="bold" fill="#D9603B" text-anchor="start" font-family="IBM Plex Mono, monospace">zzzzz</text>
+<text x="450.1" y="137" font-size="13" fill="#555555" text-anchor="start">← the whole token is one line of text</text>
+<rect x="24" y="156" width="268" height="214" rx="8" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+<text x="40" y="182" font-size="16" font-weight="bold" fill="#1F1F1F" text-anchor="start">Header</text>
+<text x="40" y="201" font-size="13" fill="#444" text-anchor="start">How it was signed</text>
+<rect x="36" y="212" width="244" height="90" rx="5" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="46" y="233" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">{ "alg": "RS512",</text>
+<text x="46" y="252" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "typ": "JWT",</text>
+<text x="46" y="271" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "kid": "&lt;key id&gt;",</text>
+<text x="46" y="290" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "jku": "&lt;F5 key set URL&gt;" }</text>
+<text x="40" y="342" font-size="12" fill="#444" text-anchor="start">RS512 = RSA signature over</text>
+<text x="40" y="359" font-size="12" fill="#444" text-anchor="start">a SHA-512 hash</text>
+<rect x="316" y="156" width="268" height="214" rx="8" fill="#E2F0E3" stroke="#3D8B4A" stroke-width="2"/>
+<text x="332" y="182" font-size="16" font-weight="bold" fill="#1F1F1F" text-anchor="start">Payload (claims)</text>
+<text x="332" y="201" font-size="13" fill="#444" text-anchor="start">Who, what, and until when</text>
+<rect x="328" y="212" width="244" height="109" rx="5" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="338" y="233" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">{ "iss": "F5 Inc.",</text>
+<text x="338" y="252" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "sub": "&lt;subscription&gt;",</text>
+<text x="338" y="271" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "iat": &lt;issued at&gt;,</text>
+<text x="338" y="290" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "f5_sat": &lt;active till&gt;,</text>
+<text x="338" y="309" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  "f5_order_type": "eval" }</text>
+<text x="332" y="342" font-size="12" fill="#444" text-anchor="start">Readable by anyone:</text>
+<text x="332" y="359" font-size="12" fill="#444" text-anchor="start">decoding is not decrypting</text>
+<rect x="608" y="156" width="268" height="214" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+<text x="624" y="182" font-size="16" font-weight="bold" fill="#1F1F1F" text-anchor="start">Signature</text>
+<text x="624" y="201" font-size="13" fill="#444" text-anchor="start">Proof nothing was changed</text>
+<rect x="620" y="212" width="244" height="90" rx="5" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="630" y="233" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">RSA-SHA512(</text>
+<text x="630" y="252" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  base64(header) + "." +</text>
+<text x="630" y="271" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  base64(payload),</text>
+<text x="630" y="290" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">  F5's private key )</text>
+<text x="624" y="342" font-size="12" fill="#444" text-anchor="start">Change one character above</text>
+<text x="624" y="359" font-size="12" fill="#444" text-anchor="start">and verification fails</text>
+<rect x="24" y="390" width="852" height="112" rx="8" fill="#F4F4F1" stroke="#9A9A96" stroke-width="1.5"/>
+<text x="40" y="414" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="start">Signed, not encrypted</text>
+<rect x="40" y="426" width="248" height="60" rx="8" fill="#FFFFFF" stroke="#9A9A96" stroke-width="1.2"/>
+<text x="164" y="451" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">F5 signs it</text>
+<text x="164" y="471" font-size="12" fill="#444" text-anchor="middle">with its private key</text>
+<line x1="290" y1="456" x2="314" y2="456" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+<rect x="318" y="426" width="248" height="60" rx="8" fill="#FFFFFF" stroke="#9A9A96" stroke-width="1.2"/>
+<text x="442" y="451" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">You hold license.jwt</text>
+<text x="442" y="471" font-size="12" fill="#444" text-anchor="middle">anyone can read the claims</text>
+<line x1="568" y1="456" x2="592" y2="456" stroke="#8A8A86" stroke-width="1.8" marker-end="url(#ag)"/>
+<rect x="596" y="426" width="248" height="60" rx="8" fill="#FFFFFF" stroke="#9A9A96" stroke-width="1.2"/>
+<text x="720" y="451" font-size="14" font-weight="bold" fill="#1F1F1F" text-anchor="middle">Anyone can verify it</text>
+<text x="720" y="471" font-size="12" fill="#444" text-anchor="middle">with F5's public key (the jku key set)</text>
+<text x="24" y="540" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">2  One token, three jobs</text>
+<rect x="24" y="556" width="268" height="324" rx="8" fill="#ECE6F7" stroke="#6B4FB3" stroke-width="2"/>
+<circle cx="54" cy="586" r="15" fill="#6B4FB3"/>
+<text x="54" y="591" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">1</text>
+<text x="78" y="584" font-size="16" font-weight="bold" fill="#1F1F1F" text-anchor="start">Pull the image</text>
+<text x="78" y="602" font-size="12" fill="#555" text-anchor="start">registry login</text>
+<text x="42" y="634" font-size="13" fill="#1F1F1F" text-anchor="start">docker login with the JWT as</text>
+<text x="42" y="652" font-size="13" fill="#1F1F1F" text-anchor="start">the username, password: none</text>
+<text x="42" y="678" font-size="13" fill="#1F1F1F" text-anchor="start">Registry answers 401 and points</text>
+<text x="42" y="696" font-size="13" fill="#1F1F1F" text-anchor="start">Docker to its token service</text>
+<text x="42" y="722" font-size="13" fill="#1F1F1F" text-anchor="start">Token service checks the</text>
+<text x="42" y="740" font-size="13" fill="#1F1F1F" text-anchor="start">signature and entitlement</text>
+<text x="42" y="766" font-size="13" fill="#1F1F1F" text-anchor="start">Returns a short-lived,</text>
+<text x="42" y="784" font-size="13" fill="#1F1F1F" text-anchor="start">pull-only access token</text>
+<text x="42" y="810" font-size="13" fill="#1F1F1F" text-anchor="start">docker pull downloads the image</text>
+<rect x="36" y="836" width="244" height="30" rx="5" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="158" y="856" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">private-registry.nginx.com</text>
+<rect x="316" y="556" width="268" height="324" rx="8" fill="#ECE6F7" stroke="#6B4FB3" stroke-width="2"/>
+<circle cx="346" cy="586" r="15" fill="#6B4FB3"/>
+<text x="346" y="591" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">2</text>
+<text x="370" y="584" font-size="16" font-weight="bold" fill="#1F1F1F" text-anchor="start">Start the instance</text>
+<text x="370" y="602" font-size="12" fill="#555" text-anchor="start">checked on the box</text>
+<text x="334" y="634" font-size="13" fill="#1F1F1F" text-anchor="start">Reads /etc/nginx/license.jwt,</text>
+<text x="334" y="652" font-size="13" fill="#1F1F1F" text-anchor="start">the default license_token path</text>
+<text x="334" y="678" font-size="13" fill="#1F1F1F" text-anchor="start">Missing or unreadable:</text>
+<text x="334" y="696" font-size="12" fill="#B33A16" text-anchor="start" font-family="IBM Plex Mono, monospace">[emerg] License file is required</text>
+<text x="334" y="722" font-size="13" fill="#1F1F1F" text-anchor="start">NGINX Plus refuses to start,</text>
+<text x="334" y="740" font-size="13" fill="#1F1F1F" text-anchor="start">before any traffic</text>
+<text x="334" y="766" font-size="13" fill="#1F1F1F" text-anchor="start">In the lab: mounted read-only</text>
+<text x="334" y="784" font-size="13" fill="#1F1F1F" text-anchor="start">from ~/plus/ on the host</text>
+<rect x="328" y="836" width="244" height="30" rx="5" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="450" y="856" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">license_token (mgmt block)</text>
+<rect x="608" y="556" width="268" height="324" rx="8" fill="#ECE6F7" stroke="#6B4FB3" stroke-width="2"/>
+<circle cx="638" cy="586" r="15" fill="#6B4FB3"/>
+<text x="638" y="591" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">3</text>
+<text x="662" y="584" font-size="16" font-weight="bold" fill="#1F1F1F" text-anchor="start">Keep serving</text>
+<text x="662" y="602" font-size="12" fill="#555" text-anchor="start">usage reporting</text>
+<text x="626" y="634" font-size="13" fill="#1F1F1F" text-anchor="start">Creates an instance uuid in</text>
+<text x="626" y="652" font-size="13" fill="#1F1F1F" text-anchor="start">its state directory</text>
+<text x="626" y="678" font-size="13" fill="#1F1F1F" text-anchor="start">Reports usage over HTTPS,</text>
+<text x="626" y="696" font-size="13" fill="#1F1F1F" text-anchor="start">authenticated with the JWT</text>
+<text x="626" y="722" font-size="13" fill="#1F1F1F" text-anchor="start">First report gates traffic</text>
+<text x="626" y="740" font-size="13" fill="#1F1F1F" text-anchor="start">(enforce_initial_report on)</text>
+<text x="626" y="766" font-size="13" fill="#1F1F1F" text-anchor="start">If reporting fails later,</text>
+<text x="626" y="784" font-size="13" fill="#1F1F1F" text-anchor="start">a grace period applies</text>
+<text x="626" y="810" font-size="13" fill="#1F1F1F" text-anchor="start">Success is silent in the logs</text>
+<rect x="620" y="836" width="244" height="30" rx="5" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="742" y="856" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">product.connect.nginx.com</text>
+<text x="24" y="904" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Check it at any time:</text>
+<text x="170" y="904" font-size="13" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">GET /api/&lt;v&gt;/license</text>
+<text x="345" y="904" font-size="13" fill="#444" text-anchor="start">→ eval, active_till, pending_renewal, reporting.healthy, grace</text>
+<text x="24" y="942" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">3  What the license JWT is not</text>
+<rect x="24" y="956" width="418" height="112" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+<text x="40" y="982" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="start">Not API access control</text>
+<text x="40" y="1006" font-size="13" fill="#333" text-anchor="start">It proves entitlement. It doesn't authenticate</text>
+<text x="40" y="1025" font-size="13" fill="#333" text-anchor="start">anyone calling the Plus API. Protect the API with</text>
+<text x="40" y="1044" font-size="13" fill="#333" text-anchor="start">a loopback listener, allow/deny, auth_basic, or mTLS.</text>
+<rect x="458" y="956" width="418" height="112" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+<text x="474" y="982" font-size="15" font-weight="bold" fill="#1F1F1F" text-anchor="start">Not auth_jwt</text>
+<text x="474" y="1006" font-size="13" fill="#333" text-anchor="start">NGINX Plus can also validate JWTs that clients</text>
+<text x="474" y="1025" font-size="13" fill="#333" text-anchor="start">send (auth_jwt, OIDC tokens). Same format,</text>
+<text x="474" y="1044" font-size="13" fill="#333" text-anchor="start">different job: that's Sprint 7.</text>
+<text x="24" y="1100" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">BIG-IP lens:</text>
+<text x="112" y="1100" font-size="13" fill="#444" text-anchor="start">like a signed license file checked at boot, plus BIG-IQ-style utility metering that keeps reporting home.</text>
+</svg>

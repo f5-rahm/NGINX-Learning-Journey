@@ -129,6 +129,14 @@ Same idea. The nuances:
 * **One request slipped through right after the drain reload.** On the lab gateway, the 3rd of 20 requests (about 20 ms after `PATCH` returned) still went to the drained 8004, and the rest skipped it. Likely cause: old workers briefly accepting connections before they close their listeners. It didn't reproduce on an isolated instance (0/20 in 5 runs), so it's unconfirmed. The guide now waits 1 s before checking.
 * Guide fixes made during testing: the "one worker exiting" comment was wrong, the activity never checked that 8004 took traffic (`otally` added), and the drain step now edits the existing line instead of adding one.
 
+### Quiz
+* 10/10 on the first attempt.
+
+### Scope: what Day 4 deliberately leaves out
+* **Active health checks** (`health_check`, `match`) are not an oversight. They're the Enterprise Side Quest for **Sprint 12** (High Availability). Day 4 is about changing a pool; Sprint 12 is about probing it. That's where BIG-IP monitor habits (interval, send/receive strings, mark down before users notice) map most directly.
+* **`slow_start` ties the two together.** Activity 3.7's gradual climb was triggered by `fail_timeout` expiring after a passive failure. With active checks, the same ramp starts when a probe marks an unhealthy server healthy again.
+* **NGINX One Console** (fleet inventory, config drift, CVE and certificate status, central config, through the NGINX Agent) is in the **Sprint 11** side quest, next to the single-instance dashboard. It's the closest analog to BIG-IQ.
+
 ### Plus setup findings
 * **Image tags changed naming in R37.** `r37-debian` doesn't exist, which first made it look like R36 (`r36-debian`) was the newest release. R37 tags carry a point release: `r37.0-debian`, `r37.1-debian`, alias `nginx-plus-r37.1-debian`, and no plain `r37`. The registry's `/v2/nginx-plus/base/tags/list` lists what a license can pull (basic auth with the JWT as the username, `none` as the password). A filter for `^r[0-9]+-` silently hides every R37 tag.
 * **Floating tags** (`debian`, `nginx-plus`, `nginx-plus-20260821`) all pointed at R37.1 (`nginx/1.31.3 (nginx-plus-r37.1.1)`), the same digest as `r37.1-debian`. A floating tag jumps to the next release on the next pull, so the lab pins `r37.1-debian`. `nginx-plus/agent` is Plus plus the NGINX Agent (for NGINX One / Instance Manager), which the lab doesn't need.

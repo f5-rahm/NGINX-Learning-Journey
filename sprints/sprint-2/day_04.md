@@ -30,7 +30,7 @@ Since 1.31.5, open source NGINX can be built with a control API (`--with-control
 | `server ... resolve` + `resolver` in `upstream` | 1.27.3 | Re-resolves DNS at runtime, honoring TTL or `valid=`. No reload when IPs change. |
 | `service=` (DNS SRV) | 1.27.3 | Discovers servers and ports from SRV records |
 | `sticky cookie` / `route` / `learn`, `server ... drain` | 1.29.6 | Session affinity, and draining a server in config |
-| `keepalive` on by default | 1.29.7 | Day 2 |
+| Upstream `keepalive` on by default | 1.29.7 | Reuses connections to backends with zero config (HTTP/1.1, an idle pool per worker), like OneConnect being on by default. Covered in Day 2. |
 | `least_time header \| last_byte` | 1.31.0 | Picks by lowest average response time and fewest active connections |
 | Control API | 1.31.5 | Reload and inspect processes over a socket (1.2) |
 
@@ -193,7 +193,7 @@ sed -i 's| weight=x;| drain;|' nginx.conf && ctl /1/control/config -X PATCH   # 
 
 ### Activity 3.2 (Plus): Is the License Working? (3 min)
 ```bash
-docker logs lumina-plus 2>&1 | grep -E 'nginx/|emerg|crit|license'   # startup banner, any license errors
+docker logs lumina-plus 2>&1 | grep -E '^[0-9]{4}/[0-9]{2}/[0-9]{2} ' | grep -E 'nginx/|emerg|crit|alert|error'   # NGINX's own lines only
 curl -s http://127.0.0.1:8085/api/; echo                            # supported versions: [1,...,10] on R37
 curl -s http://127.0.0.1:8085/api/11/nginx; echo                    # what a version this release doesn't serve gets
 api /nginx | jq '{version, build}'
@@ -201,11 +201,17 @@ api /license | jq .
 ```
 **What you'll see**
 * **The logs say nothing about the usage report when it succeeds.** NGINX Plus logs licensing only when something is wrong, such as `License file is required`. The API is where you confirm it.
+* NGINX's own log lines start with a `YYYY/MM/DD` date, and the filter keeps only those. The rest of `docker logs` comes from the image's startup scripts (`40-env-to-license.sh: ... not set. Exiting.` only means that script has nothing to do, because the license is mounted as a file) and from supervisord, the process manager inside the image.
 * `/api/11/...` returns `404 UnknownVersion`. On R36 the same happened to `/api/10/`, because R36 serves only up to 9. That's why the `api` helper asks the instance for its newest version.
 * `/license` shows `reporting.healthy: true` and `fails: 0` once the first report went through. `eval: true` marks a trial, `active_till` is the expiry as a Unix time (`date -d @<value>`), `grace` is how long, in seconds, the instance keeps serving if reporting later fails, and `pending_renewal` (new in R37) flags a license due for renewal.
 * *Journal:* which open source version is this Plus release built on? Compare it with the host's 1.31.6. Is it new enough for the 1.29.7 keepalive defaults from Day 2?
 
 ### Activity 3.3: Start From an Empty Pool (5 min)
+Rerunning? The state file keeps servers from an earlier run, so empty the pool first:
+```bash
+for id in $(api $U/servers | jq '.[].id'); do api $U/servers/$id -X DELETE > /dev/null; done; api $U/servers   # []
+```
+Then build the pool:
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: lumina.local' localhost:8084/api/v1/x   # 502: no servers yet
 for p in 8001 8002; do
