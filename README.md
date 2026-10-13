@@ -1,6 +1,6 @@
 # NGINX Learning Journey
 **Timeframe:** FY27 Q1 (October 1 – December 31)  
-**Target Cadence:** 14 Sprints, roughly one per week (days per sprint flex with the calendar)  
+**Target Cadence:** 14 Sprints, one per week. From Sprint 3 on, each sprint is **3 sessions**, scheduled on whichever days of the week suit (Sprints 1–2 ran 2 and 4 days). Enterprise side quests are optional add-ons to Day 3.  
 **Primary Engine:** Open Source NGINX (OSS)  
 **Side Quests: Enterprise Trail:** NGINX Plus, F5 App Protect WAF, F5 NGINX Ingress Controller, and NGINX Gateway Fabric  
 
@@ -26,7 +26,7 @@ By the conclusion of this 14-week journey, the engineer will possess deep, low-l
 
 ## 2. The Daily Discovery Format & Learning Engine
 
-Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-on discovery session**. Rather than passive reading, learning is driven by a 4-phase pedagogical loop:
+Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-on discovery session** (Day 3 runs longer because it carries the lab build). From Sprint 3 on, a sprint is three such sessions per week, on whichever days fit around normal duties. Rather than passive reading, learning is driven by a 4-phase pedagogical loop:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -80,17 +80,17 @@ Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-
 * **Start Date:** Thursday, October 1
 * **End Date:** Thursday, December 31
 * **Holiday Blackouts:**
-  * Thanksgiving: Thursday, Nov 26 & Friday, Nov 27 (Sprint 9 adjusted to 3 business days).
-  * Christmas: Thursday, Dec 24 & Friday, Dec 25 (Sprint 13 adjusted to 3 business days).
+  * Thanksgiving: Thursday, Nov 26 & Friday, Nov 27 (Sprint 9's three sessions fit Nov 23–25).
+  * Christmas: Thursday, Dec 24 & Friday, Dec 25 (Sprint 13's three sessions fit Dec 21–23).
 
 ```
 OCTOBER                                NOVEMBER                               DECEMBER
-S01: Oct 1-2   (2d - Web Serving)     S06: Nov 2-6   (5d - Programmability)  S10: Nov 30-Dec 4 (5d - Advanced Ingress)
-S02: Oct 6-9   (4d - Reverse Proxy)   S07: Nov 9-13  (5d - Security/JWT)     S11: Dec 7-11     (5d - Observability)
-S03: Oct 12-16 (5d - TLS & HTTP/3)    S08: Nov 16-20 (5d - K8s Ingress CRDs) S12: Dec 14-18    (5d - High Availability)
-S04: Oct 19-23 (5d - Performance)     S09: Nov 23-25 (3d - Gateway API)      S13: Dec 21-23    (3d - Edge WAF)
-S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [Dec 24-25: Christmas Break]
-                                                                             S14: Dec 28-31    (4d - Capstone)
+S01: Oct 1-2   (2d - Web Serving)     S06: Nov 2-6   (3d - Programmability)  S10: Nov 30-Dec 4 (3d - Advanced Ingress)
+S02: Oct 6-9   (4d - Reverse Proxy)   S07: Nov 9-13  (3d - Security/JWT)     S11: Dec 7-11     (3d - Observability)
+S03: Oct 12-16 (3d - TLS & HTTP/3)    S08: Nov 16-20 (3d - K8s Ingress CRDs) S12: Dec 14-18    (3d - High Availability)
+S04: Oct 19-23 (3d - Performance)     S09: Nov 23-25 (3d - Gateway API)      S13: Dec 21-23    (3d - Edge WAF)
+S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [Dec 24-25: Christmas Break]
+                                                                             S14: Dec 28-31    (3d - Capstone)
 ```
 
 ---
@@ -101,18 +101,18 @@ S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 | :--- | :--- | :---: | :--- | :--- | :--- |
 | **01** | Oct 1–2 | 2 | **Web Serving & Core Engine:** Master/worker model, Unix signals (`HUP`, `QUIT`), `epoll` loop, 5-step location precedence, `root` vs `alias`, SPA `try_files`. | Northwind Static Web Tier (`test_sprint01.sh`) | **Zero-Downtime Hot-Upgrade:** Live binary swap via `SIGUSR2` & `nginx.pid.oldbin` (Deck: Slides 10–13). |
 | **02** | Oct 6–9 | 4 | **Reverse Proxy & Load Balancing:** Trailing slash URI rules, header forwarding (`X-Forwarded-*`), balancing algorithms, passive health checks (`max_fails`), WebSocket proxying. | Multi-tier Load Balancer with WebSocket Relay (`test_sprint02.sh`) | **NGINX Plus Upstream API:** Real-time pool add/drain/remove without reload, `state` persistence, `slow_start` (Deck: Slide 54). Active probes: Sprint 12. |
-| **03** | Oct 12–16 | 5 | **TLS Termination & Edge Hardening:** TLS 1.3 cipher suites, session resumption, ALPN, HTTP/2 multiplexing, HTTP/3 (QUIC/UDP), strict security headers. | Zero-Trust TLS 1.3 / HTTP/3 Edge Gateway | **Automated Cert Management:** ACME vault integration & dual RSA/ECC cipher deployment. |
-| **04** | Oct 19–23 | 5 | **Performance, Caching & Kernel:** Dual-tier micro-caching (`proxy_cache`), cache locks, stale serving on error, Linux `sysctl` socket tuning (`somaxconn`, `tcp_tw_reuse`). | High-Throughput Cached API Gateway | **NGINX Plus Live Cache Purging:** Instant selective cache purge API without disk clearing. |
-| **05** | Oct 26–30 | 5 | **Traffic Shaping & Rate Limiting:** Leaky bucket rate limiting (`limit_req`), burst handling, two-stage delay, concurrency limits (`limit_conn`), IP allowlists/denylists. | DDoS-Resilient API Rate-Limiter | **Dynamic Bandwidth Control:** Client bandwidth slicing and progressive download throttling. |
-| **06** | Nov 2–6 | 5 | **Programmability & Extensibility:** JavaScript scripting via NGINX JavaScript (`njs`), custom header enrichment, dynamic URI rewriting, conditional upstream routing. | Smart Routing Proxy with njs Validation | **Native Lua / OpenResty vs. njs:** Memory model, safety boundaries, and C-module extensions. |
-| **07** | Nov 9–13 | 5 | **Security Hardening & Modern Auth:** Mutual TLS (mTLS), client certificate verification, subrequest authentication (`auth_request`), OAuth2 proxy integration. | Zero-Trust Perimeter Gateway with mTLS | **NGINX Plus Native JWT & OIDC:** In-engine cryptographic JWT signature validation & Keycloak OIDC (NIC Lab 3). |
-| **08** | Nov 16–20 | 5 | **Kubernetes Ingress Architecture:** Ingress controllers vs NodePorts, F5 NGINX Ingress Controller (NIC), `VirtualServer` / `VirtualServerRoute` CRDs, traffic splitting. | Multi-Tenant Microservices Ingress | **Enterprise VirtualServer Policies:** Rate limiting, circuit breaking, and blue/green splits (NIC Labs 1, 2, 4). |
+| **03** | Oct 12–16 | 3 | **TLS Termination & Edge Hardening:** TLS 1.3 cipher suites, dual RSA/ECDSA certificates, SNI, session resumption, ALPN, HTTP/2 multiplexing, HTTP/3 (QUIC/UDP), strict security headers. | Lumina Zero-Trust Edge (`test_sprint03.sh`) | **Certificates Without Reloads or Humans:** NGINX Plus key-value certificates rotated via API, and ACME issuance with `nginx-module-acme` against a Pebble test CA. |
+| **04** | Oct 19–23 | 3 | **Performance, Caching & Kernel:** Dual-tier micro-caching (`proxy_cache`), cache locks, stale serving on error, Linux `sysctl` socket tuning (`somaxconn`, `tcp_tw_reuse`). | High-Throughput Cached API Gateway | **NGINX Plus Live Cache Purging:** Instant selective cache purge API without disk clearing. |
+| **05** | Oct 26–30 | 3 | **Traffic Shaping & Rate Limiting:** Leaky bucket rate limiting (`limit_req`), burst handling, two-stage delay, concurrency limits (`limit_conn`), IP allowlists/denylists. | DDoS-Resilient API Rate-Limiter | **Dynamic Bandwidth Control:** Client bandwidth slicing and progressive download throttling. |
+| **06** | Nov 2–6 | 3 | **Programmability & Extensibility:** JavaScript scripting via NGINX JavaScript (`njs`), custom header enrichment, dynamic URI rewriting, conditional upstream routing. | Smart Routing Proxy with njs Validation | **Native Lua / OpenResty vs. njs:** Memory model, safety boundaries, and C-module extensions. |
+| **07** | Nov 9–13 | 3 | **Security Hardening & Modern Auth:** Mutual TLS (mTLS), client certificate verification, subrequest authentication (`auth_request`), OAuth2 proxy integration. | Zero-Trust Perimeter Gateway with mTLS | **NGINX Plus Native JWT & OIDC:** In-engine cryptographic JWT signature validation & Keycloak OIDC (NIC Lab 3). |
+| **08** | Nov 16–20 | 3 | **Kubernetes Ingress Architecture:** Ingress controllers vs NodePorts, F5 NGINX Ingress Controller (NIC), `VirtualServer` / `VirtualServerRoute` CRDs, traffic splitting. | Multi-Tenant Microservices Ingress | **Enterprise VirtualServer Policies:** Rate limiting, circuit breaking, and blue/green splits (NIC Labs 1, 2, 4). |
 | **09** | Nov 23–25 | 3 | **Next-Gen K8s Gateway API:** Gateway API evolution, `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`, header-based routing, cross-namespace routing. | Gateway Fabric Multi-Route Service | **GenAI LLM Inference Extensions:** Prompt routing and model endpoint load balancing (NGF Lab 10). |
-| **10** | Nov 30–Dec 4 | 5 | **Hybrid & Advanced Enterprise Ingress:** Multi-cluster routing, gRPC microservice streaming, header transformations, ExternalDNS automation. | End-to-End gRPC & HTTP/2 Microservices Fabric | **BIG-IP CIS + GatewayLink:** External BIG-IP hardware driving traffic to internal Gateway Fabric (NGF Lab 13). |
-| **11** | Dec 7–11 | 5 | **Production Observability & Telemetry:** Custom structured JSON logging, distributed tracing (OpenTelemetry / W3C `traceparent`), Prometheus metrics exporter. | Full-Stack Observability Pipeline | **NGINX Plus Live Monitoring Dashboard & NGINX One Console:** Real-time HTTP/TCP stats console and JSON telemetry API for one instance, then fleet-level visibility and config management through NGINX One. |
-| **12** | Dec 14–18 | 5 | **High Availability & Fault Resilience:** Keepalived VRRP active/passive pairing, passive failover tuning, upstream keepalive pooling, graceful error masking. | Resilient Dual-Node Edge Cluster | **Active Application Health Checks:** Proactive periodic synthetic probing with custom string validation (Deck: Slide 54). |
+| **10** | Nov 30–Dec 4 | 3 | **Hybrid & Advanced Enterprise Ingress:** Multi-cluster routing, gRPC microservice streaming, header transformations, ExternalDNS automation. | End-to-End gRPC & HTTP/2 Microservices Fabric | **BIG-IP CIS + GatewayLink:** External BIG-IP hardware driving traffic to internal Gateway Fabric (NGF Lab 13). |
+| **11** | Dec 7–11 | 3 | **Production Observability & Telemetry:** Custom structured JSON logging, distributed tracing (OpenTelemetry / W3C `traceparent`), Prometheus metrics exporter. | Full-Stack Observability Pipeline | **NGINX Plus Live Monitoring Dashboard & NGINX One Console:** Real-time HTTP/TCP stats console and JSON telemetry API for one instance, then fleet-level visibility and config management through NGINX One. |
+| **12** | Dec 14–18 | 3 | **High Availability & Fault Resilience:** Keepalived VRRP active/passive pairing, passive failover tuning, upstream keepalive pooling, graceful error masking. | Resilient Dual-Node Edge Cluster | **Active Application Health Checks:** Proactive periodic synthetic probing with custom string validation (Deck: Slide 54). |
 | **13** | Dec 21–23 | 3 | **Edge Security & Web App Firewalls:** OWASP Top 10 mitigation via NGINX, ModSecurity OSS engine integration, SQLi/XSS inspection, request body inspection limits. | Hardened Security Gateway with Signature Rules | **F5 App Protect WAF:** High-performance compiled WAF engine, DataGuard PII masking, custom attack signatures (NIC Labs 6, 7). |
-| **14** | Dec 28–31 | 4 | **Capstone Architecture & Production Deployment:** Production packaging (distroless containers, Helm charts), automated CI/CD config validation, disaster recovery. | Fully Packaged Cloud-Native Production Platform | **The Enterprise Review:** End-to-end architecture review presentation for technical peers and leadership. |
+| **14** | Dec 28–31 | 3 | **Capstone Architecture & Production Deployment:** Production packaging (distroless containers, Helm charts), automated CI/CD config validation, disaster recovery. | Fully Packaged Cloud-Native Production Platform | **The Enterprise Review:** End-to-end architecture review presentation for technical peers and leadership. |
 
 ---
 
@@ -135,32 +135,36 @@ S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
   * **Day 4 (Enterprise):** NGINX Plus upstream API (runtime add/drain/remove, `zone`, `slow_start`, `state` files). Active probes are deferred to Sprint 12.
 * **Lab:** Multi-tier load balancer proxying 3 mock backends with WebSocket streaming (`test_sprint02.sh`, 8 core assertions). Details: [`sprints/sprint-2/README.md`](sprints/sprint-2/README.md).
 
-### Sprint 3: TLS Termination, HTTP/2, HTTP/3 & Edge Security (Oct 12–16, 5 Days)
-* **Focus:** Cryptographic termination, modern protocols, and transport layer security.
-* **Key Topics:** TLS 1.3 cipher suite configuration, session resumption (tickets vs cache), ALPN negotiation, HTTP/2 stream multiplexing and HPACK header compression, HTTP/3 (QUIC over UDP) with `listen 443 quic reuseport`, and security headers (HSTS, CSP, X-Frame-Options).
-* **Enterprise Side Quest:** Automated enterprise certificate lifecycle management and dual RSA/ECC cert delivery.
+### Sprint 3: TLS Termination, HTTP/2, HTTP/3 & Edge Security (Week of Oct 12, 3 Days)
+* **Focus:** Cryptographic termination, modern protocols, and browser-facing security policy, layered onto the Sprint 2 Lumina gateway.
+* **Daily Structure:**
+  * **Day 1:** TLS termination. The client SSL profile mapped onto `ssl_*`, the two cipher knobs (`ssl_ciphers` vs `ssl_conf_command Ciphersuites`), dual RSA/ECDSA certificates, SNI and `ssl_reject_handshake`, session cache vs tickets across reloads. Quiz: [Day 1 Quiz](quiz.html?sprint=3&day=1).
+  * **Day 2:** ALPN and `http2 on`, multiplexing and HPACK measured in the access log, client vs upstream protocol, HTTP/3 over QUIC with `reuseport` and `Alt-Svc`, per-socket default servers. Quiz: [Day 2 Quiz](quiz.html?sprint=3&day=2).
+  * **Day 3:** Security headers (HSTS, `nosniff`, framing, CSP), `add_header ... always` and inheritance, hiding leaks, then the sprint lab. Quiz: [Day 3 Quiz](quiz.html?sprint=3&day=3).
+* **Enterprise Side Quest (optional, Day 3):** NGINX Plus key-value certificates rotated through the API with no reload, and ACME issuance with `nginx-module-acme` against a Pebble test CA. Optional quiz: [Enterprise Quiz](quiz.html?sprint=3&day=3&pool=enterprise).
+* **Lab:** Lumina Zero-Trust Edge validated by `test_sprint03.sh` (13 assertions). Details: [`sprints/sprint-3/README.md`](sprints/sprint-3/README.md).
 
-### Sprint 4: Performance Engineering, Caching & Kernel Tuning (Oct 19–23, 5 Days)
+### Sprint 4: Performance Engineering, Caching & Kernel Tuning (Oct 19–23, 3 Days)
 * **Focus:** Maximizing throughput and minimizing origin latency through caching and kernel tuning.
 * **Key Topics:** `proxy_cache_path` memory keys zones vs disk storage, cache keys (`$scheme$proxy_host$request_uri`), `proxy_cache_use_stale updating error timeout`, `proxy_cache_lock` to eliminate cache stampedes, Linux `sysctl` socket tuning (`net.core.somaxconn`, `net.ipv4.tcp_tw_reuse`, `epoll` socket limits).
 * **Enterprise Side Quest:** NGINX Plus programmatic cache purging via REST API (`PURGE /api/cache/...`).
 
-### Sprint 5: Traffic Control, Rate Limiting & Concurrency (Oct 26–30, 5 Days)
+### Sprint 5: Traffic Control, Rate Limiting & Concurrency (Oct 26–30, 3 Days)
 * **Focus:** Edge protection against traffic spikes, abusive clients, and denial-of-service.
 * **Key Topics:** Leaky bucket algorithm via `limit_req_zone`, burst handling and smoothing with `nodelay` and `delay`, concurrent connection limiting (`limit_conn_zone`), dynamic status code configuration (`limit_req_status 429`), and GeoIP/CIDR allowlists.
 * **Enterprise Side Quest:** Advanced client bandwidth slicing and media streaming progressive download rate limits.
 
-### Sprint 6: Programmability & Extensibility (Nov 2–6, 5 Days)
+### Sprint 6: Programmability & Extensibility (Nov 2–6, 3 Days)
 * **Focus:** Custom business logic at the edge using the NGINX JavaScript (`njs`) engine.
 * **Key Topics:** The `njs` execution model (synchronous, VM-per-request, memory safety), `js_import` and `js_set`, inspecting request/response headers and bodies, generating dynamic HMAC signatures, and conditional upstream routing based on cookie claims.
 * **Enterprise Side Quest:** Comparing `njs` with native OpenResty/Lua: performance, memory footprints, and security attack surfaces.
 
-### Sprint 7: Security Hardening & Zero Trust (Nov 9–13, 5 Days)
+### Sprint 7: Security Hardening & Zero Trust (Nov 9–13, 3 Days)
 * **Focus:** Identity verification, client authentication, and access control.
 * **Key Topics:** Mutual TLS (mTLS) with `ssl_client_certificate` and `ssl_verify_client on`, extracting client certificate CN/SAN attributes into headers, subrequest authentication with `auth_request`, and integrating OAuth2 Proxy.
 * **Enterprise Side Quest:** NGINX Plus native JWT validation (`auth_jwt`) and OpenID Connect (OIDC) integration against Keycloak / Okta.
 
-### Sprint 8: Modern Kubernetes Ingress (Nov 16–20, 5 Days)
+### Sprint 8: Modern Kubernetes Ingress (Nov 16–20, 3 Days)
 * **Focus:** Bridging NGINX into Kubernetes container networking.
 * **Key Topics:** Kubernetes networking fundamentals (Services, Endpoints, CNI), Ingress Controller architecture, standard community Ingress vs. F5 NGINX Ingress Controller (NIC), F5 CRDs (`VirtualServer`, `VirtualServerRoute`), traffic splitting, and zero-downtime pod endpoint updates.
 * **Enterprise Side Quest:** F5 NIC Enterprise policies: rate limiting CRDs, active circuit breaking, and canary deployments.
@@ -170,19 +174,19 @@ S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 * **Key Topics:** Role-oriented API architecture (Infrastructure Provider $\to$ Cluster Operator $\to$ Application Developer), `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`, cross-namespace routing, and NGINX Gateway Fabric (NGF) architecture.
 * **Enterprise Side Quest:** GenAI LLM Inference Extensions: routing prompts across multiple LLM backends based on model parameters and latency.
 
-### Sprint 10: Advanced Microservices & Enterprise Ingress (Nov 30–Dec 4, 5 Days)
+### Sprint 10: Advanced Microservices & Enterprise Ingress (Nov 30–Dec 4, 3 Days)
 * **Focus:** High-throughput microservice communication and hybrid infrastructure connectivity.
 * **Key Topics:** End-to-end gRPC streaming through NGINX (`grpc_pass`), HTTP/2 upstream multiplexing, header rewriting at scale, and external DNS automation.
 * **Enterprise Side Quest:** F5 BIG-IP CIS + GatewayLink: combining external F5 BIG-IP hardware load balancers with internal NGINX Gateway Fabric for automated end-to-end traffic delivery.
 
-### Sprint 11: Production Observability & Telemetry (Dec 7–11, 5 Days)
+### Sprint 11: Production Observability & Telemetry (Dec 7–11, 3 Days)
 * **Focus:** Deep visibility into network traffic, latencies, and distributed requests.
 * **Key Topics:** Custom JSON access logging with high-resolution timing (`$request_time`, `$upstream_connect_time`, `$upstream_response_time`), OpenTelemetry distributed tracing module, injecting W3C `traceparent` headers, and Prometheus metric exporters.
 * **Enterprise Side Quest:** NGINX Plus Live Activity Monitoring and the NGINX One Console.
   * **One instance:** the real-time graphical dashboard and live JSON metrics feed.
   * **The fleet:** NGINX One Console connected through the NGINX Agent (`nginx-plus/agent` image plus a data plane key): instance inventory, config drift, CVE and certificate status, and pushing config centrally. The closest NGINX analog to BIG-IQ.
 
-### Sprint 12: High Availability & Fault Resilience (Dec 14–18, 5 Days)
+### Sprint 12: High Availability & Fault Resilience (Dec 14–18, 3 Days)
 * **Focus:** Eliminating single points of failure and engineering self-healing systems.
 * **Key Topics:** Active/passive failover using Keepalived and Virtual Router Redundancy Protocol (VRRP), shared floating virtual IPs (VIP), tuning connection timeouts (`proxy_connect_timeout`), handling backend connection resets gracefully, and error masking.
 * **Enterprise Side Quest:** NGINX Plus active health checks: periodic out-of-band application probes with custom response body pattern matching.
@@ -192,7 +196,7 @@ S05: Oct 26-30 (5d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 * **Key Topics:** OWASP Top 10 threat modeling, ModSecurity OSS engine integration with Core Rule Set (CRS), request body inspection limits, and tuning false positives.
 * **Enterprise Side Quest:** F5 App Protect WAF: high-performance native compiled engine, DataGuard credit card/SSN masking, and precompiled policy deployment.
 
-### Sprint 14: Capstone Architecture & Production Packaging (Dec 28–31, 4 Days)
+### Sprint 14: Capstone Architecture & Production Packaging (Dec 28–31, 3 Days)
 * **Focus:** Consolidating all 13 sprints into a production-grade, shareable learning platform and deployment artifact.
 * **Key Topics:** Multi-stage Docker builds, distroless minimal container images, writing a complete Helm chart with production values, automated configuration validation in CI/CD, and disaster recovery procedures.
 * **Enterprise Side Quest:** The Executive Review: presenting the journey outcomes, architectural lessons, and ROI comparison between NGINX OSS and NGINX Plus to technical peers.
