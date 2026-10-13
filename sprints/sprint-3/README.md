@@ -1,5 +1,5 @@
 # Sprint 3: TLS Termination, HTTP/2, HTTP/3 & Edge Hardening
-**Week of:** Monday, Oct 12 (3 sessions, any days that week)  
+**Cadence:** 3 sessions, any days that week  
 **Milestone:** The Lumina Zero-Trust Edge: Sprint 2's gateway behind TLS 1.3, HTTP/2, HTTP/3 and browser security headers  
 **Shape:** From Sprint 3 on, every sprint has **3 days**. The Enterprise Side Quest is an **optional** add-on to Day 3, with its own optional quiz.
 

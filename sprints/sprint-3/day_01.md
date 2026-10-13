@@ -1,5 +1,5 @@
 # Sprint 3 &bull; Day 1: TLS Termination at the Edge
-**Week of:** Oct 12 (Day 1 of 3)  
+**Day:** 1 of 3  
 **Estimated Time:** 65 Minutes (15 concepts, 5 setup, 35 lab, 10 quiz)  
 **Theme:** On BIG-IP, a client SSL profile holds the whole TLS policy. In NGINX the same policy is a handful of `ssl_*` directives spread across `http` and `server`, and where you put each one changes what it does.
 
@@ -96,7 +96,7 @@ source helpers.sh                # c, hs, resume, h3: re-run in every new termin
 | Helper | What it does |
 | :--- | :--- |
 | `c [curl args] URL` | `curl` that trusts the Lumina Lab CA and resolves `lumina.local` to 127.0.0.1 |
-| `hs [s_client args]` | One handshake to 8443, summarized: `New TLSv1.3 cipher=... sig=ECDSA kx=X25519`, or `FAILED <alert>` |
+| `hs [s_client args]` | One handshake to 8443, summarized: `New TLSv1.3 cipher=... sig=ECDSA kx=X25519`, or `FAILED <alert>`. A failed certificate check adds `VERIFY FAILED: <reason>` |
 | `SNI=name hs`, `SNI= hs` | Send another SNI name, or none |
 | `resume [--reload] [args]` | Save a session, optionally reload NGINX, then reconnect 4 times: `Reused` or `New` |
 
@@ -165,7 +165,7 @@ ssl_conf_command Ciphersuites TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA25
 ngx -t && ngx -s reload
 hs -ciphersuites TLS_AES_128_GCM_SHA256            # refused now
 hs                                                 # normal clients are unaffected
-grep -E 'no shared cipher' logs/error.log | tail -1
+grep -a 'no shared cipher' logs/error.log | tail -1
 ```
 The failure reason is in the error log only because Day 1's config logs at `info`. At the usual `notice`, failed handshakes are invisible.
 
@@ -193,7 +193,7 @@ SNI=evil.example hs                                # unknown name
 SNI= hs                                            # no SNI at all
 SNI=evil.example hs -verify_hostname evil.example
 ```
-Right now `lumina.local` is the only server on 8443, so it's the default. Both handshakes **succeed** and present the Lumina certificate. With hostname verification, the client reports `hostname mismatch`. The server still sent a certificate to someone who asked for a different site.
+Right now `lumina.local` is the only server on 8443, so it's the default. Both handshakes **succeed** and present the Lumina certificate. With hostname verification, `hs` adds `VERIFY FAILED: hostname mismatch`. `s_client` only reports a failed check and still finishes the handshake; a browser or `curl` would abort. Either way, the server sent a certificate to someone who asked for a different site.
 
 Add a catch-all **above** the lumina server:
 ```nginx

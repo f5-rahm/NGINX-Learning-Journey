@@ -28,9 +28,10 @@ hs() {
         /ALPN protocol/       { alpn = $NF }
         /alert number/        { split($0, f, ":"); al = f[6]; n = $NF }
         /no protocols available/ { al = "CLIENT refused: no protocols available" }
+        /Verify return code: [1-9]/ && vr == "" { sub(/.*Verify return code: [0-9]+ \(/, ""); sub(/\)$/, ""); vr = $0 }
         END {
             if (cipher == "" || cipher == "(NONE)") { print "FAILED  " (al != "" ? al (n != "" ? " (" n ")" : "") : "no handshake"); exit }
-            printf "%s %s  cipher=%s  sig=%s  kx=%s%s\n", res, ver, cipher, sig, grp, (alpn != "" ? "  alpn=" alpn : "")
+            printf "%s %s  cipher=%s  sig=%s  kx=%s%s\n", res, ver, cipher, sig, grp, (alpn != "" ? "  alpn=" alpn : "") (vr != "" ? "  VERIFY FAILED: " vr : "")
         }'
 }
 

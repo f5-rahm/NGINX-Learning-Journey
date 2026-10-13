@@ -1,5 +1,5 @@
 # Sprint 3 &bull; Day 3 (Optional) Enterprise Side Quest: Certificates Without Reloads, Certificates Without Humans
-**Week of:** Oct 12 (optional, after Day 3)  
+**Day:** Optional, after Day 3  
 **Estimated Time:** 45 Minutes (10 concepts, 5 setup, 2 × 15 hands-on). Part A and Part B are independent: do either or both.  
 **Theme:** Day 1 loaded certificates from files, so changing one means a reload. Part A changes them through the NGINX Plus API with no reload. Part B has NGINX get and renew them by itself over ACME.
 

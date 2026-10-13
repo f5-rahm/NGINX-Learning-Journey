@@ -1,5 +1,5 @@
 # Sprint 3 &bull; Day 3: Security Headers & the Sprint Lab
-**Week of:** Oct 12 (Day 3 of 3)  
+**Day:** 3 of 3  
 **Estimated Time:** 75 Minutes (10 concepts, 3 setup, 17 activities, 35 Lumina build, 10 quiz)  
 **Optional:** [Enterprise Side Quest](day_03_enterprise.md), 45 minutes: certificates without reloads (NGINX Plus) and automatic issuance (ACME)  
 **Theme:** TLS protects the connection. Response headers tell the browser how to behave once the page arrives. Add them so they appear on every response, then put the whole sprint together on Lumina.

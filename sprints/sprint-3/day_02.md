@@ -1,5 +1,5 @@
 # Sprint 3 &bull; Day 2: ALPN, HTTP/2 and HTTP/3
-**Week of:** Oct 12 (Day 2 of 3)  
+**Day:** 2 of 3  
 **Estimated Time:** 65 Minutes (15 concepts, 5 setup, 35 lab, 10 quiz)  
 **Theme:** The client's protocol and the backend's protocol are separate decisions. Learn how NGINX negotiates HTTP/2 inside TLS, how it advertises HTTP/3 over UDP, and what each one changes on the wire.
 

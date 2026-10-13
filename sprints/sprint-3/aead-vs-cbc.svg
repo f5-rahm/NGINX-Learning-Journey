@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1266" viewBox="0 0 900 1266" font-family="Lato" xml:space="preserve">
+<defs><marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/></marker></defs>
+<rect width="900" height="1266" fill="#FFFFFF"/>
+<text x="24" y="40" font-size="22" font-weight="bold" fill="#1F1F1F" text-anchor="start">AEAD: one seal instead of a MAC bolted onto CBC</text>
+<text x="24" y="65" font-size="14" fill="#555555" text-anchor="start">How TLS protects each record · Sprint 3, Day 1 of my NGINX learning journey</text>
+<text x="24" y="104" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">1  Two ways to protect a TLS record</text>
+<rect x="24" y="118" width="420" height="440" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<text x="234" y="148" font-size="17" font-weight="bold" fill="#D9603B" text-anchor="middle">Before: MAC-then-encrypt (CBC suites)</text>
+<text x="234" y="168" font-size="13" fill="#555555" text-anchor="middle">TLS 1.0–1.2, e.g. ECDHE-RSA-AES128-SHA</text>
+<rect x="64" y="186" width="340" height="36" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="234.0" y="209" font-size="13" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">header + plaintext</text>
+<line x1="234" y1="224" x2="234" y2="252" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="246" y="243" font-size="12" fill="#555555" text-anchor="start">HMAC over header + plaintext</text>
+<rect x="64" y="254" width="340" height="36" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="234.0" y="277" font-size="13" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">plaintext | MAC | padding</text>
+<line x1="234" y1="292" x2="234" y2="320" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="246" y="311" font-size="12" fill="#555555" text-anchor="start">AES-CBC (TLS 1.0: IV = last block)</text>
+<rect x="64" y="322" width="340" height="36" rx="6" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+<text x="234.0" y="345" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">ciphertext</text>
+<text x="44" y="390" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Receiver order:</text>
+<text x="154" y="390" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">① decrypt  ② strip padding  ③ check MAC</text>
+<rect x="44" y="408" width="380" height="132" rx="8" fill="#FBE3DA" stroke="#D9603B" stroke-width="2"/>
+<text x="60" y="434" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">A forged record is caught only at step ③.</text>
+<text x="60" y="455" font-size="13" fill="#333" text-anchor="start">Steps ① and ② have already run on the</text>
+<text x="60" y="476" font-size="13" fill="#333" text-anchor="start">attacker's bytes, and any difference in error</text>
+<text x="60" y="497" font-size="13" fill="#333" text-anchor="start">or timing tells the attacker something about</text>
+<text x="60" y="518" font-size="13" fill="#333" text-anchor="start">the plaintext: a padding oracle.</text>
+<rect x="456" y="118" width="420" height="440" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<text x="666" y="148" font-size="17" font-weight="bold" fill="#3D8B4A" text-anchor="middle">AEAD: GCM, ChaCha20-Poly1305</text>
+<text x="666" y="168" font-size="13" fill="#555555" text-anchor="middle">Required in TLS 1.3, optional in TLS 1.2</text>
+<rect x="496" y="186" width="160" height="36" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="576" y="209" font-size="13" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">plaintext</text>
+<rect x="672" y="186" width="164" height="36" rx="6" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="1.5"/>
+<text x="754" y="209" font-size="13" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">header (AD)</text>
+<line x1="666" y1="224" x2="666" y2="252" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="678" y="243" font-size="12" fill="#555555" text-anchor="start">seal(key, nonce): one step</text>
+<rect x="496" y="254" width="340" height="36" rx="6" fill="#E2F0E4" stroke="#3D8B4A" stroke-width="2"/>
+<text x="666.0" y="277" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="middle" font-family="IBM Plex Mono, monospace">ciphertext | 16-byte tag</text>
+<text x="496" y="314" font-size="12" fill="#2F6FD6" text-anchor="start">AD = associated data: sent in the clear,</text>
+<text x="496" y="331" font-size="12" fill="#2F6FD6" text-anchor="start">but covered by the tag, so it can't be altered.</text>
+<text x="476" y="390" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Receiver order:</text>
+<text x="586" y="390" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">① verify tag  ② decrypt</text>
+<rect x="476" y="408" width="380" height="132" rx="8" fill="#E2F0E4" stroke="#3D8B4A" stroke-width="2"/>
+<text x="492" y="434" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">A forged record is rejected at step ①.</text>
+<text x="492" y="455" font-size="13" fill="#333" text-anchor="start">One constant-time check covers header and</text>
+<text x="492" y="476" font-size="13" fill="#333" text-anchor="start">ciphertext, before any plaintext exists.</text>
+<text x="492" y="497" font-size="13" fill="#333" text-anchor="start">No padding to probe, no IV chaining, and</text>
+<text x="492" y="518" font-size="13" fill="#333" text-anchor="start">TLS 1.3 never reuses a nonce.</text>
+<text x="24" y="602" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">2  The attack era it ended</text>
+<rect x="24" y="618" width="852" height="30" rx="6" fill="#EDEDEA" stroke="#EDEDEA" stroke-width="0"/>
+<text x="36" y="638" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Year</text>
+<text x="106" y="638" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Attack</text>
+<text x="274" y="638" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">What it exploited</text>
+<text x="604" y="638" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Why AEAD closes it</text>
+<text x="36" y="669" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">2002</text>
+<text x="106" y="669" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Padding oracle</text>
+<text x="274" y="669" font-size="13" fill="#333" text-anchor="start">CBC padding errors that differ let an attacker</text>
+<text x="274" y="687" font-size="13" fill="#333" text-anchor="start">decrypt a record byte by byte (Vaudenay)</text>
+<text x="604" y="669" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">No padding, and the tag is checked first</text>
+<rect x="24" y="698" width="852" height="50" rx="0" fill="#F7F7F5" stroke="#F7F7F5" stroke-width="0"/>
+<text x="36" y="719" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">2011</text>
+<text x="106" y="719" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">BEAST</text>
+<text x="274" y="719" font-size="13" fill="#333" text-anchor="start">TLS 1.0 used the previous record's last block</text>
+<text x="274" y="737" font-size="13" fill="#333" text-anchor="start">as the next IV, so it was predictable</text>
+<text x="604" y="719" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">A fresh nonce for every record,</text>
+<text x="604" y="737" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">no chaining between records</text>
+<text x="36" y="769" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">2013</text>
+<text x="106" y="769" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Lucky Thirteen</text>
+<text x="274" y="769" font-size="13" fill="#333" text-anchor="start">Timing differences from padding length in</text>
+<text x="274" y="787" font-size="13" fill="#333" text-anchor="start">MAC-then-encrypt processing</text>
+<text x="604" y="769" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">One verify step whose cost doesn't</text>
+<text x="604" y="787" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">depend on the plaintext</text>
+<rect x="24" y="798" width="852" height="50" rx="0" fill="#F7F7F5" stroke="#F7F7F5" stroke-width="0"/>
+<text x="36" y="819" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">2013–15</text>
+<text x="106" y="819" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">RC4 biases</text>
+<text x="274" y="819" font-size="13" fill="#333" text-anchor="start">The non-CBC alternative leaked plaintext through</text>
+<text x="274" y="837" font-size="13" fill="#333" text-anchor="start">keystream biases; RC4 banned (RFC 7465)</text>
+<text x="604" y="819" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">ChaCha20-Poly1305 is the fast,</text>
+<text x="604" y="837" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">sound stream-cipher option</text>
+<text x="36" y="869" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">2014</text>
+<text x="106" y="869" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">POODLE</text>
+<text x="274" y="869" font-size="13" fill="#333" text-anchor="start">SSL 3.0 padding unchecked; the TLS variant hit</text>
+<text x="274" y="887" font-size="13" fill="#333" text-anchor="start">appliances, BIG-IP included (CVE-2014-8730)</text>
+<text x="604" y="869" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">No padding to check</text>
+<rect x="24" y="898" width="852" height="50" rx="0" fill="#F7F7F5" stroke="#F7F7F5" stroke-width="0"/>
+<text x="36" y="919" font-size="13" font-weight="bold" fill="#D9603B" text-anchor="start">2019</text>
+<text x="106" y="919" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">Zombie POODLE,</text>
+<text x="106" y="937" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">GOLDENDOODLE</text>
+<text x="274" y="919" font-size="13" fill="#333" text-anchor="start">CBC padding oracles still turning up in</text>
+<text x="274" y="937" font-size="13" fill="#333" text-anchor="start">TLS 1.2 stacks on appliances</text>
+<text x="604" y="919" font-size="13" font-weight="bold" fill="#3D8B4A" text-anchor="start">TLS 1.3 removes CBC entirely</text>
+<line x1="24" y1="948" x2="876" y2="948" stroke="#C8C8C4" stroke-width="1"/>
+<text x="24" y="992" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">3  What AEAD doesn't fix</text>
+<text x="470" y="992" font-size="17" font-weight="bold" fill="#1F1F1F" text-anchor="start">4  Where it shows up in NGINX</text>
+<rect x="24" y="1006" width="420" height="196" rx="10" fill="#ECE6F7" stroke="#6B4FB3" stroke-width="2"/>
+<text x="40" y="1036" font-size="13" font-weight="bold" fill="#6B4FB3" text-anchor="start">Nonce reuse.</text>
+<text x="123.0" y="1036" font-size="13" fill="#333" text-anchor="start">Repeat a GCM nonce and forgeries follow.</text>
+<text x="40" y="1057" font-size="13" fill="#333" text-anchor="start">TLS 1.2 let stacks choose nonces (some servers</text>
+<text x="40" y="1078" font-size="13" fill="#333" text-anchor="start">repeated them); TLS 1.3 derives them from the</text>
+<text x="40" y="1099" font-size="13" fill="#333" text-anchor="start">record sequence number.</text>
+<text x="40" y="1128" font-size="13" font-weight="bold" fill="#6B4FB3" text-anchor="start">Compression leaks.</text>
+<text x="162.0" y="1128" font-size="13" fill="#333" text-anchor="start">CRIME, BREACH: lengths, not ciphers.</text>
+<text x="40" y="1157" font-size="13" font-weight="bold" fill="#6B4FB3" text-anchor="start">Handshake attacks.</text>
+<text x="162.0" y="1157" font-size="13" fill="#333" text-anchor="start">Downgrade, FREAK, Logjam hit key</text>
+<text x="40" y="1178" font-size="13" fill="#333" text-anchor="start">exchange, not the record layer.</text>
+<rect x="456" y="1006" width="420" height="196" rx="10" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2"/>
+<text x="472" y="1036" font-size="13" font-weight="bold" fill="#2F6FD6" text-anchor="start">TLS 1.3</text>
+<text x="530" y="1036" font-size="13" fill="#333" text-anchor="start">All 5 suites are AEAD. Nothing to remove.</text>
+<text x="472" y="1064" font-size="13" font-weight="bold" fill="#2F6FD6" text-anchor="start">TLS 1.2</text>
+<text x="530" y="1064" font-size="13" fill="#333" text-anchor="start">Default</text>
+<text x="580" y="1064" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">ssl_ciphers HIGH:!aNULL:!MD5</text>
+<text x="530" y="1083" font-size="13" fill="#333" text-anchor="start">still allows CBC suites. Going AEAD-only</text>
+<text x="530" y="1102" font-size="13" fill="#333" text-anchor="start">means an ECDHE + GCM/ChaCha20 list.</text>
+<text x="472" y="1134" font-size="13" font-weight="bold" fill="#2F6FD6" text-anchor="start">Knobs</text>
+<text x="530" y="1134" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">ssl_ciphers</text>
+<text x="616" y="1134" font-size="13" fill="#333" text-anchor="start">→ TLS 1.2 only</text>
+<text x="530" y="1153" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">ssl_conf_command Ciphersuites</text>
+<text x="745" y="1153" font-size="13" fill="#333" text-anchor="start">→ TLS 1.3</text>
+<text x="472" y="1182" font-size="12" fill="#555555" text-anchor="start">Sprint 3 Day 1 lab: nginx 1.31.6, OpenSSL 3.0.2</text>
+<text x="24" y="1238" font-size="13" font-weight="bold" fill="#1F1F1F" text-anchor="start">BIG-IP lens:</text>
+<text x="102" y="1238" font-size="13" fill="#444" text-anchor="start">like removing CBC from a client SSL profile's cipher string, except in NGINX that only matters for TLS 1.2.</text>
+</svg>
