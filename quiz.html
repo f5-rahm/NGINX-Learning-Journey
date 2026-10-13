@@ -85,11 +85,11 @@
       return a;
     }
 
-    function storageKey() { return `nginx_quiz_s${sprint.sprint}_d${day.day}`; }
+    function storageKey() { return `nginx_quiz_s${sprint.sprint}_d${day.day}${day.pool ? "_" + day.pool : ""}`; }
 
-    function bestScore(sp, d) {
+    function bestScore(sp, d, pool) {
       try {
-        const h = JSON.parse(localStorage.getItem(`nginx_quiz_s${sp}_d${d}`) || "[]");
+        const h = JSON.parse(localStorage.getItem(`nginx_quiz_s${sp}_d${d}${pool ? "_" + pool : ""}`) || "[]");
         return h.length ? Math.max(...h.map(r => r.percentage)) : null;
       } catch (e) { return null; }
     }
@@ -116,6 +116,12 @@
       const sp = Number(params.get("sprint")), d = Number(params.get("day"));
       sprint = data.sprints.find(s => s.sprint === sp);
       day = sprint?.days.find(x => x.day === d);
+      // Optional extra pools hang off a day: quiz.html?sprint=3&day=3&pool=enterprise
+      const poolKey = params.get("pool");
+      if (day && poolKey) {
+        const extra = day.extra_pools?.find(p => p.pool === poolKey);
+        day = extra ? { ...extra, day: day.day } : null;
+      }
       if (!day) return renderIndex();
       if (!day.questions.length) {
         document.getElementById("questions-list").innerHTML = `
@@ -125,7 +131,7 @@
       }
       pool = day.questions;
       const badge = document.getElementById("badge");
-      badge.textContent = `Sprint ${sprint.sprint} • Day ${day.day}`;
+      badge.textContent = `Sprint ${sprint.sprint} • Day ${day.day}${day.pool ? " • Optional" : ""}`;
       badge.classList.remove("hidden");
       document.getElementById("subtitle").textContent = day.title;
       document.title = `S${sprint.sprint} D${day.day} Quiz • ${day.title}`;
@@ -143,7 +149,7 @@
             </div>
             <div class="text-right bg-slate-950/80 p-3 rounded-xl border border-slate-800">
               <div class="text-[10px] uppercase font-bold text-slate-400">Best Score</div>
-              <div class="text-lg font-black text-white">${bestScore(sprint.sprint, day.day) ?? "—"}${bestScore(sprint.sprint, day.day) !== null ? "%" : ""}</div>
+              <div class="text-lg font-black text-white">${bestScore(sprint.sprint, day.day, day.pool) ?? "—"}${bestScore(sprint.sprint, day.day, day.pool) !== null ? "%" : ""}</div>
             </div>
           </div>
         </div>`;
@@ -157,8 +163,8 @@
           <div class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Sprint ${sp.sprint}</div>
           <div class="text-lg font-black text-white">${escapeHtml(sp.title)}</div>
           <div class="divide-y divide-slate-800">
-            ${sp.days.map(d => {
-              const best = bestScore(sp.sprint, d.day);
+            ${sp.days.flatMap(d => [d, ...(d.extra_pools || []).map(p => ({ ...p, day: d.day }))]).map(d => {
+              const best = bestScore(sp.sprint, d.day, d.pool);
               const ready = d.questions.length > 0;
               return `
                 <div class="flex items-center justify-between py-2 text-sm">
@@ -166,11 +172,12 @@
                     <span class="text-slate-400">Day ${d.day}${d.date ? ` • ${d.date}` : ""}</span>
                     <span class="text-slate-200 ml-2">${escapeHtml(d.title)}</span>
                     ${d.track === "enterprise" ? '<span class="ml-2 text-[10px] uppercase font-bold text-amber-400">Enterprise</span>' : ""}
+                    ${d.optional ? '<span class="ml-1 text-[10px] uppercase font-bold text-slate-400">Optional</span>' : ""}
                   </div>
                   <div class="flex items-center gap-3">
                     ${best !== null ? `<span class="text-xs ${best >= passPercent ? "text-emerald-400" : "text-rose-400"}">best ${best}%</span>` : ""}
                     ${ready
-                      ? `<a href="quiz.html?sprint=${sp.sprint}&day=${d.day}" class="nginx-btn text-white text-xs font-bold px-3 py-1.5 rounded-lg">Start</a>`
+                      ? `<a href="quiz.html?sprint=${sp.sprint}&day=${d.day}${d.pool ? `&pool=${d.pool}` : ""}" class="nginx-btn text-white text-xs font-bold px-3 py-1.5 rounded-lg">Start</a>`
                       : '<span class="text-xs text-slate-500">coming soon</span>'}
                   </div>
                 </div>`;

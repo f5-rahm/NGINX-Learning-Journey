@@ -1751,6 +1751,1023 @@
           ]
         }
       ]
+    },
+    {
+      "sprint": 3,
+      "title": "TLS Termination, HTTP/2, HTTP/3 & Edge Hardening",
+      "days": [
+        {
+          "day": 1,
+          "date": "2026-10-12",
+          "title": "TLS Termination at the Edge",
+          "questions": [
+            {
+              "id": "s3d1q01",
+              "type": "scenario",
+              "category": "Protocols",
+              "question": "A scanner reports that your NGINX 1.31 edge refuses TLS 1.1. Your config has no `ssl_protocols` line. Why is TLS 1.1 refused?",
+              "options": {
+                "A": "The default `ssl_protocols` on current NGINX is TLS 1.2 and 1.3, and Ubuntu's OpenSSL security level 2 is a second gate",
+                "B": "NGINX only supports TLS 1.3 since 1.25",
+                "C": "TLS 1.1 is disabled by `ssl_session_tickets`",
+                "D": "The scanner sent no SNI, so the handshake was rejected"
+              },
+              "answer": "A",
+              "explanation": "Current NGINX defaults `ssl_protocols` to TLS 1.2 and 1.3. Separately, OpenSSL 3 at security level 2 refuses TLS 1.0/1.1 even if NGINX allowed them. In the lab, TLS 1.1 only succeeded after opening **both**: `ssl_protocols` including TLSv1.1 and `ssl_ciphers DEFAULT@SECLEVEL=0`."
+            },
+            {
+              "id": "s3d1q02",
+              "type": "scenario",
+              "category": "Ciphers",
+              "question": "Security asks you to remove AES-128 everywhere. You change `ssl_ciphers` to list only AES-256 suites. A TLS 1.3 client still negotiates `TLS_AES_128_GCM_SHA256`. Why?",
+              "options": {
+                "A": "The session cache still holds the old cipher",
+                "B": "`ssl_ciphers` only governs TLS 1.2 and below. TLS 1.3 suites are set with `ssl_conf_command Ciphersuites`",
+                "C": "AES-128 is mandatory in TLS 1.3 and cannot be disabled",
+                "D": "`ssl_prefer_server_ciphers` is off"
+              },
+              "answer": "B",
+              "explanation": "OpenSSL configures TLS 1.3 suites through a separate API. NGINX exposes it via `ssl_conf_command Ciphersuites ...`. Changing `ssl_ciphers` alone leaves all five TLS 1.3 suites enabled, which is exactly what Activity 3.3 showed."
+            },
+            {
+              "id": "s3d1q03",
+              "type": "scenario",
+              "category": "Certificates",
+              "question": "A server has both an ECDSA and an RSA certificate. A modern browser connects with TLS 1.3. Which certificate does it get, and what decides it?",
+              "options": {
+                "A": "Always RSA, because it's listed second",
+                "B": "Always the first `ssl_certificate` in the config",
+                "C": "Usually ECDSA: OpenSSL picks a certificate the client can verify from its `signature_algorithms`, and modern clients list ECDSA first",
+                "D": "A random one, to balance CPU load"
+              },
+              "answer": "C",
+              "explanation": "With dual certificates, OpenSSL chooses per handshake. In TLS 1.3 the client's signature algorithms decide, and modern clients prefer ECDSA. An RSA-only client (`-sigalgs rsa_pss_rsae_sha256`) gets the RSA certificate instead."
+            },
+            {
+              "id": "s3d1q04",
+              "type": "scenario",
+              "category": "SNI",
+              "question": "Your edge has one HTTPS `server` (`lumina.local`) on port 8443 and nothing else. A client connects with SNI `evil.example`. What happens?",
+              "options": {
+                "A": "The handshake is refused with alert 112",
+                "B": "NGINX returns HTTP 421 Misdirected Request",
+                "C": "NGINX closes the TCP connection before the ClientHello",
+                "D": "The handshake succeeds and presents the lumina.local certificate, because the only server is the default for that port"
+              },
+              "answer": "D",
+              "explanation": "Unmatched SNI falls to the default server for that `address:port`, which is the only server here. It hands out the Lumina certificate (the client then sees a hostname mismatch). Refusing needs a catch-all `default_server` with `ssl_reject_handshake on`."
+            },
+            {
+              "id": "s3d1q05",
+              "type": "scenario",
+              "category": "SNI",
+              "question": "After you add a catch-all `default_server` with `ssl_reject_handshake on`, a monitoring system that checks `https://10.1.1.4:8443/` starts failing. Why?",
+              "options": {
+                "A": "Clients connecting to an IP address send no SNI, so they land on the rejecting default server",
+                "B": "Monitors don't support TLS 1.3",
+                "C": "The catch-all has no certificate configured",
+                "D": "The monitor's source IP is blocked by `ssl_reject_handshake`"
+              },
+              "answer": "A",
+              "explanation": "SNI can't carry an IP address, so `curl https://<ip>` and IP-based monitors send none and are refused (alert 112). Point the monitor at the hostname (SNI), or give it a dedicated health endpoint that isn't behind the catch-all."
+            },
+            {
+              "id": "s3d1q06",
+              "type": "scenario",
+              "category": "Session Resumption",
+              "question": "With default settings (tickets on, no session cache), clients resume TLS sessions fine until you run `nginx -s reload`. Then every client does a full handshake. Why?",
+              "options": {
+                "A": "Reload flushes the kernel's TCP state",
+                "B": "Without a shared cache or `ssl_session_ticket_key` files, NGINX generates new random ticket keys at every config load, so old tickets can't be decrypted",
+                "C": "Session tickets are disabled for one minute after a reload",
+                "D": "Tickets are only valid for the worker that issued them"
+              },
+              "answer": "B",
+              "explanation": "Stateless tickets are encrypted with ticket keys. Without configured key files, or a shared cache (which keeps NGINX's ticket keys in shared memory), those keys are random per config load. Activity 3.6 showed `Reused` before a reload and `New` after."
+            },
+            {
+              "id": "s3d1q07",
+              "type": "scenario",
+              "category": "Session Resumption",
+              "question": "You add `ssl_session_cache shared:SSL:10m;` inside `server lumina.local`. On the same port there is a separate `ssl_reject_handshake` default server. Sessions still don't survive reloads. Why?",
+              "options": {
+                "A": "The zone name `SSL` is reserved",
+                "B": "10m is too small for TLS 1.3 tickets",
+                "C": "Resumption is handled in the default server's context, before SNI switches to lumina.local, and the default server has no shared cache",
+                "D": "Shared caches only work with `worker_processes 1`"
+              },
+              "answer": "C",
+              "explanation": "The handshake, including the session lookup, starts in the default server of the listening socket. Put session settings at `http` level (or also in the default server) so every server on the port shares them. That's the Activity 3.6 reveal."
+            },
+            {
+              "id": "s3d1q08",
+              "type": "scenario",
+              "category": "Session Resumption",
+              "question": "You run three NGINX nodes behind a load balancer with no session persistence. Each node has its own shared session cache. Why do many returning clients still do full handshakes?",
+              "options": {
+                "A": "Shared caches are per worker",
+                "B": "Load balancers strip session tickets",
+                "C": "TLS 1.3 forbids resumption across IP addresses",
+                "D": "Each node has its own cache and its own ticket keys, so a session or ticket from node A means nothing to node B"
+              },
+              "answer": "D",
+              "explanation": "Shared memory is per host. Across a farm you need the same `ssl_session_ticket_key` files on every node, rotated together, or the client has to hit the same node. It's the same problem as BIG-IP session ticket keys across a device group."
+            },
+            {
+              "id": "s3d1q09",
+              "type": "config",
+              "category": "Ciphers",
+              "question": "Given this TLS 1.2 policy, what happens when a client offers only `ECDHE-RSA-AES128-SHA`?\n```nginx\nssl_protocols TLSv1.2 TLSv1.3;\nssl_ciphers   ECDHE+AESGCM:ECDHE+CHACHA20;\n```",
+              "options": {
+                "A": "The handshake fails with alert 40: the only offered suite is CBC, which the AEAD-only list excludes",
+                "B": "It connects, because `ECDHE+` matches all ECDHE suites",
+                "C": "It connects with TLS 1.3 instead",
+                "D": "NGINX falls back to the OpenSSL default cipher list"
+              },
+              "answer": "A",
+              "explanation": "`ECDHE+AESGCM:ECDHE+CHACHA20` keeps only ECDHE suites with AES-GCM or ChaCha20-Poly1305 (AEAD). `ECDHE-RSA-AES128-SHA` is CBC, so there's no shared cipher: `handshake failure (40)`."
+            },
+            {
+              "id": "s3d1q10",
+              "type": "config",
+              "category": "Certificates",
+              "question": "What does a TLS 1.2 client offering only `ECDHE-RSA-AES128-GCM-SHA256` get?\n```nginx\nserver {\n    listen 443 ssl;\n    ssl_certificate     ecdsa.crt;\n    ssl_certificate_key ecdsa.key;\n}\n```",
+              "options": {
+                "A": "The ECDSA certificate, with an RSA signature",
+                "B": "A handshake failure: an `ECDHE-RSA` suite needs an RSA certificate, and the server has none",
+                "C": "A self-signed RSA certificate generated on the fly",
+                "D": "HTTP 400 \"The plain HTTP request was sent to HTTPS port\""
+              },
+              "answer": "B",
+              "explanation": "In TLS 1.2 the suite names the authentication algorithm. With only an ECDSA certificate, `ECDHE-RSA-*` can't be satisfied: alert 40, logged at `info` as `no shared cipher`. Adding an RSA pair fixes it (Activity 3.4)."
+            },
+            {
+              "id": "s3d1q11",
+              "type": "config",
+              "category": "SNI",
+              "question": "Which config refuses handshakes for any name other than lumina.local, without serving a certificate?",
+              "options": {
+                "A": "```nginx\nserver { listen 443 ssl default_server; return 444; }\n```",
+                "B": "```nginx\nserver { listen 443 ssl; server_name _; deny all; }\n```",
+                "C": "```nginx\nserver { listen 443 ssl default_server; ssl_reject_handshake on; }\n```",
+                "D": "```nginx\nserver { listen 443 ssl default_server; ssl_verify_client on; }\n```"
+              },
+              "answer": "C",
+              "explanation": "`ssl_reject_handshake on` aborts the handshake (alert 112) before any certificate is sent, and needs no certificate itself. `return 444` acts only after the handshake has completed, which needs a certificate. `deny` is HTTP-level. `ssl_verify_client` is about client certificates."
+            },
+            {
+              "id": "s3d1q12",
+              "type": "config",
+              "category": "Redirects",
+              "question": "A client sends `POST /api/orders?src=app` to this server. What does it receive?\n```nginx\nserver {\n    listen 8083;\n    server_name lumina.local;\n    return 301 https://$host:8443$request_uri;\n}\n```",
+              "options": {
+                "A": "`301` to `https://lumina.local:8443/api/orders`, without the query string",
+                "B": "`308`, because the method was POST",
+                "C": "The POST is proxied over HTTPS",
+                "D": "`301` to `https://lumina.local:8443/api/orders?src=app`. Many clients will follow it as a `GET`, dropping the body."
+              },
+              "answer": "D",
+              "explanation": "`$request_uri` keeps the original path and query. A 301 lets clients switch POST to GET. If POSTs can arrive on port 80, use `308`, which preserves the method and body."
+            },
+            {
+              "id": "s3d1q13",
+              "type": "config",
+              "category": "Session Resumption",
+              "question": "Which placement lets sessions resume across reloads for every server on port 443, including behind a separate `default_server`?",
+              "options": {
+                "A": "`ssl_session_cache shared:SSL:10m;` at http level",
+                "B": "`ssl_session_cache builtin;` in each server",
+                "C": "`ssl_session_tickets off;` at http level",
+                "D": "`ssl_session_timeout 1d;` in the default server"
+              },
+              "answer": "A",
+              "explanation": "A shared cache at http level is inherited by every server, including the default server that handles resumption. `builtin` is per worker and lost on reload. Turning tickets off with no cache disables resumption entirely."
+            },
+            {
+              "id": "s3d1q14",
+              "type": "config",
+              "category": "Ciphers",
+              "question": "With this config, which TLS 1.3 suites can a client negotiate?\n```nginx\nssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256;\n```",
+              "options": {
+                "A": "Only `TLS_AES_128_GCM_SHA256`",
+                "B": "All of OpenSSL's default TLS 1.3 suites. `ssl_ciphers` doesn't apply to TLS 1.3.",
+                "C": "None: TLS 1.3 is disabled",
+                "D": "Only suites using ECDSA"
+              },
+              "answer": "B",
+              "explanation": "`ssl_ciphers` is a TLS 1.2-and-below setting. TLS 1.3 suites are untouched unless you use `ssl_conf_command Ciphersuites`."
+            },
+            {
+              "id": "s3d1q15",
+              "type": "diagnose",
+              "category": "Troubleshooting",
+              "question": "Some clients fail to connect, and the NGINX error log shows nothing. `error_log` is set to `notice`. What's the most likely reason the log is silent?",
+              "options": {
+                "A": "NGINX doesn't log TLS failures at all",
+                "B": "The failures are logged to the access log instead",
+                "C": "Handshake failures such as `no shared cipher` are logged at `info` level, below `notice`",
+                "D": "Failed handshakes are only visible with `debug` builds"
+              },
+              "answer": "C",
+              "explanation": "`SSL_do_handshake() failed (... no shared cipher)` and `no suitable signature algorithm` are `info`-level messages. Day 1's config logs at `info` so you can see them. Production configs at `notice` or `warn` hide them."
+            },
+            {
+              "id": "s3d1q16",
+              "type": "diagnose",
+              "category": "SNI",
+              "question": "`openssl s_client -connect edge:443 -servername old.example.com` fails with `tlsv1 unrecognized name ... SSL alert number 112`. What does that tell you?",
+              "options": {
+                "A": "The certificate has expired",
+                "B": "The client and server share no cipher",
+                "C": "The TLS version is too old",
+                "D": "No `server_name` claimed that SNI name, and the default server has `ssl_reject_handshake on`"
+              },
+              "answer": "D",
+              "explanation": "Alert 112 (`unrecognized_name`) is what `ssl_reject_handshake` sends. Either the name is missing from `server_name`, or the client sent a different name than you think."
+            },
+            {
+              "id": "s3d1q17",
+              "type": "diagnose",
+              "category": "Protocols",
+              "question": "On the lab box, `openssl s_client -tls1_1 -connect localhost:8443` prints `no protocols available` and NGINX logs nothing. What happened?",
+              "options": {
+                "A": "The client's own OpenSSL (security level 2) refused to offer TLS 1.1, so no ClientHello reached NGINX",
+                "B": "NGINX refused TLS 1.1 with alert 70",
+                "C": "Port 8443 isn't listening",
+                "D": "SNI is missing"
+              },
+              "answer": "A",
+              "explanation": "`no protocols available` is a client-side error. Lowering the client's level (`-cipher 'DEFAULT@SECLEVEL=0'`) lets the request reach NGINX, which then answers `alert protocol version (70)`."
+            },
+            {
+              "id": "s3d1q18",
+              "type": "recall",
+              "category": "Variables",
+              "question": "Which variable is `r` when the current request's TLS session was resumed, and `.` otherwise?",
+              "options": {
+                "A": "`$ssl_session_id`",
+                "B": "`$ssl_session_reused`",
+                "C": "`$ssl_early_data`",
+                "D": "`$connection_requests`"
+              },
+              "answer": "B",
+              "explanation": "`$ssl_session_reused` is `r` for a resumed session. Logging it next to `$ssl_protocol` and `$ssl_cipher` shows how much resumption you get."
+            },
+            {
+              "id": "s3d1q19",
+              "type": "recall",
+              "category": "Directives",
+              "question": "Which directive passes a setting such as `Ciphersuites` straight to OpenSSL?",
+              "options": {
+                "A": "`ssl_ciphers`",
+                "B": "`ssl_ecdh_curve`",
+                "C": "`ssl_conf_command`",
+                "D": "`ssl_prefer_server_ciphers`"
+              },
+              "answer": "C",
+              "explanation": "`ssl_conf_command Name Value` hands any OpenSSL configuration command to the library. `Ciphersuites` is the common use, because NGINX has no dedicated TLS 1.3 suite directive."
+            },
+            {
+              "id": "s3d1q20",
+              "type": "recall",
+              "category": "Directives",
+              "question": "Which is the default for `ssl_session_cache`?",
+              "options": {
+                "A": "`shared:SSL:1m`",
+                "B": "`builtin`",
+                "C": "`off`",
+                "D": "`none`"
+              },
+              "answer": "D",
+              "explanation": "The default is `none`: the server tells clients sessions may be reused but stores none, so resumption relies on tickets. `off` explicitly forbids reuse, `builtin` is per worker, and `shared` is shared by all workers and survives reloads."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "date": "2026-10-12",
+          "title": "ALPN, HTTP/2 and HTTP/3",
+          "questions": [
+            {
+              "id": "s3d2q01",
+              "type": "scenario",
+              "category": "ALPN",
+              "question": "A client offers `h2` and `http/1.1` in ALPN, but NGINX picks `http/1.1`. The `server` has `listen 443 ssl;`. What's missing?",
+              "options": {
+                "A": "`http2 on;` in that server",
+                "B": "`proxy_http_version 2;`",
+                "C": "`ssl_protocols TLSv1.3;`",
+                "D": "An `Alt-Svc` header"
+              },
+              "answer": "A",
+              "explanation": "NGINX offers `h2` in ALPN only where `http2 on;` is set. The older `listen ... http2` form is deprecated. `proxy_http_version` concerns the upstream side, not the client."
+            },
+            {
+              "id": "s3d2q02",
+              "type": "scenario",
+              "category": "HTTP/2",
+              "question": "Three slow requests (2 s each) are sent in parallel. Over HTTP/2 the access log shows one `$connection` value with `$connection_requests` 1, 2, 3. Over HTTP/1.1 (parallel) it shows three different `$connection` values. What does this demonstrate?",
+              "options": {
+                "A": "HTTP/2 is three times faster per request",
+                "B": "HTTP/2 multiplexes concurrent streams on one connection. HTTP/1.1 needs a separate connection (and TLS handshake) per concurrent request.",
+                "C": "HTTP/1.1 doesn't support keepalive",
+                "D": "NGINX serializes HTTP/2 requests"
+              },
+              "answer": "B",
+              "explanation": "Both finished in about 2 s. The difference is connection count: one TCP+TLS connection for HTTP/2, three for HTTP/1.1. With one HTTP/1.1 connection, the same work took about 6 s."
+            },
+            {
+              "id": "s3d2q03",
+              "type": "scenario",
+              "category": "HPACK",
+              "question": "The same 600-byte header is sent twice on one HTTP/2 connection. `$request_length` logs 422 for the first request and 11 for the second. Why 11?",
+              "options": {
+                "A": "NGINX truncates repeated headers",
+                "B": "The second request was served from cache",
+                "C": "HPACK's dynamic table already held those headers, so the second request referenced them by index instead of resending them",
+                "D": "HTTP/2 drops custom headers after the first request"
+              },
+              "answer": "C",
+              "explanation": "HPACK keeps a per-connection table of headers already sent. The first request was only Huffman-coded (422 vs 695 bytes in HTTP/1.1). The repeat cost a few index bytes."
+            },
+            {
+              "id": "s3d2q04",
+              "type": "scenario",
+              "category": "Upstream Protocol",
+              "question": "A client talks HTTP/3 to NGINX, which proxies to a backend with default settings. What protocol does the backend see?",
+              "options": {
+                "A": "HTTP/3",
+                "B": "HTTP/2",
+                "C": "Whatever the client used",
+                "D": "HTTP/1.1"
+              },
+              "answer": "D",
+              "explanation": "The client side and the upstream side are independent. By default `proxy_pass` speaks HTTP/1.1 with keepalive. Recent NGINX can do `proxy_http_version 2` to backends that support it. The lab's mocks reported `HTTP/1.1` for h2 and h3 clients alike."
+            },
+            {
+              "id": "s3d2q05",
+              "type": "scenario",
+              "category": "HTTP/3",
+              "question": "HTTP/3 is listening on UDP 8443, but browsers keep using HTTP/2. The firewall allows UDP 8443. What's the most likely cause?",
+              "options": {
+                "A": "No `Alt-Svc` header is being sent, so clients never learn HTTP/3 is available",
+                "B": "Browsers only use HTTP/3 on port 443",
+                "C": "HTTP/3 requires `ssl_session_tickets off`",
+                "D": "`http2 on` disables HTTP/3"
+              },
+              "answer": "A",
+              "explanation": "Browsers discover HTTP/3 from `Alt-Svc: h3=\":8443\"` on an HTTP/1.1 or HTTP/2 response (or from an HTTPS DNS record). Without it they never try QUIC. In the lab, `h3alt` stayed on HTTP/2 without the header."
+            },
+            {
+              "id": "s3d2q06",
+              "type": "scenario",
+              "category": "HTTP/3",
+              "question": "Why does HTTP/3 avoid the head-of-line blocking that HTTP/2 still suffers from?",
+              "options": {
+                "A": "HTTP/3 compresses headers better",
+                "B": "QUIC delivers streams independently over UDP, so a lost packet stalls only its own stream, not every stream on the connection",
+                "C": "HTTP/3 opens one TCP connection per stream",
+                "D": "HTTP/3 disables retransmission"
+              },
+              "answer": "B",
+              "explanation": "HTTP/2 removed HTTP-level head-of-line blocking, but all streams share one TCP byte stream: one lost segment stalls them all. QUIC does loss recovery per stream."
+            },
+            {
+              "id": "s3d2q07",
+              "type": "scenario",
+              "category": "QUIC",
+              "question": "Day 1's `ssl_reject_handshake` catch-all has only `listen 8443 ssl default_server;`. Over HTTP/3, a client using SNI `evil.example` gets a response with the Lumina certificate. Why?",
+              "options": {
+                "A": "QUIC doesn't send SNI",
+                "B": "`ssl_reject_handshake` isn't supported with TLS 1.3",
+                "C": "TCP and UDP on port 8443 are separate sockets with separate default servers. On UDP, the lumina.local server is the only one, so it's the default.",
+                "D": "HTTP/3 ignores `server_name`"
+              },
+              "answer": "C",
+              "explanation": "Each socket has its own default server. The catch-all also needs `listen 8443 quic reuseport default_server;` (with `reuseport` moved off the lumina server)."
+            },
+            {
+              "id": "s3d2q08",
+              "type": "scenario",
+              "category": "0-RTT",
+              "question": "You set `ssl_early_data on;` for HTTP/3 on an NGINX built against plain OpenSSL 3.0. What should you expect?",
+              "options": {
+                "A": "0-RTT works for all clients",
+                "B": "NGINX refuses to start",
+                "C": "Early data is accepted only over TCP",
+                "D": "0-RTT is unavailable: with plain OpenSSL, NGINX's QUIC support uses a compatibility layer without early data"
+              },
+              "answer": "D",
+              "explanation": "Plain OpenSSL (before its own QUIC server API) has no QUIC support. NGINX's compatibility layer makes HTTP/3 work, but without 0-RTT. Libraries such as BoringSSL, quictls or LibreSSL support early data."
+            },
+            {
+              "id": "s3d2q09",
+              "type": "config",
+              "category": "HTTP/3",
+              "question": "What does `nginx -t` say about this?\n```nginx\nserver { listen 8443 quic reuseport default_server; ssl_reject_handshake on; }\nserver { listen 8443 quic reuseport; server_name lumina.local; }\n```",
+              "options": {
+                "A": "`[emerg] duplicate listen options for 0.0.0.0:8443`",
+                "B": "Syntax OK: each server gets its own UDP socket",
+                "C": "A warning that QUIC needs `http3 on`",
+                "D": "OK, but the second line is silently ignored"
+              },
+              "answer": "A",
+              "explanation": "Socket options like `reuseport` belong to the address:port, not to a server, so they may be specified only once. Keep `reuseport` on one `listen ... quic` (the default server's) and use plain `listen 8443 quic;` elsewhere."
+            },
+            {
+              "id": "s3d2q10",
+              "type": "config",
+              "category": "HTTP/3",
+              "question": "Which pair of lines makes a TLS server answer HTTP/3 and tell clients about it?",
+              "options": {
+                "A": "`listen 443 http3;` and `http3 on;`",
+                "B": "`listen 443 quic reuseport;` and `add_header Alt-Svc 'h3=\":443\"; ma=86400' always;`",
+                "C": "`listen 443 udp;` and `http2 on;`",
+                "D": "`quic on;` and `add_header Upgrade h3;`"
+              },
+              "answer": "B",
+              "explanation": "`listen ... quic` opens the UDP listener (`http3 on` is the default). `Alt-Svc` advertises it. `always` keeps the advertisement on error responses too."
+            },
+            {
+              "id": "s3d2q11",
+              "type": "config",
+              "category": "ALPN",
+              "question": "In this config, which servers offer `h2`?\n```nginx\nserver { listen 443 ssl; server_name a.example; http2 on; }\nserver { listen 443 ssl; server_name b.example; }\n```",
+              "options": {
+                "A": "Both: `http2 on` on one server applies to the whole port",
+                "B": "Neither: `http2` must be on the `listen` line",
+                "C": "Only a.example",
+                "D": "Only b.example, because it's the last one"
+              },
+              "answer": "C",
+              "explanation": "`http2` is a per-server directive. Clients sending SNI `b.example` are offered only `http/1.1`."
+            },
+            {
+              "id": "s3d2q12",
+              "type": "config",
+              "category": "Inheritance",
+              "question": "Alt-Svc is set at server level. A location adds its own header:\n```nginx\nadd_header Alt-Svc 'h3=\":8443\"; ma=86400' always;\nlocation /downloads/ {\n    add_header Cache-Control no-store always;\n}\n```\nWhat do responses from `/downloads/` carry?",
+              "options": {
+                "A": "Both headers",
+                "B": "Only `Alt-Svc`",
+                "C": "Neither, because `always` cancels inheritance",
+                "D": "Only `Cache-Control`: the location's own `add_header` stops inheritance, so it no longer advertises HTTP/3"
+              },
+              "answer": "D",
+              "explanation": "The `add_header` inheritance rule from Sprint 1: a level with any `add_header` of its own inherits none. `add_header_inherit merge;` in the location, or an `include` snippet, restores it. Day 3 explores this."
+            },
+            {
+              "id": "s3d2q13",
+              "type": "config",
+              "category": "Upstream Protocol",
+              "question": "What does the backend see for an HTTP/2 client request to `/api/x`?\n```nginx\nserver {\n    listen 443 ssl; http2 on;\n    location /api/ {\n        proxy_pass http://pool;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n}\n```",
+              "options": {
+                "A": "HTTP/1.1 with `X-Forwarded-Proto: https`",
+                "B": "HTTP/2 with `X-Forwarded-Proto: h2`",
+                "C": "HTTP/2 with `X-Forwarded-Proto: https`",
+                "D": "HTTP/1.0 with no forwarded header"
+              },
+              "answer": "A",
+              "explanation": "`$scheme` is `https`, not a protocol version. The upstream defaults to HTTP/1.1 unless `proxy_http_version 2` is set."
+            },
+            {
+              "id": "s3d2q14",
+              "type": "config",
+              "category": "HTTP/2",
+              "question": "Which access log variable shows a header block shrinking under HPACK?",
+              "options": {
+                "A": "`$bytes_sent`",
+                "B": "`$request_length`",
+                "C": "`$body_bytes_sent`",
+                "D": "`$http2`"
+              },
+              "answer": "B",
+              "explanation": "`$request_length` counts request line, headers and body as received on the wire. For HTTP/2 that's the HPACK-compressed size, so repeated headers drop to a few bytes."
+            },
+            {
+              "id": "s3d2q15",
+              "type": "diagnose",
+              "category": "HTTP/3",
+              "question": "`ss -lunp` shows NGINX listening on UDP 8443 and the config has `Alt-Svc`, but HTTP/3 clients from outside the box time out while local tests work. Most likely cause?",
+              "options": {
+                "A": "The certificate doesn't support QUIC",
+                "B": "HTTP/3 requires port 443",
+                "C": "A security group or firewall allows TCP 8443 but not UDP 8443",
+                "D": "`reuseport` is missing on the lumina server"
+              },
+              "answer": "C",
+              "explanation": "QUIC is UDP. Firewall rules written for HTTPS usually open only TCP. Clients that can't reach UDP fall back to TCP after the QUIC attempt fails, or keep timing out if they insist on HTTP/3."
+            },
+            {
+              "id": "s3d2q16",
+              "type": "diagnose",
+              "category": "ALPN",
+              "question": "`curl -v https://lumina.local:8443/` shows `ALPN: server accepted http/1.1` even though the client offered h2. The server block has `http2 on;`. What else could explain it?",
+              "options": {
+                "A": "HTTP/2 requires an RSA certificate",
+                "B": "Session resumption disables ALPN",
+                "C": "ALPN only works on port 443",
+                "D": "The client hit a different `server` by SNI (for example, a name only another server block claims), and that server lacks `http2 on`"
+              },
+              "answer": "D",
+              "explanation": "SNI picks the server, and that server's `http2` setting decides the ALPN answer. Check which `server_name` actually matched (`$ssl_server_name`, `$server_name` in the log)."
+            },
+            {
+              "id": "s3d2q17",
+              "type": "diagnose",
+              "category": "Config",
+              "question": "After an upgrade, `nginx -t` warns: `the \"listen ... http2\" directive is deprecated, use the \"http2\" directive instead`. What should you change?",
+              "options": {
+                "A": "Remove `http2` from the `listen` line and add `http2 on;` in the server",
+                "B": "Nothing: it's only cosmetic and will keep working forever",
+                "C": "Replace it with `listen ... quic`",
+                "D": "Add `proxy_http_version 2;`"
+              },
+              "answer": "A",
+              "explanation": "Since 1.25.1, HTTP/2 is a per-server directive. The old `listen` parameter still works with a warning, but move to `http2 on;`, especially before CI starts failing on warnings."
+            },
+            {
+              "id": "s3d2q18",
+              "type": "recall",
+              "category": "Variables",
+              "question": "Which variable holds the protocol negotiated through ALPN (`h2`, `http/1.1`, `h3`)?",
+              "options": {
+                "A": "`$server_protocol`",
+                "B": "`$ssl_alpn_protocol`",
+                "C": "`$http2`",
+                "D": "`$scheme`"
+              },
+              "answer": "B",
+              "explanation": "`$ssl_alpn_protocol` is the ALPN result. `$server_protocol` is the request's protocol (`HTTP/2.0`, `HTTP/3.0`)."
+            },
+            {
+              "id": "s3d2q19",
+              "type": "recall",
+              "category": "HTTP/3",
+              "question": "What transport does QUIC run over?",
+              "options": {
+                "A": "TCP",
+                "B": "SCTP",
+                "C": "UDP",
+                "D": "Raw IP"
+              },
+              "answer": "C",
+              "explanation": "QUIC runs over UDP. It implements reliability, ordering per stream, congestion control, and TLS 1.3 itself."
+            },
+            {
+              "id": "s3d2q20",
+              "type": "recall",
+              "category": "HTTP/2",
+              "question": "What is the default `http2_max_concurrent_streams`?",
+              "options": {
+                "A": "32",
+                "B": "100",
+                "C": "Unlimited",
+                "D": "128"
+              },
+              "answer": "D",
+              "explanation": "128 concurrent streams per HTTP/2 connection by default."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "date": "2026-10-12",
+          "title": "Security Headers & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s3d3q01",
+              "type": "scenario",
+              "category": "add_header",
+              "question": "Security headers are set at server level with plain `add_header` (no `always`). A backend fails, and NGINX returns 502. Which headers does the 502 carry?",
+              "options": {
+                "A": "None of the added security headers: without `always`, `add_header` applies only to 200, 201, 204, 206, 301, 302, 303, 304, 307 and 308",
+                "B": "All of them",
+                "C": "Only HSTS, because browsers require it",
+                "D": "Only headers set in the `http` block"
+              },
+              "answer": "A",
+              "explanation": "`add_header` skips other status codes unless you add `always`. The lab showed bare 404 and 502 responses until `always` was added."
+            },
+            {
+              "id": "s3d3q02",
+              "type": "scenario",
+              "category": "HSTS",
+              "question": "Why should `Strict-Transport-Security` be sent only from the HTTPS server, not from the port 80 redirect server?",
+              "options": {
+                "A": "It would cause a redirect loop",
+                "B": "Browsers ignore HSTS received over plain HTTP, because an attacker could inject it. Only a secure response can set it.",
+                "C": "HSTS over HTTP disables the redirect",
+                "D": "Port 80 servers can't use `add_header`"
+              },
+              "answer": "B",
+              "explanation": "RFC 6797: user agents must ignore STS headers received over insecure transport. Set it on the HTTPS responses, and the browser will skip port 80 next time."
+            },
+            {
+              "id": "s3d3q03",
+              "type": "scenario",
+              "category": "HSTS",
+              "question": "You set `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` on example.com and submit it to the preload list. A month later, `legacy.example.com` (HTTP only) stops working in browsers. Why, and how hard is it to undo?",
+              "options": {
+                "A": "Only the main domain is affected; a cache clear fixes it",
+                "B": "`preload` only affects search engines",
+                "C": "`includeSubDomains` forces HTTPS for every subdomain, and preload ships that rule inside browsers. Removal takes a list update and browser releases: months.",
+                "D": "The legacy site needs `X-Frame-Options`"
+              },
+              "answer": "C",
+              "explanation": "Treat `includeSubDomains` and especially `preload` as long-term commitments. Ramp `max-age` up gradually, and inventory subdomains first."
+            },
+            {
+              "id": "s3d3q04",
+              "type": "scenario",
+              "category": "Inheritance",
+              "question": "HSTS, nosniff and X-Frame-Options are set at server level. Someone adds `add_header Cache-Control no-store always;` to `location /downloads/`. `nginx -t` passes. What changed for `/downloads/`?",
+              "options": {
+                "A": "Nothing, apart from the new Cache-Control header",
+                "B": "Cache-Control replaces only HSTS",
+                "C": "The location now returns 500",
+                "D": "Responses lose every server-level header, including HSTS and Alt-Svc, because a level with its own `add_header` inherits none"
+              },
+              "answer": "D",
+              "explanation": "That's the inheritance trap from Sprint 1, now affecting security policy. Fix it with `add_header_inherit merge;` in the location, or an `include` of the shared header list."
+            },
+            {
+              "id": "s3d3q05",
+              "type": "scenario",
+              "category": "Headers",
+              "question": "Which header stops a browser from rendering an uploaded `avatar.png`, which is really HTML with script, as a page?",
+              "options": {
+                "A": "`X-Content-Type-Options: nosniff`",
+                "B": "`X-Frame-Options: DENY`",
+                "C": "`Referrer-Policy: no-referrer`",
+                "D": "`Strict-Transport-Security`"
+              },
+              "answer": "A",
+              "explanation": "`nosniff` tells the browser to trust `Content-Type` instead of guessing from content (MIME sniffing)."
+            },
+            {
+              "id": "s3d3q06",
+              "type": "scenario",
+              "category": "Headers",
+              "question": "What's the modern replacement for `X-Frame-Options: DENY`?",
+              "options": {
+                "A": "`Referrer-Policy: same-origin`",
+                "B": "`Content-Security-Policy: frame-ancestors 'none'`",
+                "C": "`X-XSS-Protection: 1`",
+                "D": "`Cross-Origin-Resource-Policy: same-site`"
+              },
+              "answer": "B",
+              "explanation": "CSP `frame-ancestors` supersedes X-Frame-Options and can express allow-lists. Many sites send both for older clients."
+            },
+            {
+              "id": "s3d3q07",
+              "type": "scenario",
+              "category": "Leaks",
+              "question": "The backend sends `X-Content-Type-Options: nosniff`, and NGINX also has `add_header X-Content-Type-Options nosniff always;`. What does the client receive?",
+              "options": {
+                "A": "One header: NGINX deduplicates",
+                "B": "Only NGINX's copy, because `add_header` overrides",
+                "C": "Two copies of the header, one from the backend and one from NGINX",
+                "D": "Only the backend's copy"
+              },
+              "answer": "C",
+              "explanation": "`add_header` adds; it doesn't replace. To control the value at the edge, `proxy_hide_header X-Content-Type-Options;` and then add your own."
+            },
+            {
+              "id": "s3d3q08",
+              "type": "scenario",
+              "category": "CSP",
+              "question": "Why roll out a new Content-Security-Policy as `Content-Security-Policy-Report-Only` first?",
+              "options": {
+                "A": "Report-Only is enforced more strictly",
+                "B": "Report-Only works over HTTP, CSP doesn't",
+                "C": "It's required by HSTS",
+                "D": "Browsers report violations without blocking anything, so you find what the policy would break before enforcing it"
+              },
+              "answer": "D",
+              "explanation": "CSP is application-specific. Report-Only lets you see the real violations first."
+            },
+            {
+              "id": "s3d3q09",
+              "type": "config",
+              "category": "add_header",
+              "question": "What does a request to `/missing` (a 404) return?\n```nginx\nserver {\n    add_header Strict-Transport-Security \"max-age=31536000\" always;\n    add_header X-Frame-Options DENY;\n    location / { root html; try_files $uri =404; }\n}\n```",
+              "options": {
+                "A": "Only HSTS",
+                "B": "Both headers",
+                "C": "Only X-Frame-Options",
+                "D": "Neither"
+              },
+              "answer": "A",
+              "explanation": "Only the header with `always` is added to a 404."
+            },
+            {
+              "id": "s3d3q10",
+              "type": "config",
+              "category": "Inheritance",
+              "question": "What does a response from `/reports/` carry?\n```nginx\nserver {\n    add_header Strict-Transport-Security \"max-age=31536000\" always;\n    location /reports/ {\n        add_header_inherit merge;\n        add_header Cache-Control no-store always;\n    }\n}\n```",
+              "options": {
+                "A": "Only Cache-Control",
+                "B": "Both HSTS and Cache-Control",
+                "C": "Only HSTS",
+                "D": "Neither: `merge` cancels `always`"
+              },
+              "answer": "B",
+              "explanation": "`add_header_inherit merge` keeps the parent's `add_header` list and adds the location's own."
+            },
+            {
+              "id": "s3d3q11",
+              "type": "config",
+              "category": "Leaks",
+              "question": "Which config removes the backend's `X-Powered-By` header and NGINX's version number from responses?",
+              "options": {
+                "A": "`add_header X-Powered-By \"\";` and `server_tokens off;`",
+                "B": "`proxy_set_header X-Powered-By \"\";` and `server_tokens off;`",
+                "C": "`proxy_hide_header X-Powered-By;` and `server_tokens off;`",
+                "D": "`proxy_pass_header X-Powered-By;` and `server_tokens none;`"
+              },
+              "answer": "C",
+              "explanation": "`proxy_hide_header` removes a header from the upstream response. `proxy_set_header` changes request headers to the backend. `server_tokens off` reduces `Server` to `nginx`."
+            },
+            {
+              "id": "s3d3q12",
+              "type": "config",
+              "category": "HSTS",
+              "question": "Which HSTS value is a sensible first step for a site that isn't sure all subdomains support HTTPS?",
+              "options": {
+                "A": "`max-age=63072000; includeSubDomains; preload`",
+                "B": "`max-age=0; preload`",
+                "C": "`includeSubDomains` only",
+                "D": "`max-age=300`, raised over time once nothing breaks"
+              },
+              "answer": "D",
+              "explanation": "Start short and raise it (for example, 5 minutes, then a week, then a year). `max-age=0` tells browsers to forget the policy. Add `includeSubDomains` and `preload` only after an inventory."
+            },
+            {
+              "id": "s3d3q13",
+              "type": "config",
+              "category": "Server Header",
+              "question": "With `server_tokens off;`, what is the `Server` response header on open source NGINX?",
+              "options": {
+                "A": "`nginx`",
+                "B": "It's removed entirely",
+                "C": "`nginx/1.31.6`",
+                "D": "`hidden`"
+              },
+              "answer": "A",
+              "explanation": "`off` drops the version. Removing or changing the header needs NGINX Plus (`server_tokens \"\"` or a string) or a third-party module."
+            },
+            {
+              "id": "s3d3q14",
+              "type": "config",
+              "category": "Inheritance",
+              "question": "Headers are defined in `http` only. Which locations get them?\n```nginx\nhttp {\n    add_header X-Frame-Options DENY always;\n    server {\n        add_header Alt-Svc 'h3=\":8443\"' always;\n        location /a/ { }\n        location /b/ { add_header X-Cache $upstream_cache_status; }\n    }\n}\n```",
+              "options": {
+                "A": "`/a/` and `/b/` both get X-Frame-Options",
+                "B": "Neither location gets X-Frame-Options: the server defines its own `add_header`, so it inherits nothing from `http`",
+                "C": "Only `/b/`",
+                "D": "Only `/a/`, which also gets Alt-Svc"
+              },
+              "answer": "B",
+              "explanation": "Inheritance stops at the first level with its own `add_header`. The server has Alt-Svc, so the http-level X-Frame-Options is lost. `/a/` gets Alt-Svc only, and `/b/` gets only X-Cache."
+            },
+            {
+              "id": "s3d3q15",
+              "type": "diagnose",
+              "category": "Inheritance",
+              "question": "Browsers use HTTP/3 for most of the site, but always HTTP/2 for `/downloads/`. The QUIC listener is fine. What do you check first?",
+              "options": {
+                "A": "The UDP firewall",
+                "B": "The certificate's SAN",
+                "C": "Whether `/downloads/` has its own `add_header`, which drops the inherited `Alt-Svc`",
+                "D": "`http2_max_concurrent_streams`"
+              },
+              "answer": "C",
+              "explanation": "Without `Alt-Svc` on those responses, clients loading only from that path never learn about HTTP/3. Compare headers per location with `curl -I`."
+            },
+            {
+              "id": "s3d3q16",
+              "type": "diagnose",
+              "category": "Headers",
+              "question": "A scanner reports `Strict-Transport-Security` missing on `https://site/api/login`, but present on `/`. The API is proxied. Which is NOT a plausible cause?",
+              "options": {
+                "A": "The API location has its own `add_header`, breaking inheritance",
+                "B": "The scanner got a 401 from the API, and the HSTS `add_header` lacks `always`",
+                "C": "The API is served by a different `server` block without the header",
+                "D": "The API location uses `proxy_pass`, and `add_header` doesn't work on proxied responses"
+              },
+              "answer": "D",
+              "explanation": "`add_header` works fine on proxied responses (the lab added headers to API 200, 404 and 502 responses). The other three are classic causes."
+            },
+            {
+              "id": "s3d3q17",
+              "type": "diagnose",
+              "category": "Headers",
+              "question": "Clients receive two `Strict-Transport-Security` headers with different `max-age` values. Why?",
+              "options": {
+                "A": "The backend sends its own HSTS header and NGINX adds another. `add_header` doesn't replace upstream headers.",
+                "B": "NGINX adds it once per worker",
+                "C": "HTTP/2 duplicates headers",
+                "D": "`always` sends the header twice"
+              },
+              "answer": "A",
+              "explanation": "Hide the backend's copy with `proxy_hide_header Strict-Transport-Security;` and keep the policy at the edge."
+            },
+            {
+              "id": "s3d3q18",
+              "type": "recall",
+              "category": "add_header",
+              "question": "Which parameter makes `add_header` apply to every response code?",
+              "options": {
+                "A": "`force`",
+                "B": "`always`",
+                "C": "`all`",
+                "D": "`inherit`"
+              },
+              "answer": "B",
+              "explanation": "`add_header Name value always;`"
+            },
+            {
+              "id": "s3d3q19",
+              "type": "recall",
+              "category": "Directives",
+              "question": "Which directive keeps the parent level's `add_header` list in a child that defines its own headers?",
+              "options": {
+                "A": "`add_header_append on;`",
+                "B": "`inherit_headers on;`",
+                "C": "`add_header_inherit merge;`",
+                "D": "`include headers.conf;` is the only way"
+              },
+              "answer": "C",
+              "explanation": "`add_header_inherit merge` (available on the lab's 1.31.6) merges parent and child `add_header` lists. An `include` snippet is the portable alternative for older versions."
+            },
+            {
+              "id": "s3d3q20",
+              "type": "recall",
+              "category": "HSTS",
+              "question": "What does `max-age=31536000` in HSTS mean?",
+              "options": {
+                "A": "Cache the page for one year",
+                "B": "Expire the TLS session after one year",
+                "C": "Keep the HTTP/2 connection open for one year",
+                "D": "Use only HTTPS for this host for one year (31,536,000 seconds)"
+              },
+              "answer": "D",
+              "explanation": "`max-age` is how long, in seconds, the browser remembers the HTTPS-only rule. Each response refreshes it."
+            }
+          ],
+          "extra_pools": [
+            {
+              "pool": "enterprise",
+              "title": "Enterprise (Optional): Certificates Without Reloads or Humans",
+              "track": "enterprise",
+              "optional": true,
+              "questions": [
+                {
+                  "id": "s3d3e01",
+                  "type": "scenario",
+                  "category": "Key-Value Certificates",
+                  "question": "With `ssl_certificate data:$pem` fed from a Plus `keyval` zone, you PATCH a new value through the API. What happens to the running instance?",
+                  "options": {
+                    "A": "The next handshake in every worker uses the new certificate. No reload, and the worker PIDs stay the same.",
+                    "B": "Nothing until `nginx -s reload`",
+                    "C": "NGINX restarts its workers one at a time",
+                    "D": "Only new workers started after the change use it"
+                  },
+                  "answer": "A",
+                  "explanation": "The key-value store is shared memory, and the variable is evaluated per handshake. The lab rotated under a 40-handshake loop with zero failures and unchanged worker PIDs."
+                },
+                {
+                  "id": "s3d3e02",
+                  "type": "scenario",
+                  "category": "Key-Value Certificates",
+                  "question": "Why does the lab store the private key and certificate as ONE value under one key, instead of two keys?",
+                  "options": {
+                    "A": "The API limits values to 1 KB",
+                    "B": "The API changes one key per PATCH. With two keys, there's a window where the new certificate meets the old key and handshakes fail.",
+                    "C": "OpenSSL requires the key first",
+                    "D": "Two keys would double the memory"
+                  },
+                  "answer": "B",
+                  "explanation": "`only one key can be updated` (400) is the API's answer to a two-key PATCH. A bundled value makes the rotation atomic."
+                },
+                {
+                  "id": "s3d3e03",
+                  "type": "scenario",
+                  "category": "Key-Value Certificates",
+                  "question": "A brand-new instance has an empty `lumina_certs` store. What do clients get?",
+                  "options": {
+                    "A": "A default self-signed certificate",
+                    "B": "HTTP 503",
+                    "C": "A handshake failure (alert 80, internal error), with `cannot load certificate \"data:\"` in the error log",
+                    "D": "A plaintext HTTP response"
+                  },
+                  "answer": "C",
+                  "explanation": "There's no fallback. An empty variable means no certificate. Seed the store (or keep a file-based server for bootstrapping) before taking traffic."
+                },
+                {
+                  "id": "s3d3e04",
+                  "type": "scenario",
+                  "category": "ACME",
+                  "question": "The ACME server listens for HTTP-01 on port 80, where your server does `return 301 https://...`. With `nginx-module-acme`, does validation pass?",
+                  "options": {
+                    "A": "No: the challenge gets the 301 and validation fails",
+                    "B": "Only if you add a dedicated `location` for the challenge",
+                    "C": "Only with TLS-ALPN-01",
+                    "D": "Yes: the module answers `/.well-known/acme-challenge/` before the rewrite phase, so the `return` never runs for it"
+                  },
+                  "answer": "D",
+                  "explanation": "In the lab, Pebble's three validation requests got `200` on a server whose only directive was `return 301`."
+                },
+                {
+                  "id": "s3d3e05",
+                  "type": "scenario",
+                  "category": "ACME",
+                  "question": "You need a wildcard certificate (`*.lumina.example`). Which ACME challenge type is required?",
+                  "options": {
+                    "A": "DNS-01",
+                    "B": "HTTP-01",
+                    "C": "TLS-ALPN-01",
+                    "D": "Any of them"
+                  },
+                  "answer": "A",
+                  "explanation": "Wildcards can only be validated with DNS-01 (a TXT record), because there's no single host to serve a token from."
+                },
+                {
+                  "id": "s3d3e06",
+                  "type": "scenario",
+                  "category": "Lifetimes",
+                  "question": "Why is automated certificate renewal becoming mandatory rather than optional?",
+                  "options": {
+                    "A": "TLS 1.3 forbids certificates older than 90 days",
+                    "B": "CA/Browser Forum rules cut the maximum public certificate lifetime to 200 days (2026), then 100 days (2027) and 47 days (2029)",
+                    "C": "NGINX refuses certificates valid for over a year",
+                    "D": "OCSP stapling requires short certificates"
+                  },
+                  "answer": "B",
+                  "explanation": "Ballot SC-081 shrinks lifetimes step by step, and Let's Encrypt also offers 6-day certificates. Manual yearly renewals don't scale to that."
+                },
+                {
+                  "id": "s3d3e07",
+                  "type": "config",
+                  "category": "ACME",
+                  "question": "Which lines connect an ACME-issued certificate to a server?",
+                  "options": {
+                    "A": "```nginx\nssl_certificate acme:pebble;\n```",
+                    "B": "```nginx\nacme on;\nssl_certificate auto;\n```",
+                    "C": "```nginx\nacme_certificate pebble;\nssl_certificate     $acme_certificate;\nssl_certificate_key $acme_certificate_key;\n```",
+                    "D": "```nginx\ninclude acme/pebble.conf;\n```"
+                  },
+                  "answer": "C",
+                  "explanation": "`acme_certificate <issuer>` requests a certificate for the server's `server_name`. The two variables hand it to `ssl_certificate`/`ssl_certificate_key`. The lab also sets `ssl_certificate_cache`."
+                },
+                {
+                  "id": "s3d3e08",
+                  "type": "config",
+                  "category": "ACME",
+                  "question": "`state_path state/pebble;` (relative) fails with `mkdir() \"/var/cache/nginx/state/pebble\" failed`, even though NGINX runs with `-p` pointing at the lab directory. Why?",
+                  "options": {
+                    "A": "The module doesn't support state",
+                    "B": "The directory must already exist",
+                    "C": "`state_path` must be in the `server` block",
+                    "D": "A relative `state_path` resolves against the package's built-in state directory, not the `-p` prefix. Use an absolute path."
+                  },
+                  "answer": "D",
+                  "explanation": "Found while building the lab. The guide's config uses an absolute path. The module then creates the directory itself, owned by the worker user, with mode 700."
+                },
+                {
+                  "id": "s3d3e09",
+                  "type": "diagnose",
+                  "category": "Plus Lab",
+                  "question": "You edit `lab/plus/nginx.conf` with `sed -i`, run `docker exec lumina-tls-plus nginx -s reload`, and nothing changes. `docker exec ... cat /etc/nginx/nginx.conf` shows the old content. Why?",
+                  "options": {
+                    "A": "The file is bind-mounted as a single file. `sed -i` writes a new file (a new inode), and the container still sees the old one. Restart the container.",
+                    "B": "The reload failed silently",
+                    "C": "Plus caches its config for 60 seconds",
+                    "D": "Read-only mounts can't be reloaded"
+                  },
+                  "answer": "A",
+                  "explanation": "A single-file bind mount follows the inode, not the path. Editors that replace the file break the link. `docker restart` re-resolves the mount."
+                },
+                {
+                  "id": "s3d3e10",
+                  "type": "recall",
+                  "category": "ACME",
+                  "question": "What is Pebble?",
+                  "options": {
+                    "A": "An NGINX Plus module",
+                    "B": "Let's Encrypt's ACME test server, which issues from a throwaway CA and needs no public DNS",
+                    "C": "A certificate format",
+                    "D": "F5's ACME client"
+                  },
+                  "answer": "B",
+                  "explanation": "Pebble speaks real ACME for testing clients. The lab points it at 8087 for HTTP-01 and resolves `lumina.local` locally."
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

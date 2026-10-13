@@ -231,3 +231,10 @@ sprints/*/lab/plus/state/*
 
 # NGINX Plus license (lives in ~/plus, never in the repo; see docs/nginx-plus-lab.md)
 *.jwt
+
+# Sprint 3+: lab PKI (private keys) and runtime state
+sprints/*/lab/certs/
+sprints/*/lab/acme/state/
+sprints/*/lab/acme/pebble/
+sprints/*/lab/plus/state/*
+!sprints/*/lab/plus/state/.gitkeep

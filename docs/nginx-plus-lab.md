@@ -90,3 +90,4 @@ Use `--mount`, not `-v`. If a `-v` source path doesn't exist (for example, `$HOM
 | Container runs, but traffic is refused | First usage report hasn't succeeded (`enforce_initial_report on` is the default). Look for licensing lines in `docker logs`, and check outbound HTTPS to `product.connect.nginx.com`. |
 | `port already in use` | The OSS instance or another container holds the port. `ss -ltnp \| grep <port>`. |
 | API answers, but writes fail with `UpstreamStatic` | The upstream has no `zone`. |
+| You edited `lab/plus/nginx.conf`, reloaded inside the container, and nothing changed | The config is bind-mounted as a single file. Editors and `sed -i` replace the file (a new inode), and the container keeps the old one: `docker exec <lab>-plus cat /etc/nginx/nginx.conf` shows the old content. Run `docker restart <lab>-plus` after editing. |
