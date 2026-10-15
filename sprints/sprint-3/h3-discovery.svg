@@ -127,13 +127,12 @@
 <text x="44" y="1094" font-size="13" fill="#333" text-anchor="start">CDNs publish them for you, listing what's enabled.</text>
 <text x="44" y="1113" font-size="13" fill="#333" text-anchor="start">Seen live with dig from the lab box:</text>
 <text x="44" y="1138" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">$ dig +short cdn.f5.com HTTPS</text>
-<text x="44" y="1156" font-size="12" fill="#8A8A86" text-anchor="start" font-family="IBM Plex Mono, monospace">d1cm8zmm34tddg.cloudfront.net.</text>
-<text x="44" y="1174" font-size="12" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">1 . alpn="h2"</text>
-<text x="158" y="1174" font-size="12" fill="#D9603B" text-anchor="start" font-weight="bold">← h2 only: HTTP/3 isn't enabled there</text>
-<text x="44" y="1192" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">$ dig +short www.google.com HTTPS</text>
-<text x="44" y="1210" font-size="12" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">1 . alpn="h2,h3"</text>
-<text x="44" y="1236" font-size="13" fill="#333" text-anchor="start">Your zone needs a DNS provider that supports the</text>
-<text x="44" y="1255" font-size="13" fill="#333" text-anchor="start">type. Resolvers that drop it just fall back to A/AAAA.</text>
+<text x="44" y="1156" font-size="12" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">1 . alpn="h2"</text>
+<text x="158" y="1156" font-size="12" fill="#D9603B" text-anchor="start" font-weight="bold">← h2 only: HTTP/3 isn't enabled there</text>
+<text x="44" y="1174" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">$ dig +short www.google.com HTTPS</text>
+<text x="44" y="1192" font-size="12" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">1 . alpn="h2,h3"</text>
+<text x="44" y="1218" font-size="13" fill="#333" text-anchor="start">Your zone needs a DNS provider that supports the</text>
+<text x="44" y="1237" font-size="13" fill="#333" text-anchor="start">type. Resolvers that drop it just fall back to A/AAAA.</text>
 <text x="476" y="1030" font-size="15" fill="#6B4FB3" text-anchor="start" font-weight="bold">Who reads them</text>
 <text x="476" y="1056" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Apple platforms</text>
 <text x="610" y="1056" font-size="13" fill="#333" text-anchor="start">read them from the system resolver.</text>
