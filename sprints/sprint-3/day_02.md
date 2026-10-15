@@ -180,6 +180,8 @@ ngx -t && ngx -s reload
 h3 --http3-only -k --max-time 5 --resolve evil.example:8443:127.0.0.1 -o /dev/null -w '%{http_code}\n' https://evil.example:8443/   # 000: refused
 h3 --http3-only -o /dev/null -w 'HTTP/%{http_version}\n' https://lumina.local:8443/                                               # HTTP/3
 ```
+* The `000` takes the full 5 seconds. **Keep the time limit:** this quiche curl retries a refused QUIC handshake in a tight loop and keeps allocating memory. The `h3` helper sets `--max-time 5` and a 1 GB container memory limit by default. Re-`source helpers.sh` if your terminal loaded an older copy.
+
 *Try it:* leave `reuseport` on **both** QUIC listeners and run `ngx -t`. That's the `duplicate listen options` error from concept 1.4.
 
 ---

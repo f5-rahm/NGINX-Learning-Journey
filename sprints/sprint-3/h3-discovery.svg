@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1542" viewBox="0 0 900 1542" font-family="Lato" xml:space="preserve">
+<defs><marker id="a_D9603B" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D9603B"/></marker><marker id="a_3D8B4A" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3D8B4A"/></marker><marker id="a_2F6FD6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2F6FD6"/></marker><marker id="a_6B4FB3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B4FB3"/></marker><marker id="a_8A8A86" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/></marker></defs>
+<rect width="900" height="1542" fill="#FFFFFF"/>
+<text x="24" y="40" font-size="22" fill="#1F1F1F" text-anchor="start" font-weight="bold">Two ways to find HTTP/3: Alt-Svc vs the HTTPS DNS record</text>
+<text x="24" y="65" font-size="14" fill="#555555" text-anchor="start">What the first visit looks like on the wire · Sprint 3, Day 2 of my NGINX learning journey</text>
+<text x="24" y="104" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">1  The first visit, packet by packet</text>
+<rect x="24" y="118" width="420" height="826" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<text x="234" y="148" font-size="17" fill="#6B4FB3" text-anchor="middle" font-weight="bold">Alt-Svc response header</text>
+<text x="234" y="168" font-size="13" fill="#555555" text-anchor="middle">learned from a response, over TCP</text>
+<rect x="32.0" y="184" width="72" height="38" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="68" y="200" font-size="12" fill="#1F1F1F" text-anchor="middle" font-weight="bold">DNS</text>
+<text x="68" y="215" font-size="11" fill="#555555" text-anchor="middle">resolver</text>
+<line x1="68" y1="224" x2="68" y2="930" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<rect x="160.0" y="184" width="72" height="38" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="196" y="208" font-size="12" fill="#1F1F1F" text-anchor="middle" font-weight="bold">Client</text>
+<line x1="196" y1="224" x2="196" y2="930" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<rect x="372.0" y="184" width="64" height="38" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="404" y="200" font-size="12" fill="#1F1F1F" text-anchor="middle" font-weight="bold">NGINX</text>
+<text x="404" y="215" font-size="11" fill="#555555" text-anchor="middle">:8443</text>
+<line x1="404" y1="224" x2="404" y2="930" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="192" y1="254" x2="76" y2="270" stroke="#2F6FD6" stroke-width="2.5" marker-end="url(#a_2F6FD6)"/>
+<text x="132.0" y="249" font-size="12" fill="#1F1F1F" text-anchor="middle">A/AAAA? lumina.example</text>
+<line x1="72" y1="292" x2="188" y2="308" stroke="#2F6FD6" stroke-width="2.5" marker-end="url(#a_2F6FD6)"/>
+<text x="132.0" y="287" font-size="12" fill="#1F1F1F" text-anchor="middle">A  192.0.2.10</text>
+<text x="400" y="285.0" font-size="11" fill="#2F6FD6" text-anchor="end" font-style="italic">DNS: a separate server</text>
+<line x1="200" y1="330" x2="396" y2="346" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="300.0" y="325" font-size="12" fill="#1F1F1F" text-anchor="middle">SYN  (TCP)</text>
+<line x1="400" y1="368" x2="204" y2="384" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="300.0" y="363" font-size="12" fill="#1F1F1F" text-anchor="middle">SYN-ACK</text>
+<path d="M184 320 h6 V388 h-6" fill="none" stroke="#D9603B" stroke-width="1.5"/>
+<text x="178" y="355.0" font-size="12" fill="#D9603B" text-anchor="end" font-weight="bold">RTT 1</text>
+<text x="178" y="369.0" font-size="11" fill="#555555" text-anchor="end">TCP</text>
+<line x1="200" y1="406" x2="396" y2="422" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="300.0" y="401" font-size="12" fill="#1F1F1F" text-anchor="middle">ClientHello · ALPN h2, http/1.1</text>
+<line x1="400" y1="444" x2="204" y2="460" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="300.0" y="439" font-size="12" fill="#1F1F1F" text-anchor="middle">ServerHello … Finished · h2</text>
+<path d="M184 396 h6 V464 h-6" fill="none" stroke="#D9603B" stroke-width="1.5"/>
+<text x="178" y="431.0" font-size="12" fill="#D9603B" text-anchor="end" font-weight="bold">RTT 2</text>
+<text x="178" y="445.0" font-size="11" fill="#555555" text-anchor="end">TLS 1.3</text>
+<line x1="200" y1="482" x2="396" y2="498" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="300.0" y="477" font-size="12" fill="#1F1F1F" text-anchor="middle">Finished + GET /  (h2)</text>
+<line x1="400" y1="534" x2="204" y2="550" stroke="#6B4FB3" stroke-width="2.5" marker-end="url(#a_6B4FB3)"/>
+<text x="300.0" y="515" font-size="12" fill="#6B4FB3" text-anchor="middle" font-weight="bold">200 OK</text>
+<text x="300.0" y="529" font-size="12" fill="#6B4FB3" text-anchor="middle" font-weight="bold">Alt-Svc: h3=":8443"; ma=86400</text>
+<path d="M184 472 h6 V554 h-6" fill="none" stroke="#D9603B" stroke-width="1.5"/>
+<text x="178" y="514.0" font-size="12" fill="#D9603B" text-anchor="end" font-weight="bold">RTT 3</text>
+<text x="178" y="528.0" font-size="11" fill="#555555" text-anchor="end">first byte</text>
+<line x1="38" y1="556" x2="430" y2="556" stroke="#8A8A86" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="234" y="574" font-size="12" fill="#555555" text-anchor="middle" font-style="italic">Client caches Alt-Svc for ma seconds.</text>
+<text x="234" y="590" font-size="12" fill="#555555" text-anchor="middle" font-style="italic">The next NEW connection tries QUIC:</text>
+<line x1="200" y1="628" x2="396" y2="644" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="300.0" y="623" font-size="12" fill="#1F1F1F" text-anchor="middle">QUIC Initial · ClientHello, ALPN h3</text>
+<line x1="400" y1="666" x2="204" y2="682" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="300.0" y="661" font-size="12" fill="#1F1F1F" text-anchor="middle">ServerHello … Finished</text>
+<path d="M184 618 h6 V686 h-6" fill="none" stroke="#3D8B4A" stroke-width="1.5"/>
+<text x="178" y="653.0" font-size="12" fill="#3D8B4A" text-anchor="end" font-weight="bold">RTT 1</text>
+<text x="178" y="667.0" font-size="11" fill="#555555" text-anchor="end">QUIC + TLS</text>
+<line x1="200" y1="704" x2="396" y2="720" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="300.0" y="699" font-size="12" fill="#1F1F1F" text-anchor="middle">Finished + GET /  (h3)</text>
+<line x1="400" y1="742" x2="204" y2="758" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="300.0" y="737" font-size="12" fill="#1F1F1F" text-anchor="middle">200 OK</text>
+<path d="M184 694 h6 V762 h-6" fill="none" stroke="#3D8B4A" stroke-width="1.5"/>
+<text x="178" y="729.0" font-size="12" fill="#3D8B4A" text-anchor="end" font-weight="bold">RTT 2</text>
+<text x="178" y="743.0" font-size="11" fill="#555555" text-anchor="end">first byte</text>
+<rect x="38" y="768" width="392" height="76" rx="6" fill="#FBE3DA" stroke="#D9603B" stroke-width="1.5"/>
+<text x="50" y="788" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">First visit is always TCP + TLS + h2.</text>
+<text x="50" y="808" font-size="13" fill="#333" text-anchor="start">HTTP/3 starts on a later connection, and only</text>
+<text x="50" y="828" font-size="13" fill="#333" text-anchor="start">after a response has carried the header.</text>
+<rect x="456" y="118" width="420" height="826" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<text x="666" y="148" font-size="17" fill="#2F6FD6" text-anchor="middle" font-weight="bold">HTTPS DNS record (type 65)</text>
+<text x="666" y="168" font-size="13" fill="#555555" text-anchor="middle">learned from DNS, before connecting</text>
+<rect x="464.0" y="184" width="72" height="38" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="500" y="200" font-size="12" fill="#1F1F1F" text-anchor="middle" font-weight="bold">DNS</text>
+<text x="500" y="215" font-size="11" fill="#555555" text-anchor="middle">resolver</text>
+<line x1="500" y1="224" x2="500" y2="930" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<rect x="592.0" y="184" width="72" height="38" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="628" y="208" font-size="12" fill="#1F1F1F" text-anchor="middle" font-weight="bold">Client</text>
+<line x1="628" y1="224" x2="628" y2="930" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<rect x="804.0" y="184" width="64" height="38" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="836" y="200" font-size="12" fill="#1F1F1F" text-anchor="middle" font-weight="bold">NGINX</text>
+<text x="836" y="215" font-size="11" fill="#555555" text-anchor="middle">:8443</text>
+<line x1="836" y1="224" x2="836" y2="930" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="624" y1="282" x2="508" y2="298" stroke="#2F6FD6" stroke-width="2.5" marker-end="url(#a_2F6FD6)"/>
+<text x="564.0" y="263" font-size="12" fill="#1F1F1F" text-anchor="middle">A/AAAA? + HTTPS?</text>
+<text x="564.0" y="277" font-size="12" fill="#1F1F1F" text-anchor="middle">lumina.example</text>
+<line x1="504" y1="320" x2="620" y2="336" stroke="#2F6FD6" stroke-width="2.5" marker-end="url(#a_2F6FD6)"/>
+<text x="564.0" y="315" font-size="12" fill="#1F1F1F" text-anchor="middle">A + HTTPS answers</text>
+<text x="832" y="313.0" font-size="11" fill="#2F6FD6" text-anchor="end" font-style="italic">DNS: a separate server</text>
+<rect x="470" y="340" width="392" height="76" rx="6" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="1.5"/>
+<text x="482" y="360" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">lumina.example. 300 IN HTTPS 1 .</text>
+<text x="482" y="380" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    alpn="h3,h2" port=8443</text>
+<text x="482" y="400" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    ipv4hint=192.0.2.10</text>
+<line x1="632" y1="456" x2="828" y2="472" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="732.0" y="451" font-size="12" fill="#1F1F1F" text-anchor="middle">QUIC Initial · ClientHello, ALPN h3</text>
+<line x1="832" y1="494" x2="636" y2="510" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="732.0" y="489" font-size="12" fill="#1F1F1F" text-anchor="middle">ServerHello … Finished</text>
+<path d="M616 446 h6 V514 h-6" fill="none" stroke="#3D8B4A" stroke-width="1.5"/>
+<text x="610" y="481.0" font-size="12" fill="#3D8B4A" text-anchor="end" font-weight="bold">RTT 1</text>
+<text x="610" y="495.0" font-size="11" fill="#555555" text-anchor="end">QUIC + TLS</text>
+<line x1="632" y1="532" x2="828" y2="548" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="732.0" y="527" font-size="12" fill="#1F1F1F" text-anchor="middle">Finished + GET /  (h3)</text>
+<line x1="832" y1="570" x2="636" y2="586" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="732.0" y="565" font-size="12" fill="#1F1F1F" text-anchor="middle">200 OK</text>
+<path d="M616 522 h6 V590 h-6" fill="none" stroke="#3D8B4A" stroke-width="1.5"/>
+<text x="610" y="557.0" font-size="12" fill="#3D8B4A" text-anchor="end" font-weight="bold">RTT 2</text>
+<text x="610" y="571.0" font-size="11" fill="#555555" text-anchor="end">first byte</text>
+<rect x="470" y="596" width="392" height="76" rx="6" fill="#E2F0E4" stroke="#3D8B4A" stroke-width="1.5"/>
+<text x="482" y="616" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">HTTP/3 on the very first connection.</text>
+<text x="482" y="636" font-size="13" fill="#333" text-anchor="start">One round trip fewer than TCP + TLS 1.3, and</text>
+<text x="482" y="656" font-size="13" fill="#333" text-anchor="start">no TCP connection to set up at all.</text>
+<rect x="470" y="686" width="392" height="136" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="482" y="706" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">What else the record can carry</text>
+<text x="482" y="726" font-size="13" fill="#333" text-anchor="start">• ech=…  the Encrypted Client Hello key: the</text>
+<text x="482" y="746" font-size="13" fill="#333" text-anchor="start">   main reason the record type exists</text>
+<text x="482" y="766" font-size="13" fill="#333" text-anchor="start">• port= applies to h2 too, not just h3</text>
+<text x="482" y="786" font-size="13" fill="#333" text-anchor="start">• its presence alone upgrades http:// to https://</text>
+<text x="482" y="806" font-size="13" fill="#333" text-anchor="start">• AliasMode (priority 0): a CNAME at the apex</text>
+<rect x="470" y="836" width="392" height="56" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="482" y="856" font-size="13" fill="#333" text-anchor="start">If UDP is blocked, clients that race TCP + h2</text>
+<text x="482" y="876" font-size="13" fill="#333" text-anchor="start">alongside QUIC fall back without a stall.</text>
+<text x="24" y="986" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">2  Where HTTPS records stand</text>
+<rect x="24" y="1000" width="420" height="286" rx="10" fill="#DCE8FA" stroke="#2F6FD6" stroke-width="2.5"/>
+<rect x="456" y="1000" width="420" height="286" rx="10" fill="#ECE6F7" stroke="#6B4FB3" stroke-width="2.5"/>
+<text x="44" y="1030" font-size="15" fill="#2F6FD6" text-anchor="start" font-weight="bold">Who publishes them</text>
+<text x="44" y="1056" font-size="13" fill="#333" text-anchor="start">Standardised in RFC 9460 (Nov 2023), with its</text>
+<text x="44" y="1075" font-size="13" fill="#333" text-anchor="start">generic sibling SVCB (type 64).</text>
+<text x="44" y="1094" font-size="13" fill="#333" text-anchor="start">Big CDNs publish them automatically. Seen live</text>
+<text x="44" y="1113" font-size="13" fill="#333" text-anchor="start">with dig from the lab box:</text>
+<text x="44" y="1138" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">$ dig +short cloudflare.com HTTPS</text>
+<text x="44" y="1156" font-size="12" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">1 . alpn="h3,h2" ipv4hint=104.16…</text>
+<text x="44" y="1174" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">$ dig +short www.google.com HTTPS</text>
+<text x="44" y="1192" font-size="12" fill="#2F6FD6" text-anchor="start" font-family="IBM Plex Mono, monospace">1 . alpn="h2,h3"</text>
+<text x="44" y="1218" font-size="13" fill="#333" text-anchor="start">Your own zone needs a DNS provider that supports</text>
+<text x="44" y="1237" font-size="13" fill="#333" text-anchor="start">the type. Resolvers or firewalls that drop it are</text>
+<text x="44" y="1256" font-size="13" fill="#333" text-anchor="start">harmless: the client just uses A/AAAA.</text>
+<text x="476" y="1030" font-size="15" fill="#6B4FB3" text-anchor="start" font-weight="bold">Who reads them</text>
+<text x="476" y="1056" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Apple platforms</text>
+<text x="610" y="1056" font-size="13" fill="#333" text-anchor="start">read them from the system resolver.</text>
+<text x="476" y="1085" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Firefox</text>
+<text x="610" y="1085" font-size="13" fill="#333" text-anchor="start">only with DNS over HTTPS turned on.</text>
+<text x="476" y="1114" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Chromium &amp; others</text>
+<text x="610" y="1114" font-size="13" fill="#333" text-anchor="start">depends on version and DNS mode:</text>
+<text x="610" y="1133" font-size="13" fill="#333" text-anchor="start">test the clients you care about.</text>
+<text x="476" y="1162" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">curl</text>
+<text x="610" y="1162" font-size="13" fill="#333" text-anchor="start">newer builds, opt-in at build time.</text>
+<text x="610" y="1181" font-size="13" fill="#333" text-anchor="start">The lab's 8.11 image ignores them.</text>
+<text x="476" y="1214" font-size="13" fill="#6B4FB3" text-anchor="start" font-weight="bold">Coverage is partial, so the record is a speed-up</text>
+<text x="476" y="1233" font-size="13" fill="#6B4FB3" text-anchor="start" font-weight="bold">for some clients, not a replacement for Alt-Svc.</text>
+<text x="24" y="1328" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">3  What it means for NGINX</text>
+<rect x="24" y="1342" width="852" height="92" rx="10" fill="#E2F0E4" stroke="#3D8B4A" stroke-width="2.5"/>
+<text x="44" y="1370" font-size="14" fill="#3D8B4A" text-anchor="start" font-weight="bold">Publish both.</text>
+<text x="140" y="1370" font-size="13" fill="#333" text-anchor="start">NGINX has nothing to configure for the record: the DNS zone owns it.</text>
+<text x="44" y="1392" font-size="13" fill="#333" text-anchor="start">NGINX still needs the UDP listener, and keeps sending Alt-Svc for every client that doesn't read HTTPS records:</text>
+<text x="44" y="1416" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">listen 8443 quic;    add_header Alt-Svc 'h3=":8443"; ma=86400' always;</text>
+<text x="24" y="1470" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">BIG-IP lens:</text>
+<text x="110" y="1470" font-size="13" fill="#444" text-anchor="start">Alt-Svc lives on the data path (the HTTP/3 profile here, add_header in NGINX). The HTTPS record lives</text>
+<text x="110" y="1489" font-size="13" fill="#444" text-anchor="start">with whoever runs the zone, so the DNS and app teams must agree on the UDP port and when it goes live.</text>
+<text x="24" y="1520" font-size="12" fill="#555555" text-anchor="start">lumina.example and 192.0.2.10 stand in for the lab's lumina.local, which resolves from /etc/hosts and has no DNS records.</text>
+</svg>

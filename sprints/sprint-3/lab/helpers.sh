@@ -47,14 +47,18 @@ resume() {
     echo "$out"; rm -f "$sess"
 }
 
+# The quiche curl in this image loops and leaks ~130 MB/s when a server refuses the QUIC handshake
+# (e.g. ssl_reject_handshake). The memory cap and default --max-time keep that from taking down the host.
+H3_LIMITS=(--memory 1g --memory-swap 1g)
+
 h3() {
-    docker run --rm --network host --add-host lumina.local:127.0.0.1 -v "$LAB/certs:/certs:ro" "$H3_IMAGE" \
-        curl -s --cacert /certs/ca.crt "$@"
+    docker run --rm "${H3_LIMITS[@]}" --network host --add-host lumina.local:127.0.0.1 -v "$LAB/certs:/certs:ro" "$H3_IMAGE" \
+        curl -s --max-time 5 --cacert /certs/ca.crt "$@"
 }
 
 h3alt() {   # two requests from one client that remembers Alt-Svc: the first learns, the second upgrades
-    docker run --rm --network host --add-host lumina.local:127.0.0.1 -v "$LAB/certs:/certs:ro" "$H3_IMAGE" sh -c '
+    docker run --rm "${H3_LIMITS[@]}" --network host --add-host lumina.local:127.0.0.1 -v "$LAB/certs:/certs:ro" "$H3_IMAGE" sh -c '
         for i in 1 2; do
-            curl -s --cacert /certs/ca.crt --alt-svc /tmp/altsvc -o /dev/null -w "request $i: HTTP/%{http_version}\n" "$1"
+            curl -s --max-time 5 --cacert /certs/ca.crt --alt-svc /tmp/altsvc -o /dev/null -w "request $i: HTTP/%{http_version}\n" "$1"
         done' _ "${1:-https://lumina.local:8443/}"
 }

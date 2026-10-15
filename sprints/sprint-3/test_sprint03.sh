@@ -61,7 +61,7 @@ hs() {
 }
 
 h3() {
-    timeout 30 docker run --rm --network host --add-host "$NAME:127.0.0.1" -v "$LAB/certs:/certs:ro" "$H3_IMAGE" \
+    timeout 30 docker run --rm --memory 1g --memory-swap 1g --network host --add-host "$NAME:127.0.0.1" -v "$LAB/certs:/certs:ro" "$H3_IMAGE" \
         curl -s --max-time 6 --cacert /certs/ca.crt "$@" 2>/dev/null
 }
 
