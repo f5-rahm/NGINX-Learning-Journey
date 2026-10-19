@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="2253" viewBox="0 0 900 2253" font-family="Lato" xml:space="preserve">
+<defs><marker id="a_D9603B" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D9603B"/></marker><marker id="a_3D8B4A" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3D8B4A"/></marker><marker id="a_2F6FD6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2F6FD6"/></marker><marker id="a_6B4FB3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6B4FB3"/></marker><marker id="a_8A8A86" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/></marker><marker id="a_C0392B" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C0392B"/></marker></defs>
+<rect width="900" height="2253" fill="#FFFFFF"/>
+<text x="24" y="40" font-size="22" fill="#1F1F1F" text-anchor="start" font-weight="bold">Three ways to prove you own a name: ACME HTTP-01, TLS-ALPN-01, DNS-01</text>
+<text x="24" y="65" font-size="14" fill="#555555" text-anchor="start">What the CA checks, and where the proof lives · Sprint 3, Day 3 side quest of my NGINX learning journey</text>
+<text x="24" y="104" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">1  Every challenge sits inside the same ACME order</text>
+<rect x="24" y="118" width="852" height="250" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<rect x="34" y="136" width="196" height="56" rx="6" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+<text x="46" y="159" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold">1  newAccount</text>
+<text x="46" y="179" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">account key pair, accept ToS</text>
+<line x1="231" y1="164" x2="245" y2="164" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="246" y="136" width="196" height="56" rx="6" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+<text x="258" y="159" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold">2  newOrder</text>
+<text x="258" y="179" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">names: lumina.local</text>
+<line x1="443" y1="164" x2="457" y2="164" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="458" y="136" width="196" height="56" rx="6" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+<text x="470" y="159" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold">3  Fetch authorization</text>
+<text x="470" y="179" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">CA offers challenges + token</text>
+<line x1="655" y1="164" x2="669" y2="164" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="670" y="136" width="196" height="56" rx="6" fill="#FFF4EE" stroke="#D9603B" stroke-width="2.5"/>
+<text x="682" y="159" font-size="14" fill="#D9603B" text-anchor="start" font-weight="bold">4  Publish the proof</text>
+<text x="682" y="179" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">differs per challenge</text>
+<rect x="34" y="216" width="196" height="56" rx="6" fill="#FFF4EE" stroke="#D9603B" stroke-width="2.5"/>
+<text x="46" y="239" font-size="14" fill="#D9603B" text-anchor="start" font-weight="bold">5  POST challenge URL</text>
+<text x="46" y="259" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">“I'm ready, check it”</text>
+<line x1="231" y1="244" x2="245" y2="244" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="246" y="216" width="196" height="56" rx="6" fill="#FFF4EE" stroke="#D9603B" stroke-width="2.5"/>
+<text x="258" y="239" font-size="14" fill="#D9603B" text-anchor="start" font-weight="bold">6  CA validates</text>
+<text x="258" y="259" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">from several network vantage points</text>
+<line x1="443" y1="244" x2="457" y2="244" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="458" y="216" width="196" height="56" rx="6" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+<text x="470" y="239" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold">7  finalize</text>
+<text x="470" y="259" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">send a CSR for the names</text>
+<line x1="655" y1="244" x2="669" y2="244" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="670" y="216" width="196" height="56" rx="6" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+<text x="682" y="239" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold">8  Download certificate</text>
+<text x="682" y="259" font-size="11.5" fill="#555555" text-anchor="start" font-style="italic">then renew before expiry (ARI)</text>
+<path d="M768.0 193 V204 H132.0 V214" fill="none" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="34" y="300" width="832" height="56" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1.5"/>
+<text x="48" y="322" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">key authorization = token + "." + base64url(SHA-256 thumbprint of the account public key)</text>
+<text x="48" y="344" font-size="13" fill="#555555" text-anchor="start">Every proof below is built from it, so a copied token is useless to anyone else's ACME account.</text>
+<text x="24" y="408" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">2  HTTP-01: serve a file on port 80</text>
+<rect x="24" y="422" width="852" height="423" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<rect x="40" y="438" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#2F6FD6" stroke-width="1.8"/>
+<text x="150" y="457" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">ACME client</text>
+<text x="150" y="474" font-size="11" fill="#555555" text-anchor="middle">NGINX + nginx-module-acme</text>
+<rect x="340" y="438" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#2F6FD6" stroke-width="1.8"/>
+<text x="450" y="457" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">NGINX :80</text>
+<text x="450" y="474" font-size="11" fill="#555555" text-anchor="middle">same process answers</text>
+<rect x="640" y="438" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#2F6FD6" stroke-width="1.8"/>
+<text x="750" y="457" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">CA validators</text>
+<text x="750" y="474" font-size="11" fill="#555555" text-anchor="middle">several vantage points</text>
+<line x1="150" y1="484" x2="150" y2="754" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="450" y1="484" x2="450" y2="754" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="750" y1="484" x2="750" y2="754" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="746" y1="524" x2="156" y2="524" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<text x="450.0" y="516" font-size="12" fill="#1F1F1F" text-anchor="middle">authz: http-01, token T</text>
+<line x1="154" y1="566" x2="444" y2="566" stroke="#2F6FD6" stroke-width="2.5" marker-end="url(#a_2F6FD6)"/>
+<text x="300.0" y="558" font-size="12" fill="#1F1F1F" text-anchor="middle">keep key authorization for T</text>
+<line x1="154" y1="608" x2="744" y2="608" stroke="#2F6FD6" stroke-width="2.5" marker-end="url(#a_2F6FD6)"/>
+<text x="450.0" y="600" font-size="12" fill="#1F1F1F" text-anchor="middle">POST challenge URL: ready</text>
+<line x1="746" y1="650" x2="456" y2="650" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="600.0" y="642" font-size="12" fill="#1F1F1F" text-anchor="middle">GET /.well-known/acme-challenge/T</text>
+<line x1="454" y1="692" x2="744" y2="692" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="600.0" y="684" font-size="12" fill="#1F1F1F" text-anchor="middle">200  key authorization</text>
+<line x1="746" y1="734" x2="156" y2="734" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="450.0" y="726" font-size="12" fill="#1F1F1F" text-anchor="middle">authorization valid</text>
+<text x="44" y="768" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="768" font-size="13" fill="#1F1F1F" text-anchor="start">Port 80 must be reachable from the internet. No wildcards.</text>
+<text x="44" y="789" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="789" font-size="13" fill="#1F1F1F" text-anchor="start">nginx-module-acme answers before the rewrite phase, so a blanket return 301 doesn't block it (lab B.1).</text>
+<text x="44" y="810" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="810" font-size="13" fill="#555555" text-anchor="start">Behind a load balancer, every node must answer, or forward /.well-known/acme-challenge/ to the one that can.</text>
+<text x="24" y="885" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">3  TLS-ALPN-01: answer a special handshake on port 443</text>
+<rect x="24" y="899" width="852" height="497" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<rect x="40" y="915" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#6B4FB3" stroke-width="1.8"/>
+<text x="150" y="934" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">ACME client</text>
+<text x="150" y="951" font-size="11" fill="#555555" text-anchor="middle">NGINX + nginx-module-acme</text>
+<rect x="340" y="915" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#6B4FB3" stroke-width="1.8"/>
+<text x="450" y="934" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">NGINX :443</text>
+<text x="450" y="951" font-size="11" fill="#555555" text-anchor="middle">same process answers</text>
+<rect x="640" y="915" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#6B4FB3" stroke-width="1.8"/>
+<text x="750" y="934" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">CA validators</text>
+<text x="750" y="951" font-size="11" fill="#555555" text-anchor="middle">several vantage points</text>
+<line x1="150" y1="961" x2="150" y2="1305" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="450" y1="961" x2="450" y2="1305" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="750" y1="961" x2="750" y2="1305" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="746" y1="1001" x2="156" y2="1001" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<text x="450.0" y="993" font-size="12" fill="#1F1F1F" text-anchor="middle">authz: tls-alpn-01, token T</text>
+<line x1="154" y1="1043" x2="444" y2="1043" stroke="#6B4FB3" stroke-width="2.5" marker-end="url(#a_6B4FB3)"/>
+<text x="300.0" y="1035" font-size="12" fill="#1F1F1F" text-anchor="middle">build a challenge cert for lumina.local</text>
+<line x1="154" y1="1085" x2="744" y2="1085" stroke="#6B4FB3" stroke-width="2.5" marker-end="url(#a_6B4FB3)"/>
+<text x="450.0" y="1077" font-size="12" fill="#1F1F1F" text-anchor="middle">POST challenge URL: ready</text>
+<line x1="746" y1="1143" x2="456" y2="1143" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="600.0" y="1119" font-size="12" fill="#1F1F1F" text-anchor="middle">ClientHello  SNI lumina.local</text>
+<text x="600.0" y="1135" font-size="12" fill="#1F1F1F" text-anchor="middle">ALPN acme-tls/1</text>
+<line x1="454" y1="1201" x2="744" y2="1201" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="600.0" y="1177" font-size="12" fill="#1F1F1F" text-anchor="middle">self-signed cert, SAN lumina.local</text>
+<text x="600.0" y="1193" font-size="12" fill="#1F1F1F" text-anchor="middle">acmeIdentifier = SHA-256(key auth)</text>
+<text x="738" y="1239" font-size="12" fill="#D9603B" text-anchor="end" font-style="italic">handshake ends: no HTTP request</text>
+<line x1="746" y1="1285" x2="156" y2="1285" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="450.0" y="1277" font-size="12" fill="#1F1F1F" text-anchor="middle">authorization valid</text>
+<text x="44" y="1319" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="1319" font-size="13" fill="#1F1F1F" text-anchor="start">Port 443 only, so it fits edges with no port 80. No wildcards.</text>
+<text x="44" y="1340" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="1340" font-size="13" fill="#1F1F1F" text-anchor="start">Whatever terminates TLS in front of the ACME client must pass acme-tls/1 through to it.</text>
+<text x="44" y="1361" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="1361" font-size="13" fill="#555555" text-anchor="start">A BIG-IP virtual server that terminates TLS in front of NGINX breaks it unless it hands that ALPN on.</text>
+<text x="24" y="1436" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">4  DNS-01: publish a TXT record</text>
+<rect x="24" y="1450" width="852" height="539" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<rect x="40" y="1466" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#3D8B4A" stroke-width="1.8"/>
+<text x="150" y="1485" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">ACME client</text>
+<text x="150" y="1502" font-size="11" fill="#555555" text-anchor="middle">needs DNS API credentials</text>
+<rect x="340" y="1466" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#3D8B4A" stroke-width="1.8"/>
+<text x="450" y="1485" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">DNS provider</text>
+<text x="450" y="1502" font-size="11" fill="#555555" text-anchor="middle">authoritative for the zone</text>
+<rect x="640" y="1466" width="220" height="44" rx="6" fill="#FFFFFF" stroke="#3D8B4A" stroke-width="1.8"/>
+<text x="750" y="1485" font-size="13" fill="#1F1F1F" text-anchor="middle" font-weight="bold">CA validators</text>
+<text x="750" y="1502" font-size="11" fill="#555555" text-anchor="middle">several vantage points</text>
+<line x1="150" y1="1512" x2="150" y2="1898" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="450" y1="1512" x2="450" y2="1898" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="750" y1="1512" x2="750" y2="1898" stroke="#C8C8C4" stroke-width="1.5" stroke-dasharray="4 4"/>
+<line x1="746" y1="1552" x2="156" y2="1552" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<text x="450.0" y="1544" font-size="12" fill="#1F1F1F" text-anchor="middle">authz: dns-01, token T</text>
+<line x1="154" y1="1610" x2="444" y2="1610" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="300.0" y="1586" font-size="12" fill="#1F1F1F" text-anchor="middle">API: TXT _acme-challenge.lumina.local</text>
+<text x="300.0" y="1602" font-size="12" fill="#1F1F1F" text-anchor="middle">= base64url(SHA-256(key auth))</text>
+<text x="462" y="1648" font-size="12" fill="#3D8B4A" text-anchor="start" font-style="italic">wait until every authoritative</text>
+<text x="462" y="1664" font-size="12" fill="#3D8B4A" text-anchor="start" font-style="italic">server has the record</text>
+<line x1="154" y1="1710" x2="744" y2="1710" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="450.0" y="1702" font-size="12" fill="#1F1F1F" text-anchor="middle">POST challenge URL: ready</text>
+<line x1="746" y1="1752" x2="456" y2="1752" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="600.0" y="1744" font-size="12" fill="#1F1F1F" text-anchor="middle">TXT? _acme-challenge.lumina.local</text>
+<line x1="454" y1="1794" x2="744" y2="1794" stroke="#D9603B" stroke-width="2.5" marker-end="url(#a_D9603B)"/>
+<text x="600.0" y="1786" font-size="12" fill="#1F1F1F" text-anchor="middle">the TXT value</text>
+<line x1="746" y1="1836" x2="156" y2="1836" stroke="#3D8B4A" stroke-width="2.5" marker-end="url(#a_3D8B4A)"/>
+<text x="450.0" y="1828" font-size="12" fill="#1F1F1F" text-anchor="middle">authorization valid</text>
+<line x1="154" y1="1878" x2="444" y2="1878" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<text x="300.0" y="1870" font-size="12" fill="#1F1F1F" text-anchor="middle">API: delete the TXT record</text>
+<text x="44" y="1912" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="1912" font-size="13" fill="#1F1F1F" text-anchor="start">The only challenge that issues wildcards (*.lumina.local), and the only one for names with no public web server.</text>
+<text x="44" y="1933" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="1933" font-size="13" fill="#1F1F1F" text-anchor="start">A CNAME from _acme-challenge to a zone used only for ACME limits what those credentials can change.</text>
+<text x="44" y="1954" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">•</text>
+<text x="58" y="1954" font-size="13" fill="#555555" text-anchor="start">nginx-module-acme 0.4.1 has no DNS-01 solver. On BIG-IP, kojot-acme does DNS-01.</text>
+<text x="24" y="2029" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">5  Side by side</text>
+<rect x="24" y="2043" width="852" height="170" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<text x="44" y="2071" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">Challenge</text>
+<text x="184" y="2071" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">CA connects to</text>
+<text x="354" y="2071" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">Wildcards</text>
+<text x="460" y="2071" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">The proof</text>
+<text x="704" y="2071" font-size="13" fill="#555555" text-anchor="start" font-weight="bold">nginx-module-acme 0.4.1</text>
+<rect x="36" y="2087" width="828" height="32" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="44" y="2108" font-size="13" fill="#2F6FD6" text-anchor="start" font-weight="bold">HTTP-01</text>
+<text x="184" y="2108" font-size="13" fill="#1F1F1F" text-anchor="start">port 80</text>
+<text x="354" y="2108" font-size="13" fill="#1F1F1F" text-anchor="start">no</text>
+<text x="460" y="2108" font-size="13" fill="#1F1F1F" text-anchor="start">file under /.well-known/acme-challenge/</text>
+<text x="704" y="2108" font-size="13" fill="#3D8B4A" text-anchor="start" font-weight="bold">yes</text>
+<rect x="36" y="2125" width="828" height="32" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="44" y="2146" font-size="13" fill="#6B4FB3" text-anchor="start" font-weight="bold">TLS-ALPN-01</text>
+<text x="184" y="2146" font-size="13" fill="#1F1F1F" text-anchor="start">port 443</text>
+<text x="354" y="2146" font-size="13" fill="#1F1F1F" text-anchor="start">no</text>
+<text x="460" y="2146" font-size="13" fill="#1F1F1F" text-anchor="start">challenge cert via ALPN acme-tls/1</text>
+<text x="704" y="2146" font-size="13" fill="#3D8B4A" text-anchor="start" font-weight="bold">yes</text>
+<rect x="36" y="2163" width="828" height="32" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="44" y="2184" font-size="13" fill="#3D8B4A" text-anchor="start" font-weight="bold">DNS-01</text>
+<text x="184" y="2184" font-size="13" fill="#1F1F1F" text-anchor="start">your DNS servers</text>
+<text x="354" y="2184" font-size="13" fill="#3D8B4A" text-anchor="start" font-weight="bold">yes</text>
+<text x="460" y="2184" font-size="13" fill="#1F1F1F" text-anchor="start">TXT record at _acme-challenge</text>
+<text x="704" y="2184" font-size="13" fill="#C0392B" text-anchor="start" font-weight="bold">no solver</text>
+<text x="24" y="2235" font-size="12" fill="#555555" text-anchor="start">ACMEv2 = RFC 8555 · TLS-ALPN-01 = RFC 8737 · Lab: Pebble test CA + nginx-module-acme 0.4.1 on nginx 1.31.6</text>
+</svg>
