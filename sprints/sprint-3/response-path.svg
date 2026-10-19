@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1178" viewBox="0 0 900 1178" font-family="Lato" xml:space="preserve">
+<defs><marker id="a_8A8A86" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/></marker></defs>
+<rect width="900" height="1178" fill="#FFFFFF"/>
+<text x="24" y="40" font-size="22" fill="#1F1F1F" text-anchor="start" font-weight="bold">How a response leaves NGINX, and where your headers go</text>
+<text x="24" y="65" font-size="14" fill="#555555" text-anchor="start">Security headers, the Server banner and two add_header traps · Sprint 3, Day 3 of my NGINX learning journey</text>
+<text x="24" y="104" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">1  The response path inside a worker</text>
+<rect x="24" y="118" width="852" height="496" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<rect x="44" y="136" width="812" height="74" rx="8" fill="#FFFFFF" stroke="#8A8A86" stroke-width="1.5"/>
+<rect x="44" y="136" width="8" height="74" fill="#8A8A86"/>
+<text x="68" y="166" font-size="16" fill="#8A8A86" text-anchor="start" font-weight="bold">1  Backend response</text>
+<text x="68" y="186" font-size="12" fill="#555555" text-anchor="start" font-style="italic">arrives from the upstream</text>
+<text x="330" y="166" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">Server: SimpleHTTP/0.6 · X-Handled-By: api-node-1</text>
+<line x1="450" y1="211" x2="450" y2="225" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="44" y="226" width="812" height="74" rx="8" fill="#FFFFFF" stroke="#2F6FD6" stroke-width="1.5"/>
+<rect x="44" y="226" width="8" height="74" fill="#2F6FD6"/>
+<text x="68" y="256" font-size="16" fill="#2F6FD6" text-anchor="start" font-weight="bold">2  Proxy module</text>
+<text x="68" y="276" font-size="12" fill="#555555" text-anchor="start" font-style="italic">copies upstream headers into the response</text>
+<text x="330" y="256" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">proxy_hide_header X-Handled-By;</text>
+<text x="330" y="278" font-size="13" fill="#555555" text-anchor="start">hides the backend's Server and Date by default; proxy_pass_header Server keeps them</text>
+<line x1="450" y1="301" x2="450" y2="315" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="44" y="316" width="812" height="74" rx="8" fill="#FFFFFF" stroke="#6B4FB3" stroke-width="1.5"/>
+<rect x="44" y="316" width="8" height="74" fill="#6B4FB3"/>
+<text x="68" y="346" font-size="16" fill="#6B4FB3" text-anchor="start" font-weight="bold">3  Header filter chain</text>
+<text x="68" y="366" font-size="12" fill="#555555" text-anchor="start" font-style="italic">configurable filters, in this order</text>
+<text x="330" y="346" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">third-party filters first:  more_clear_headers Server;   (headers-more)</text>
+<text x="330" y="368" font-size="13" fill="#555555" text-anchor="start">then add_header / expires, then gzip, range ...</text>
+<line x1="450" y1="391" x2="450" y2="405" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="44" y="406" width="812" height="74" rx="8" fill="#FFF4EE" stroke="#D9603B" stroke-width="2.5"/>
+<rect x="44" y="406" width="8" height="74" fill="#D9603B"/>
+<text x="68" y="436" font-size="16" fill="#D9603B" text-anchor="start" font-weight="bold">4  Final header filter</text>
+<text x="68" y="456" font-size="12" fill="#555555" text-anchor="start" font-style="italic">writes the response headers</text>
+<text x="330" y="436" font-size="13" fill="#1F1F1F" text-anchor="start">No directive runs here. Adds Server and Date only if no Server value is set yet</text>
+<text x="330" y="458" font-size="13" fill="#1F1F1F" text-anchor="start">server_tokens off → "nginx" ·  NGINX Plus server_tokens "" → no Server header</text>
+<line x1="450" y1="481" x2="450" y2="495" stroke="#8A8A86" stroke-width="2.5" marker-end="url(#a_8A8A86)"/>
+<rect x="44" y="496" width="812" height="74" rx="8" fill="#FFFFFF" stroke="#3D8B4A" stroke-width="1.5"/>
+<rect x="44" y="496" width="8" height="74" fill="#3D8B4A"/>
+<text x="68" y="526" font-size="16" fill="#3D8B4A" text-anchor="start" font-weight="bold">5  Body filters</text>
+<text x="68" y="546" font-size="12" fill="#555555" text-anchor="start" font-style="italic">then the payload</text>
+<text x="330" y="526" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">sub_filter, gzip, ssi ...</text>
+<text x="44" y="590" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold">→ client</text>
+<text x="120" y="590" font-size="13" fill="#555555" text-anchor="start">add_header Server x  only adds a second Server header: step 4 still writes NGINX's own.</text>
+<text x="24" y="650" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold">2  The two add_header traps</text>
+<rect x="24" y="664" width="414" height="402" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<rect x="462" y="664" width="414" height="402" rx="10" fill="#F3F3F0" stroke="#9A9A96" stroke-width="2"/>
+<text x="44" y="696" font-size="16" fill="#D9603B" text-anchor="start" font-weight="bold">Status codes: without always</text>
+<text x="44" y="718" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">add_header X-Frame-Options "DENY";</text>
+<rect x="44" y="730" width="374" height="30" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="58" y="750" font-size="13" fill="#1F1F1F" text-anchor="start">200 page</text>
+<text x="404" y="750" font-size="13" fill="#3D8B4A" text-anchor="end" font-weight="bold">header sent</text>
+<rect x="44" y="768" width="374" height="30" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="58" y="788" font-size="13" fill="#1F1F1F" text-anchor="start">301 redirect</text>
+<text x="404" y="788" font-size="13" fill="#3D8B4A" text-anchor="end" font-weight="bold">header sent</text>
+<rect x="44" y="806" width="374" height="30" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="58" y="826" font-size="13" fill="#1F1F1F" text-anchor="start">404 not found</text>
+<text x="404" y="826" font-size="13" fill="#C0392B" text-anchor="end" font-weight="bold">goes out bare</text>
+<rect x="44" y="844" width="374" height="30" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="58" y="864" font-size="13" fill="#1F1F1F" text-anchor="start">429 rate limited</text>
+<text x="404" y="864" font-size="13" fill="#C0392B" text-anchor="end" font-weight="bold">goes out bare</text>
+<rect x="44" y="882" width="374" height="30" rx="6" fill="#FFFFFF" stroke="#C8C8C4" stroke-width="1"/>
+<text x="58" y="902" font-size="13" fill="#1F1F1F" text-anchor="start">502 dead backend</text>
+<text x="404" y="902" font-size="13" fill="#C0392B" text-anchor="end" font-weight="bold">goes out bare</text>
+<text x="44" y="946" font-size="12" fill="#555555" text-anchor="start">Default list: 200, 201, 204, 206, 301, 302, 303, 304, 307, 308.</text>
+<text x="44" y="972" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">add_header X-Frame-Options "DENY" always;</text>
+<text x="44" y="994" font-size="13" fill="#3D8B4A" text-anchor="start" font-weight="bold">always = every status. Use it on every security header.</text>
+<text x="482" y="696" font-size="16" fill="#6B4FB3" text-anchor="start" font-weight="bold">Inheritance: one header replaces the list</text>
+<text x="482" y="722" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">server {</text>
+<text x="482" y="739" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    add_header Strict-Transport-Security ... always;</text>
+<text x="482" y="756" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    add_header X-Content-Type-Options ... always;</text>
+<text x="482" y="773" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    add_header X-Frame-Options ... always;</text>
+<text x="482" y="790" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    add_header Alt-Svc ... always;</text>
+<text x="482" y="807" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    location /downloads/ {</text>
+<text x="482" y="824" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">        add_header Cache-Control "no-store" always;</text>
+<text x="482" y="841" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">    }</text>
+<text x="482" y="858" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">}</text>
+<text x="482" y="885" font-size="13" fill="#C0392B" text-anchor="start" font-weight="bold">/downloads/ gets Cache-Control only. HSTS, nosniff,</text>
+<text x="482" y="903" font-size="13" fill="#C0392B" text-anchor="start" font-weight="bold">X-Frame-Options and Alt-Svc are gone. nginx -t is silent.</text>
+<text x="482" y="933" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Fixes:</text>
+<text x="482" y="955" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">include snippets/security_headers.conf;</text>
+<text x="494" y="973" font-size="12" fill="#555555" text-anchor="start">in the server and in every location with its own header</text>
+<text x="482" y="997" font-size="11" fill="#1F1F1F" text-anchor="start" font-family="IBM Plex Mono, monospace">add_header_inherit merge;</text>
+<text x="494" y="1015" font-size="12" fill="#555555" text-anchor="start">newer NGINX: keep the parent's headers, add your own</text>
+<text x="482" y="1041" font-size="12" fill="#6B4FB3" text-anchor="start" font-weight="bold">Same rule: proxy_set_header, proxy_hide_header.</text>
+<text x="24" y="1106" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">BIG-IP lens:</text>
+<text x="110" y="1106" font-size="13" fill="#444" text-anchor="start">no iRule events to pick. Each directive's module decides when it runs, not its line in the file.</text>
+<text x="110" y="1125" font-size="13" fill="#444" text-anchor="start">Removing Server is a product feature (NGINX Plus) or a module you rebuild with every upgrade (headers-more).</text>
+<text x="24" y="1156" font-size="12" fill="#555555" text-anchor="start">Tested on NGINX 1.31.6 (Python mock backend, headers-more v0.37 as a dynamic module) and NGINX Plus R37.1.</text>
+</svg>

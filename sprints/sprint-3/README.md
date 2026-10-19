@@ -101,6 +101,7 @@ source helpers.sh               # c, hs, resume, h3, h3alt: load in every new te
 * Headers missing from 404 and 502 responses until `always`.
 * One `Cache-Control` that silently drops HSTS and `Alt-Svc`.
 * Hide the version and a backend header.
+* Group the repeated headers and proxy settings into `include` snippets.
 * Then build the Lumina edge (Section 4) and pass `test_sprint03.sh`.
 
 ### Day 3+ (Optional): Enterprise Side Quest

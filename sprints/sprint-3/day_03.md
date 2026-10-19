@@ -1,6 +1,6 @@
 # Sprint 3 &bull; Day 3: Security Headers & the Sprint Lab
 **Day:** 3 of 3  
-**Estimated Time:** 75 Minutes (10 concepts, 3 setup, 17 activities, 35 Lumina build, 10 quiz)  
+**Estimated Time:** 80 Minutes (10 concepts, 3 setup, 22 activities, 35 Lumina build, 10 quiz)  
 **Optional:** [Enterprise Side Quest](day_03_enterprise.md), 45 minutes: certificates without reloads (NGINX Plus) and automatic issuance (ACME)  
 **Theme:** TLS protects the connection. Response headers tell the browser how to behave once the page arrives. Add them so they appear on every response, then put the whole sprint together on Lumina.
 
@@ -59,7 +59,7 @@ hdrs() { for p in "$@"; do echo "== $p"; c -D - -o /dev/null "https://lumina.loc
 
 ---
 
-## 3. Hands-on Guided Discovery Activities (17 Minutes)
+## 3. Hands-on Guided Discovery Activities (22 Minutes)
 
 ### Activity 3.1: Baseline (2 min)
 ```bash
@@ -111,6 +111,67 @@ Make the version and the backend's `X-Handled-By` disappear, using the directive
 ```bash
 ngx -t && ngx -s reload && hdrs /api/x
 ```
+<details>
+<summary>Result</summary>
+
+* **`server_tokens off;` in `http`.** It works at any level, but it's a policy for the whole box. At `http` it also covers the 8083 redirect server and NGINX's own error pages. `hdrs` now shows `Server: nginx`.
+* **`proxy_hide_header X-Handled-By;` in `location /api/`**, next to the `proxy_pass` that receives the header. `server` or `http` also works if more proxied locations need it. The `add_header` rule applies here too: a location that sets any `proxy_hide_header` of its own stops inheriting the parent's list.
+</details>
+
+### Activity 3.5: Snippets Instead of Repeats (5 min)
+After 3.2–3.4, the lumina.local server repeats itself. `/downloads/` relies on `add_header_inherit merge`, and every new proxied location would need the same three `proxy_` lines. Group them into files that you `include` where they're needed:
+* `snippets/security_headers.conf`: the four `add_header` lines (HSTS, `nosniff`, `X-Frame-Options`, `Alt-Svc`).
+* `snippets/proxy_api.conf`: the `/api/` proxy settings (both `proxy_set_header` lines and `proxy_hide_header`).
+* Include each one where its directives are needed. In `/downloads/`, replace `add_header_inherit merge;` with the snippet.
+* `hdrs` must show the same output as at the end of 3.4.
+
+```bash
+mkdir -p snippets
+ngx -t && ngx -s reload && hdrs / /nope /api/x /downloads/
+ngx -T | grep -E '^# configuration file|include'
+```
+* Relative `include` paths: what are they resolved from?
+* Why does the 8083 server get neither snippet?
+
+<details>
+<summary>Result</summary>
+
+```nginx
+# snippets/security_headers.conf
+add_header Strict-Transport-Security "max-age=31536000" always;
+add_header X-Content-Type-Options    "nosniff" always;
+add_header X-Frame-Options           "DENY" always;
+add_header Alt-Svc 'h3=":8443"; ma=86400' always;
+
+# snippets/proxy_api.conf
+proxy_set_header Host              $host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_hide_header X-Handled-By;
+```
+```nginx
+server {                                   # lumina.local :8443
+    ...
+    include snippets/security_headers.conf;
+
+    location /api/ {
+        proxy_pass http://lumina_api_nodes;
+        include snippets/proxy_api.conf;
+    }
+
+    location /downloads/ {
+        include snippets/security_headers.conf;
+        add_header Cache-Control "no-store" always;
+        default_type text/plain;
+        return 200 "report.csv\n";
+    }
+    ...
+}
+```
+* Relative paths are resolved from the directory of the main config file, `lab/` here, so `snippets/...` works.
+* `nginx -T` prints each snippet **once**, however many times it's included. To see everything a location gets, you follow its `include` lines.
+* The 8083 server only redirects. Browsers ignore HSTS over plain HTTP, and it has no proxy. Separate snippets for separate purposes let each block take only the ones it needs.
+* Each `include` is a full copy of the list. A location that adds a header without including the snippet still drops the rest. That's the 3.3 trap again.
+</details>
 
 ---
 
@@ -120,6 +181,9 @@ Requirements: [README Section 4](README.md#4-lab-specification-lumina-zero-trust
 ```bash
 cd /srv/nginx-journey/sprints/sprint-3/lab
 cp starter_nginx.conf nginx.conf          # every TODO is a requirement; Days 1-3 and Sprint 2 have the how
+```
+Fill in the TODOs first. The bare starter fails `nginx -t` until the certificate TODO is done, because its `listen 8443 ssl` has no certificate yet. Then:
+```bash
 ngx -t && ngx -s reload
 cd .. && ./test_sprint03.sh               # gate: 13/13
 ```

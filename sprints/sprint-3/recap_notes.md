@@ -97,3 +97,24 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 * **Quiz:** 9/10 on the first attempt. Day 2 recap written: `day02_recap.md`, with the `h3-discovery.png` infographic.
 
 ## Day 3
+* **Q: Where in the worker can a request/response be changed?** Requests go through fixed **phases**: `POST_READ` (realip) → `SERVER_REWRITE` / `FIND_CONFIG` / `REWRITE` (`rewrite`, `set`, `if`, `return`) → `PREACCESS` (`limit_req/conn`) → `ACCESS` (`allow/deny`, `auth_basic`, `auth_request`) → `PRECONTENT` (`try_files`, `mirror`) → `CONTENT` (`proxy_pass` builds the upstream request; `proxy_set_header` is evaluated here) → `LOG`. Responses don't have phases. Upstream headers are first copied by the proxy module (`proxy_hide_header`, `proxy_pass_header`, `proxy_redirect`, `proxy_cookie_*`), then pass through the **header filter chain** (`add_header`, gzip, range, …) and the **body filter chain** (`sub_filter`, gzip). The last header filter serializes the status line and adds `Server`/`Date`. The directive's module decides its phase, not its position in the file. Verified on 8088:
+  * `deny all; return 200 ...;` in one location → 200. `return` runs in REWRITE, before ACCESS.
+  * `add_header Server mine;` → **two** `Server` headers (`nginx/1.31.6` and `mine`). `add_header` appends to the list, and the core still writes its own at serialization.
+  * Proxied: NGINX hides the upstream `Server` by default and sends its own. `proxy_pass_header Server;` sent the backend's `SimpleHTTP/0.6 Python/3.10.6` and **no** NGINX one, because the core adds `Server` only if none is set. That is an open-source way to avoid the NGINX banner, but only on proxied responses. (Plus `server_tokens ""` and headers-more `more_clear_headers Server` act on that same "already set / empty" slot.)
+  * **Where headers-more fits:** it is a **header filter** module, so it runs inside the header filter chain, after the proxy module has copied upstream headers in and before the final header filter writes the response out. `more_clear_headers Server` fills the core's `Server` slot with an entry marked "don't send". The final filter sees the slot is taken and doesn't add its own, then skips the marked entry, so no `Server` goes out. A third-party filter is registered after the core filters, so it runs **before** `add_header`. Verified with headers-more v0.37 built `--with-compat` as a dynamic module against 1.31.6 (official `nginx:mainline` container; Ubuntu's `libnginx-mod-http-headers-more-filter` is built for 1.18 and won't load):
+    * `more_clear_headers Server` → no `Server` on a `return 200`, on a `return 404` and on a proxied response.
+    * `more_set_headers "Server: lumina"` → `Server: lumina` (replaces it rather than adding a second one).
+    * `more_clear_headers Server` + `add_header Server mine` → only `Server: mine`. headers-more ran first, and `add_header`'s entry was appended after it.
+* **Activity 3.4 result and new Activity 3.5 (`include` snippets), checked on 8088/8089 against a copy of `day3_nginx.conf`:**
+  * `server_tokens off` at `http` also covers the redirect server (`Server: nginx` on the 301).
+  * **`proxy_hide_header` has the `add_header` inheritance trap:** with `proxy_hide_header X-Handled-By` at `server`, adding `proxy_hide_header X-Powered-By` in `location /api/` brought `X-Handled-By: api-node-1` back.
+  * With the two snippets (`security_headers.conf` in the server and in `/downloads/`, `proxy_api.conf` in `/api/`), `hdrs` matched the end-of-3.4 output with no duplicate headers. `nginx -T` listed each snippet file once, even though `security_headers.conf` is included twice.
+* **Plus check for the Server header** (R37.1 container on 8089): `server_tokens "";` sent **no** `Server` header on a 200 or a 404, and dropped the `<hr><center>nginx</center>` footer from the built-in 404 page. (headers-more's `more_clear_headers Server` removes the header only.)
+* **Sprint lab, first run: 8/13.** In order, the misses were:
+  * the WebSocket `map $http_upgrade $connection_upgrade`;
+  * separate default servers: one for the 8083 redirect, and the 8443 catch-all that refuses unknown or missing SNI;
+  * `/healthz`, not yet built.
+  * Takeaways: config syntax is a beast, and troubleshooting a flat file is hard (Activity 3.5's snippets help). But `nginx -t`'s error messages are informative and point to the file and line.
+  * A section 4 doc bug surfaced (fixed): the bare starter can't pass `nginx -t` (`listen 8443 ssl` with no certificate), but the guide said to reload right after the `cp`. From Sprint 4 on, the untouched starter must load, and the test should "fail successfully" against it.
+* **Quiz:** 7/10 first attempt, 9/10 second. The misses were about inheritance and `always`, so review both carefully.
+* **Day 3 recap written:** `day03_recap.md`, with the `response-path.png` infographic (`.svg` source, Lato, resvg at 2x). The enterprise side quest gets its own recap.
