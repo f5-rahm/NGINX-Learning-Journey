@@ -147,7 +147,12 @@ S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 ### Sprint 4: Performance Engineering, Caching & Kernel Tuning (Oct 19–23, 3 Days)
 * **Focus:** Maximizing throughput and minimizing origin latency through caching and kernel tuning.
 * **Key Topics:** `proxy_cache_path` memory keys zones vs disk storage, cache keys (`$scheme$proxy_host$request_uri`), `proxy_cache_use_stale updating error timeout`, `proxy_cache_lock` to eliminate cache stampedes, Linux `sysctl` socket tuning (`net.core.somaxconn`, `net.ipv4.tcp_tw_reuse`, `epoll` socket limits).
-* **Enterprise Side Quest:** NGINX Plus programmatic cache purging via REST API (`PURGE /api/cache/...`).
+* **Daily Structure:**
+  * **Day 1:** The edge cache. Keys zone vs disk, which origin headers decide the lifetime, the cache key and `Host`, `Authorization` with `proxy_cache_bypass` vs `proxy_no_cache`, `$upstream_cache_status`. Quiz: [Day 1 Quiz](quiz.html?sprint=4&day=1).
+  * **Day 2:** The cache under pressure. `proxy_cache_lock` and its limits, `proxy_cache_use_stale`, background update, revalidation, measuring the tail and the origin with `oha`. Quiz: [Day 2 Quiz](quiz.html?sprint=4&day=2).
+  * **Day 3:** Kernel and connection limits. Accept queue (`backlog`, `somaxconn`, overflows), `reuseport`, `worker_rlimit_nofile`, ephemeral ports, TIME_WAIT and `tcp_tw_reuse`, then the sprint lab. Quiz: [Day 3 Quiz](quiz.html?sprint=4&day=3).
+* **Enterprise Side Quest (optional, Day 3):** NGINX Plus cache purging with `proxy_cache_purge` (a `PURGE` request on the data plane, including wildcards), and cache metrics from the Plus API. Optional quiz: [Enterprise Quiz](quiz.html?sprint=4&day=3&pool=enterprise).
+* **Lab:** Lumina Edge Accelerator, in containers, validated by `test_sprint04.sh` (10 assertions). Details: [`sprints/sprint-4/README.md`](sprints/sprint-4/README.md).
 
 ### Sprint 5: Traffic Control, Rate Limiting & Concurrency (Oct 26–30, 3 Days)
 * **Focus:** Edge protection against traffic spikes, abusive clients, and denial-of-service.

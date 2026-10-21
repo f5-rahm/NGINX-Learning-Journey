@@ -48,6 +48,7 @@ def bump_connections():
 
 class Origin(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"      # keepalive capable, so upstream reuse is visible
+    disable_nagle_algorithm = True     # headers and body go out as separate writes: no 40 ms Nagle/delayed-ACK stall
     server_version = "lumina-origin"
     sys_version = ""
 

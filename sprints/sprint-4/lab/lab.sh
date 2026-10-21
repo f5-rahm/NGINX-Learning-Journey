@@ -5,21 +5,25 @@
 #   ./lab.sh check               # ready check: config loads, edge and origin answer, edge reaches origin
 #   ./lab.sh reload              # nginx -t, then reload, inside the edge container
 #   ./lab.sh t | T               # nginx -t / nginx -T inside the edge container
-#   ./lab.sh edge                # recreate only the edge (picks up SOMAXCONN / NOFILE, see below)
+#   ./lab.sh edge                # recreate only the edge (picks up the environment below)
 #   ./lab.sh down                # remove both containers and the network
 #
 #   ./lab.sh stats               # the origin's counters: requests per URI, 304s, TCP connections
 #   ./lab.sh reset               # zero the origin's counters
-#   ./lab.sh mode status=503     # every origin answer is now a 503 (also delay=3); "./lab.sh mode" = normal
+#   ./lab.sh mode status=503     # every origin answer is now a 503 (also delay=3, drop=1); "./lab.sh mode" = normal
 #   ./lab.sh load [oha args] /path   # oha load test from inside the lab network, aimed at the edge
 #   ./lab.sh ss [args]           # ss inside the edge's network namespace (default: -lnt)
 #   ./lab.sh nstat [args]        # nstat inside the edge's network namespace
 #   ./lab.sh workers             # host PIDs of the edge's master and workers
+#   ./lab.sh freeze [SECONDS]    # pause the edge's workers (a stalled event loop) once connections queue up
+#                                # on :8084, for SECONDS (default 2), then resume them
 #   ./lab.sh logs [edge|origin]  # follow container output
 #
-# Environment for "up" and "edge":
+# Environment for "up" and "edge" (unset = container default):
 #   SOMAXCONN=128   the edge's net.core.somaxconn (container default: 4096)
 #   NOFILE=1024     the edge's open-files limit, soft:hard or one number (Docker default 1024:524288)
+#   PORTS="40000 40999"  the edge's net.ipv4.ip_local_port_range (container default: 32768 60999)
+#   TW_REUSE=1      the edge's net.ipv4.tcp_tw_reuse (container default: 2, loopback only)
 set -u
 
 LAB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -54,6 +58,8 @@ edge_up() {
     mkdir -p "$LAB"/{logs,cache} "$LAB"/temp/{client,proxy,fastcgi,uwsgi,scgi}
     local opts=()
     [ -n "${SOMAXCONN:-}" ] && opts+=(--sysctl "net.core.somaxconn=$SOMAXCONN")
+    [ -n "${PORTS:-}" ] && opts+=(--sysctl "net.ipv4.ip_local_port_range=$PORTS")
+    [ -n "${TW_REUSE:-}" ] && opts+=(--sysctl "net.ipv4.tcp_tw_reuse=$TW_REUSE")
     if [ -n "${NOFILE:-}" ]; then
         [[ "$NOFILE" == *:* ]] && opts+=(--ulimit "nofile=$NOFILE") || opts+=(--ulimit "nofile=$NOFILE:$NOFILE")
     fi
@@ -94,13 +100,34 @@ check() {
     return "$fail"
 }
 
+# freeze SECONDS: SIGSTOP the workers, wait for the first queued connection, hold, then SIGCONT.
+# The trap resumes the workers even if this is interrupted.
+freeze() {
+    local secs="${1:-2}" q
+    FROZEN=$(pgrep -P "$(edge_pid)" -f 'worker process' | tr '\n' ' ')
+    [ -n "$FROZEN" ] || { bad "no edge workers found (./lab.sh up)"; return 1; }
+    trap 'kill -CONT $FROZEN 2>/dev/null' EXIT INT TERM
+    kill -STOP $FROZEN
+    echo "workers ${FROZEN% } paused: waiting for connections to queue on :$EDGE_PORT"
+    for _ in $(seq 600); do
+        q=$(nsenter -t "$(edge_pid)" -n ss -Hlnt "sport = :$EDGE_PORT" | awk '{ s += $2 } END { print s + 0 }')
+        [ "$q" -gt 0 ] && break
+        sleep 0.05
+    done
+    sleep "$secs"
+    nsenter -t "$(edge_pid)" -n ss -Hlnt "sport = :$EDGE_PORT" | awk '{ printf "accept queue after %ss: %s waiting, limit %s\n", "'"$secs"'", $2, $3 }'
+    kill -CONT $FROZEN
+    trap - EXIT INT TERM
+    echo "workers resumed"
+}
+
 cmd="${1:-}"; shift || true
 case "$cmd" in
     up)      net_up && origin_up && edge_up && check ;;
     edge)    net_up && edge_up && check ;;
     check)   check ;;
     down)    docker rm -f "$EDGE" "$ORIGIN" >/dev/null 2>&1; docker network rm "$NET" >/dev/null 2>&1; echo "Sprint 4 lab removed" ;;
-    reload)  docker exec "$EDGE" "${NGX[@]}" -t && docker exec "$EDGE" "${NGX[@]}" -s reload && echo "reloaded" ;;
+    reload)  docker exec "$EDGE" "${NGX[@]}" -t && docker exec "$EDGE" "${NGX[@]}" -s reload && sleep 1 && echo "reloaded" ;;
     t)       docker exec "$EDGE" "${NGX[@]}" -t ;;
     T)       docker exec "$EDGE" "${NGX[@]}" -T ;;
     stats)   curl -s "http://127.0.0.1:$ORIGIN_PORT/_stats" ;;
@@ -108,10 +135,11 @@ case "$cmd" in
     mode)    q=$(IFS='&'; echo "$*"); curl -s "http://127.0.0.1:$ORIGIN_PORT/_mode?$q" ;;
     load)    args=("$@"); last=$((${#args[@]} - 1))
              [ "$last" -ge 0 ] && [[ "${args[$last]}" == /* ]] && args[$last]="http://$EDGE:$EDGE_PORT${args[$last]}"
-             docker run --rm --network "$NET" "$OHA_IMAGE" --no-tui "${args[@]}" ;;
+             docker run --rm --network "$NET" --ulimit nofile=65536:65536 "$OHA_IMAGE" --no-tui "${args[@]}" ;;
     ss)      [ $# -eq 0 ] && set -- -lnt; nsenter -t "$(edge_pid)" -n ss "$@" ;;
     nstat)   nsenter -t "$(edge_pid)" -n nstat "$@" ;;
     workers) ps -o pid,user,args --ppid "$(edge_pid)" --pid "$(edge_pid)" ;;
+    freeze)  freeze "$@" ;;
     logs)    docker logs -f "$([ "${1:-edge}" = origin ] && echo "$ORIGIN" || echo "$EDGE")" ;;
-    *)       sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+    *)       awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 1 ;;
 esac

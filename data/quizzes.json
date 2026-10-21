@@ -2768,6 +2768,1020 @@
           ]
         }
       ]
+    },
+    {
+      "sprint": 4,
+      "title": "Performance Engineering, Caching & Kernel Tuning",
+      "days": [
+        {
+          "day": 1,
+          "title": "The Edge Cache",
+          "questions": [
+            {
+              "id": "s4d1q01",
+              "type": "scenario",
+              "category": "Keys Zone vs Disk",
+              "question": "`keys_zone=lumina:10m max_size=10g`. After a marketing campaign adds hundreds of thousands of distinct URLs, the hit ratio drops, yet the cache directory holds only 400 MB. What's the most likely cause?",
+              "options": {
+                "A": "The keys zone is full, so NGINX evicts the least recently used entries and deletes their files, with nothing in the error log",
+                "B": "`max_size` is enforced against the page cache, not the disk",
+                "C": "`inactive` defaults to one minute, so entries vanish quickly",
+                "D": "The cache loader is still indexing and serves misses until it finishes"
+              },
+              "answer": "A",
+              "explanation": "About 8,000 keys fit in 1 MB, so a 10 MB zone holds roughly 80,000 entries. When the zone fills, NGINX evicts LRU entries (and their files) regardless of free disk. Day 1 Activity 3.6 showed a 32 KB zone keeping about 216 of 400 entries, silently."
+            },
+            {
+              "id": "s4d1q02",
+              "type": "scenario",
+              "category": "What Gets Cached",
+              "question": "`proxy_cache lumina;` is on, there is no `proxy_cache_valid`, and the origin sends `ETag` and `Last-Modified` but no `Cache-Control` or `Expires`. What happens on repeat requests?",
+              "options": {
+                "A": "NGINX derives a lifetime from `Last-Modified`, like a browser",
+                "B": "Nothing is stored: every request is a `MISS` and reaches the origin",
+                "C": "The response is cached for the default 10 minutes of `inactive`",
+                "D": "The response is cached until the `ETag` changes"
+              },
+              "answer": "B",
+              "explanation": "NGINX needs an explicit lifetime: `X-Accel-Expires`, `Cache-Control`/`Expires`, or `proxy_cache_valid`. It doesn't use heuristic freshness. Activity 3.2 showed `MISS MISS MISS` until `proxy_cache_valid` was added."
+            },
+            {
+              "id": "s4d1q03",
+              "type": "scenario",
+              "category": "Header Precedence",
+              "question": "The location has `proxy_cache_valid 200 10m;`. The origin answers 200 with `Cache-Control: max-age=5`. How long is the response fresh in the cache?",
+              "options": {
+                "A": "10 minutes: the NGINX config always wins",
+                "B": "10 minutes and 5 seconds: the two are added",
+                "C": "About 5 seconds: origin headers take priority over `proxy_cache_valid`",
+                "D": "It isn't cached: the two lifetimes conflict"
+              },
+              "answer": "C",
+              "explanation": "`proxy_cache_valid` is only used when the origin gives no lifetime. A `max-age` from the origin shortens (or lengthens) it. Activity 3.3a: `max-age=2` beat `proxy_cache_valid 200 1m`."
+            },
+            {
+              "id": "s4d1q04",
+              "type": "scenario",
+              "category": "Cache Key and Host",
+              "question": "Two tenants, a.lumina.local and b.lumina.local, share one `location` with `proxy_set_header Host $host;` and the **default** cache key. What can happen?",
+              "options": {
+                "A": "Nothing: `proxy_set_header Host` also changes the cache key",
+                "B": "Requests for b.lumina.local are refused because the key doesn't match",
+                "C": "Every request bypasses the cache because the Host header changed",
+                "D": "B's visitors can receive A's page, because the key has no client host but the origin built a per-host page"
+              },
+              "answer": "D",
+              "explanation": "The default key is `$scheme$proxy_host$request_uri`, which has the upstream name, not the client host. With the origin now building per-host pages, whichever tenant fills the entry first serves the other. Activity 3.4 showed `host=a.lumina.local` returned to b."
+            },
+            {
+              "id": "s4d1q05",
+              "type": "scenario",
+              "category": "Authorization",
+              "question": "Default caching config with `proxy_cache_valid 200 1m;`. Alice requests `/account` with `Authorization: Bearer alice`, then an anonymous client requests `/account`. What does the anonymous client get?",
+              "options": {
+                "A": "A `HIT` on Alice's response",
+                "B": "A `MISS`: NGINX never caches responses to requests with `Authorization`",
+                "C": "A 401, because the cached entry requires credentials",
+                "D": "A `BYPASS`: NGINX detects the header mismatch"
+              },
+              "answer": "A",
+              "explanation": "NGINX doesn't apply RFC 9111's rule for `Authorization` in shared caches. Without `proxy_cache_bypass`/`proxy_no_cache`, Alice's personalized response is stored and served to everyone (Activity 3.5)."
+            },
+            {
+              "id": "s4d1q06",
+              "type": "scenario",
+              "category": "Bypass vs No-Cache",
+              "question": "Only `proxy_cache_bypass $http_authorization;` is set. An anonymous client caches `/a`, then Alice requests `/a` with `Authorization`, then another anonymous client requests `/a`. What does the last client get?",
+              "options": {
+                "A": "The original anonymous copy, because bypass never touches the cache",
+                "B": "Alice's response: her bypassed request still stored its response, replacing the entry",
+                "C": "A `MISS`, because bypass deleted the entry",
+                "D": "A 403, because the entry is now marked private"
+              },
+              "answer": "B",
+              "explanation": "`proxy_cache_bypass` controls reading only. The response to a bypassed request is still written unless `proxy_no_cache` says otherwise. Activity 3.5 showed `HIT` with `origin_hits=2` (Alice's copy)."
+            },
+            {
+              "id": "s4d1q07",
+              "type": "scenario",
+              "category": "Inactive vs Lifetime",
+              "question": "An entry is fresh for 1 hour (`proxy_cache_valid 200 1h`), and the cache has `inactive=10m`. Nobody requests it for 15 minutes. What happens?",
+              "options": {
+                "A": "It stays until the hour is up, because `inactive` only applies to expired entries",
+                "B": "It's moved to the stale list for `proxy_cache_use_stale`",
+                "C": "The cache manager deletes it, even though it was still fresh",
+                "D": "It's kept in the keys zone but its file is deleted"
+              },
+              "answer": "C",
+              "explanation": "`inactive` removes entries that haven't been **accessed** for that long, whatever their freshness. The lifetime decides fresh vs expired. `inactive` decides whether the entry exists at all."
+            },
+            {
+              "id": "s4d1q08",
+              "type": "scenario",
+              "category": "Restart Behavior",
+              "question": "The edge container is recreated with the same cache directory mounted. The very first request for a URL cached before the restart arrives before the cache loader has run. What does it get?",
+              "options": {
+                "A": "A `MISS`: the keys zone is empty until the loader finishes",
+                "B": "A 503 while the cache is cold",
+                "C": "A `STALE` copy, because loaded entries count as expired",
+                "D": "A `HIT`: a worker that misses in the zone checks for the file on disk"
+              },
+              "answer": "D",
+              "explanation": "When the key isn't in the zone, NGINX still looks for the file named by the key's hash and uses it if it's valid. Activity 3.6 showed a `HIT` right after `./lab.sh edge`."
+            },
+            {
+              "id": "s4d1q09",
+              "type": "config",
+              "category": "Cache Key and Host",
+              "question": "Which `location` settings give each tenant its own cache entries **and** send the client's host name to the origin?",
+              "options": {
+                "A": "```nginx\nproxy_set_header Host $host;\nproxy_cache_key $scheme$host$request_uri;\n```",
+                "B": "```nginx\nproxy_cache_key $scheme$host$request_uri;\n```",
+                "C": "```nginx\nproxy_set_header Host $host;\n```",
+                "D": "```nginx\nproxy_set_header Host $proxy_host;\nproxy_cache_key $scheme$proxy_host$request_uri;\n```"
+              },
+              "answer": "A",
+              "explanation": "Both halves are needed. B separates entries but the origin still sees `origin`. C is the cross-tenant trap. D is just the defaults written out."
+            },
+            {
+              "id": "s4d1q10",
+              "type": "config",
+              "category": "Status Codes",
+              "question": "```nginx\nproxy_cache_valid 200 1m;\n```\nThe origin starts answering `/prices` with `503` and `Cache-Control: max-age=60`. What do clients get over the next minute?",
+              "options": {
+                "A": "A fresh request to the origin each time, because only 200 is cacheable",
+                "B": "The cached 503, as a `HIT`, for up to a minute",
+                "C": "The last cached 200, because 503s are never cached",
+                "D": "A 502 from NGINX"
+              },
+              "answer": "B",
+              "explanation": "The origin's `Cache-Control` sets the lifetime for any status. `proxy_cache_valid` only applies when the origin gives none. Activity 3.3e cached a 503."
+            },
+            {
+              "id": "s4d1q11",
+              "type": "config",
+              "category": "Header Precedence",
+              "question": "The origin sends both `X-Accel-Expires: 0` and `Cache-Control: max-age=300`. With `proxy_cache_valid 200 10m;`, what happens?",
+              "options": {
+                "A": "Cached for 300 seconds",
+                "B": "Cached for 10 minutes",
+                "C": "Not cached",
+                "D": "Cached until `inactive` expires"
+              },
+              "answer": "C",
+              "explanation": "`X-Accel-Expires` has the highest priority, and `0` means don't cache. Activity 3.3b: `MISS MISS`."
+            },
+            {
+              "id": "s4d1q12",
+              "type": "config",
+              "category": "Bypass vs No-Cache",
+              "question": "Which pair keeps authenticated traffic fully separate from the shared cache (never served from it, never stored in it)?",
+              "options": {
+                "A": "```nginx\nproxy_cache_bypass $http_authorization;\n```",
+                "B": "```nginx\nproxy_no_cache $http_authorization;\n```",
+                "C": "```nginx\nproxy_cache_methods GET;\nproxy_cache_bypass $cookie_session;\n```",
+                "D": "```nginx\nproxy_cache_bypass $http_authorization;\nproxy_no_cache     $http_authorization;\n```"
+              },
+              "answer": "D",
+              "explanation": "`proxy_cache_bypass` stops reading and `proxy_no_cache` stops writing. Either alone leaks in one direction (Activity 3.5)."
+            },
+            {
+              "id": "s4d1q13",
+              "type": "config",
+              "category": "Cache Status Header",
+              "question": "```nginx\nadd_header X-Cache-Status $upstream_cache_status;\n```\nThe origin answers a request with 404. Does the client see `X-Cache-Status`?",
+              "options": {
+                "A": "No: without `always`, `add_header` skips 404 and other error statuses",
+                "B": "Yes: `add_header` applies to every status",
+                "C": "Yes, but only if the 404 was cached",
+                "D": "No: `$upstream_cache_status` is empty for 404s"
+              },
+              "answer": "A",
+              "explanation": "Without `always`, `add_header` only adds to 200, 201, 204, 206, 301, 302, 303, 304, 307 and 308 (Sprint 3 Day 3). Errors are exactly the responses you'll want to explain, so use `always`."
+            },
+            {
+              "id": "s4d1q14",
+              "type": "config",
+              "category": "Keys Zone Sizing",
+              "question": "```nginx\nproxy_cache_path cache/lumina keys_zone=lumina:1m max_size=50g;\n```\nRoughly how many entries can this cache hold?",
+              "options": {
+                "A": "About 1 million, one per byte",
+                "B": "About 8,000, limited by the keys zone",
+                "C": "As many as fit in 50 GB",
+                "D": "About 1,000, one per KB"
+              },
+              "answer": "B",
+              "explanation": "The keys zone holds one node per entry; about 8,000 fit in 1 MB. With a 1 MB zone, the disk limit will never be reached."
+            },
+            {
+              "id": "s4d1q15",
+              "type": "diagnose",
+              "category": "What Gets Cached",
+              "question": "`X-Cache-Status` is `MISS` on every request to `/catalog`, and the origin count climbs, though `proxy_cache_valid 200 5m` is set. The origin's response headers include `Set-Cookie: tracking=...`. Most likely cause?",
+              "options": {
+                "A": "The keys zone is full",
+                "B": "`proxy_cache_valid` doesn't apply to `/catalog`",
+                "C": "NGINX doesn't cache responses that set a cookie",
+                "D": "The cache path isn't writable"
+              },
+              "answer": "C",
+              "explanation": "A `Set-Cookie` response is never cached unless you tell NGINX to ignore that header (`proxy_ignore_headers Set-Cookie`), which risks caching per-user cookies. Activity 3.3c."
+            },
+            {
+              "id": "s4d1q16",
+              "type": "diagnose",
+              "category": "Cache Status",
+              "question": "The access log line `cache=$upstream_cache_status` is empty for every request to `/api/`, while requests to `/` show `HIT` and `MISS`. Most likely cause?",
+              "options": {
+                "A": "The origin sends `no-store` for `/api/`",
+                "B": "`/api/` requests all carry `Authorization`",
+                "C": "The keys zone was resized",
+                "D": "The location handling `/api/` has no `proxy_cache` directive"
+              },
+              "answer": "D",
+              "explanation": "An empty value means no cache was involved. `no-store` would still show `MISS`, and a bypass would show `BYPASS`."
+            },
+            {
+              "id": "s4d1q17",
+              "type": "diagnose",
+              "category": "Cache Key",
+              "question": "A cache file's `KEY:` line reads `http://origin/products/7`. The site serves three host names from this location. What does that tell you?",
+              "options": {
+                "A": "The default key is in use: the host names share one entry per path",
+                "B": "The key includes the client host; `origin` is the requested host",
+                "C": "The entry was written by the cache loader, which normalizes keys",
+                "D": "The file is a temporary file from `proxy_temp_path`"
+              },
+              "answer": "A",
+              "explanation": "The default key uses the `proxy_pass` URL (`$proxy_host`). Any key without `$host` is shared by every host name behind the location (Activity 3.2 and 3.4)."
+            },
+            {
+              "id": "s4d1q18",
+              "type": "recall",
+              "category": "Cache Status",
+              "question": "Which `$upstream_cache_status` value means the request matched `proxy_cache_bypass`?",
+              "options": {
+                "A": "`MISS`",
+                "B": "`BYPASS`",
+                "C": "`EXPIRED`",
+                "D": "`UPDATING`"
+              },
+              "answer": "B",
+              "explanation": "`BYPASS`: the response came from the origin because `proxy_cache_bypass` was non-empty and not `0`."
+            },
+            {
+              "id": "s4d1q19",
+              "type": "recall",
+              "category": "Cache Key",
+              "question": "What is NGINX's default `proxy_cache_key`?",
+              "options": {
+                "A": "`$host$request_uri`",
+                "B": "`$scheme$host$uri$is_args$args`",
+                "C": "`$scheme$proxy_host$request_uri`",
+                "D": "`$request_uri`"
+              },
+              "answer": "C",
+              "explanation": "`$scheme$proxy_host$request_uri`. `$proxy_host` comes from `proxy_pass`, not from the client."
+            },
+            {
+              "id": "s4d1q20",
+              "type": "recall",
+              "category": "What Gets Cached",
+              "question": "Which request methods does `proxy_cache` cache by default?",
+              "options": {
+                "A": "GET only",
+                "B": "GET, HEAD and POST",
+                "C": "Every method except DELETE",
+                "D": "GET and HEAD"
+              },
+              "answer": "D",
+              "explanation": "`proxy_cache_methods` defaults to `GET HEAD`. GET and HEAD are always cached when caching is on; POST can be added explicitly."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "title": "The Cache Under Pressure",
+          "questions": [
+            {
+              "id": "s4d2q01",
+              "type": "scenario",
+              "category": "Thundering Herd",
+              "question": "`proxy_cache_lock on;` is set, with no `proxy_cache_use_stale`. A popular cached URL expires while 300 requests per second arrive, and the origin takes 2 seconds. What reaches the origin?",
+              "options": {
+                "A": "Every request that finds the entry expired, until the refresh completes: the lock only covers new entries",
+                "B": "Exactly one request; the others wait on the lock",
+                "C": "Nothing: NGINX serves the expired copy until the origin answers",
+                "D": "One request per worker process"
+              },
+              "answer": "A",
+              "explanation": "`proxy_cache_lock` applies when populating a **new** entry. Expired entries aren't locked, so each request that finds the entry expired goes to the origin. Collapsing refreshes is `proxy_cache_use_stale updating` (Day 2 Activity 3.4)."
+            },
+            {
+              "id": "s4d2q02",
+              "type": "scenario",
+              "category": "Cache Lock",
+              "question": "`proxy_cache_lock on;` with default timers. A new URL is requested by 20 clients at once, and the origin takes 8 seconds. What happens to the 19 waiting requests?",
+              "options": {
+                "A": "They wait the full 8 seconds and are served the new entry",
+                "B": "After 5 seconds each goes to the origin itself, and their responses aren't cached",
+                "C": "They get a 504 after 5 seconds",
+                "D": "They get `STALE` copies"
+              },
+              "answer": "B",
+              "explanation": "`proxy_cache_lock_timeout` (5 s) ends the wait. The waiters then fetch from the origin and their responses aren't stored. Activity 3.2 with `delay=7`: 20 origin requests, all `MISS`."
+            },
+            {
+              "id": "s4d2q03",
+              "type": "scenario",
+              "category": "Stale on Failure",
+              "question": "`proxy_cache_use_stale error timeout;`. An expired entry exists. The origin is up, but answers 503 to everything. What does the client get?",
+              "options": {
+                "A": "The stale copy, because a 503 is an error",
+                "B": "A 502 from NGINX",
+                "C": "The origin's 503: a 5xx **answer** isn't `error` unless `http_503` is listed",
+                "D": "A 504 after `proxy_read_timeout`"
+              },
+              "answer": "C",
+              "explanation": "`error` covers connection failures. Each 5xx status must be listed (`http_500`, `http_502`, `http_503`, `http_504`). Activity 3.3."
+            },
+            {
+              "id": "s4d2q04",
+              "type": "scenario",
+              "category": "Stale on Failure",
+              "question": "The origin is down. `proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;` is set. A client requests a URL that has never been cached. What does it get?",
+              "options": {
+                "A": "A `STALE` copy of the nearest cached URL",
+                "B": "An empty 200",
+                "C": "A 404",
+                "D": "A 502: there's nothing stale to serve"
+              },
+              "answer": "D",
+              "explanation": "Stale serving needs a cached copy. Activity 3.3 ended with `502 cache=MISS` for a never-cached URL."
+            },
+            {
+              "id": "s4d2q05",
+              "type": "scenario",
+              "category": "Refresh Behavior",
+              "question": "`proxy_cache_use_stale updating;` is set, without `proxy_cache_background_update`. The origin takes 3 seconds. What does the **first** request after expiry experience?",
+              "options": {
+                "A": "It waits about 3 seconds for the origin (`EXPIRED`); requests arriving during the refresh get `UPDATING` at once",
+                "B": "It gets `STALE` at once, and the refresh happens in the background",
+                "C": "It gets `UPDATING` at once",
+                "D": "It gets a 504"
+              },
+              "answer": "A",
+              "explanation": "`updating` helps the others. The request that found the entry expired is the one refreshing it and waits. Activity 3.4b."
+            },
+            {
+              "id": "s4d2q06",
+              "type": "scenario",
+              "category": "Stale on Failure",
+              "question": "During an origin outage, your monitoring (which counts HTTP status codes at the edge) shows nothing unusual. Why might that be?",
+              "options": {
+                "A": "NGINX suppresses access logging while the origin is down",
+                "B": "The edge is serving stale copies as 200s; only `X-Cache-Status`/`STALE` counts reveal the outage",
+                "C": "`proxy_cache_use_stale` converts errors into 304s",
+                "D": "The origin's errors are logged only at debug level"
+              },
+              "answer": "B",
+              "explanation": "Stale responses are ordinary 200s to the client. Count `cache=STALE` in the access log, or the API's `stale` counter in NGINX Plus, to see the outage the users didn't."
+            },
+            {
+              "id": "s4d2q07",
+              "type": "scenario",
+              "category": "Revalidation",
+              "question": "`proxy_cache_revalidate on;`. An entry expires, and the object hasn't changed at the origin. What happens on refresh?",
+              "options": {
+                "A": "The entry is deleted and fetched again in full",
+                "B": "NGINX serves the old copy until `inactive` ends",
+                "C": "NGINX sends a conditional request, the origin answers 304 with no body, and the entry's life is extended",
+                "D": "NGINX compares checksums of the cached and new bodies"
+              },
+              "answer": "C",
+              "explanation": "Revalidation uses `If-None-Match`/`If-Modified-Since`. A 304 refreshes the entry without transferring the body (`REVALIDATED`)."
+            },
+            {
+              "id": "s4d2q08",
+              "type": "scenario",
+              "category": "Measuring",
+              "question": "Two configs give nearly the same requests per second in a 10-second `oha` run against a slow origin. Which numbers best show which config protects the origin?",
+              "options": {
+                "A": "The average latency and the success rate",
+                "B": "The number of `oha` connections",
+                "C": "The CPU usage of the `oha` container",
+                "D": "The slowest response and the number of requests the origin received"
+              },
+              "answer": "D",
+              "explanation": "Averages hide herds. Activity 3.6: similar requests per second, but 107 vs 3 origin requests and 2.5 s vs 1.5 s slowest."
+            },
+            {
+              "id": "s4d2q09",
+              "type": "config",
+              "category": "Background Update",
+              "question": "Which config serves the **first** request after expiry a stale copy immediately, and refreshes the entry without anyone waiting?",
+              "options": {
+                "A": "```nginx\nproxy_cache_use_stale updating;\nproxy_cache_background_update on;\n```",
+                "B": "```nginx\nproxy_cache_use_stale updating;\n```",
+                "C": "```nginx\nproxy_cache_background_update on;\n```",
+                "D": "```nginx\nproxy_cache_lock on;\nproxy_cache_revalidate on;\n```"
+              },
+              "answer": "A",
+              "explanation": "Background update needs `updating` in `proxy_cache_use_stale`. B still makes the first request wait. C alone does nothing. D doesn't serve stale."
+            },
+            {
+              "id": "s4d2q10",
+              "type": "config",
+              "category": "Background Update",
+              "question": "```nginx\nproxy_cache_background_update on;\nproxy_cache_use_stale error timeout;\n```\nAn entry expires and the origin is slow. What does the first request get?",
+              "options": {
+                "A": "`STALE` at once, refreshed in the background",
+                "B": "It waits for the origin: background update needs `updating` in `proxy_cache_use_stale`",
+                "C": "`UPDATING` at once",
+                "D": "A 502"
+              },
+              "answer": "B",
+              "explanation": "Without `updating`, NGINX isn't allowed to serve the stale copy while refreshing, so there's nothing to hand back early."
+            },
+            {
+              "id": "s4d2q11",
+              "type": "config",
+              "category": "Origin Stale Directives",
+              "question": "No `proxy_cache_use_stale` is configured. The origin sends `Cache-Control: max-age=1, stale-while-revalidate=30` and takes 3 seconds. After expiry, two requests arrive 0.3 s apart. What do they get?",
+              "options": {
+                "A": "Both get `STALE` immediately",
+                "B": "Both wait 3 seconds",
+                "C": "The first waits 3 seconds (`EXPIRED`), the second gets `UPDATING` at once",
+                "D": "The first gets `STALE`, the second `HIT`"
+              },
+              "answer": "C",
+              "explanation": "NGINX honors `stale-while-revalidate` like `updating`: it helps concurrent requests, not the one doing the refresh."
+            },
+            {
+              "id": "s4d2q12",
+              "type": "config",
+              "category": "Origin Stale Directives",
+              "question": "No `proxy_cache_use_stale` is configured. Cached responses carried `Cache-Control: max-age=1, stale-if-error=60`. The origin now answers every request with **503**. What do clients get for an expired entry?",
+              "options": {
+                "A": "The stale copy, for up to 60 seconds",
+                "B": "A 502",
+                "C": "The stale copy, until `inactive` ends",
+                "D": "The origin's 503: `stale-if-error` covers connection errors and timeouts, not 5xx answers"
+              },
+              "answer": "D",
+              "explanation": "NGINX maps `stale-if-error` to error conditions. A 503 answer isn't one unless `http_503` is configured. Verified while building the sprint: a dropped connection gave `STALE`, a 503 answer passed through."
+            },
+            {
+              "id": "s4d2q13",
+              "type": "config",
+              "category": "Stale on Failure",
+              "question": "```nginx\nproxy_cache_use_stale error timeout http_502 http_503 http_504;\n```\nAn expired entry exists and the origin answers 500. What does the client get?",
+              "options": {
+                "A": "The origin's 500",
+                "B": "The stale copy",
+                "C": "A 502 from NGINX",
+                "D": "An `UPDATING` copy"
+              },
+              "answer": "A",
+              "explanation": "Only the statuses listed trigger stale serving. `http_500` isn't in the list."
+            },
+            {
+              "id": "s4d2q14",
+              "type": "config",
+              "category": "Cache Lock",
+              "question": "```nginx\nproxy_cache_lock on;\nproxy_cache_lock_timeout 10s;\n```\nA new URL is requested by 20 clients at once, and the origin takes 7 seconds. How many requests reach the origin?",
+              "options": {
+                "A": "1: the timeout was raised above the origin's response time",
+                "B": "2: after `proxy_cache_lock_age` (5 s) NGINX lets one more request through",
+                "C": "20: the lock only applies for 5 seconds",
+                "D": "0: the waiters get `STALE`"
+              },
+              "answer": "B",
+              "explanation": "`proxy_cache_lock_age` (default 5 s) lets one more request go to the origin if the first hasn't finished. Verified: 2 origin requests and a 12-second burst; with `proxy_cache_lock_age 10s` too, 1 request and 7 seconds."
+            },
+            {
+              "id": "s4d2q15",
+              "type": "diagnose",
+              "category": "Thundering Herd",
+              "question": "The access log shows bursts of dozens of `EXPIRED` lines for the same URL every time it expires, with origin CPU spikes. `proxy_cache_lock on;` is set. What fixes it?",
+              "options": {
+                "A": "Raise `proxy_cache_lock_timeout`",
+                "B": "Increase `keys_zone`",
+                "C": "Add `proxy_cache_use_stale updating` (and background update): the lock doesn't apply to expired entries",
+                "D": "Set `proxy_cache_min_uses 2`"
+              },
+              "answer": "C",
+              "explanation": "Requests that find an expired entry all go to the origin, lock or no lock. `updating` lets them get the stale copy while one refresh runs."
+            },
+            {
+              "id": "s4d2q16",
+              "type": "diagnose",
+              "category": "Revalidation",
+              "question": "`proxy_cache_revalidate on;` and `proxy_cache_background_update on;`. The origin's counters show 304s, but the access log never shows `REVALIDATED`. Why?",
+              "options": {
+                "A": "The origin's 304s are being ignored",
+                "B": "Revalidation only works without `proxy_cache_lock`",
+                "C": "`$upstream_cache_status` doesn't support `REVALIDATED`",
+                "D": "The revalidation happens in a background subrequest, which isn't logged; the client saw `STALE`"
+              },
+              "answer": "D",
+              "explanation": "Background update serves the stale copy and refreshes in a subrequest (`log_subrequest` is off by default). Activity 3.5."
+            },
+            {
+              "id": "s4d2q17",
+              "type": "diagnose",
+              "category": "Stale on Failure",
+              "question": "Dashboards show 99.9% 200s at the edge, but `cache=STALE` lines jumped from zero to thousands per minute. What's going on?",
+              "options": {
+                "A": "The origin is failing or timing out, and the edge is hiding it by serving expired copies",
+                "B": "The keys zone is full",
+                "C": "Clients are sending `Cache-Control: no-cache`",
+                "D": "Background update is refreshing too often"
+              },
+              "answer": "A",
+              "explanation": "`STALE` means an expired copy was served because the origin couldn't provide a fresh one. It's the origin outage the users didn't see."
+            },
+            {
+              "id": "s4d2q18",
+              "type": "recall",
+              "category": "Cache Lock",
+              "question": "What is the default `proxy_cache_lock_timeout`?",
+              "options": {
+                "A": "1 second",
+                "B": "5 seconds",
+                "C": "30 seconds",
+                "D": "60 seconds"
+              },
+              "answer": "B",
+              "explanation": "5 seconds, the same as the default `proxy_cache_lock_age`."
+            },
+            {
+              "id": "s4d2q19",
+              "type": "recall",
+              "category": "Cache Status",
+              "question": "Which `$upstream_cache_status` value means the client got the old copy because another request is already refreshing the entry?",
+              "options": {
+                "A": "`STALE`",
+                "B": "`EXPIRED`",
+                "C": "`UPDATING`",
+                "D": "`REVALIDATED`"
+              },
+              "answer": "C",
+              "explanation": "`UPDATING`. `STALE` is used for the request that triggered a background refresh or when the origin failed."
+            },
+            {
+              "id": "s4d2q20",
+              "type": "recall",
+              "category": "Revalidation",
+              "question": "Which directive makes NGINX refresh expired entries with conditional requests (`If-Modified-Since` / `If-None-Match`)?",
+              "options": {
+                "A": "`proxy_cache_lock`",
+                "B": "`proxy_cache_background_update`",
+                "C": "`proxy_cache_min_uses`",
+                "D": "`proxy_cache_revalidate`"
+              },
+              "answer": "D",
+              "explanation": "`proxy_cache_revalidate on;`."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "title": "Kernel and Connection Limits & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s4d3q01",
+              "type": "scenario",
+              "category": "Accept Queue",
+              "question": "`listen 8084 backlog=4096;` on a host where `net.core.somaxconn` is 128. What is the accept queue's real limit?",
+              "options": {
+                "A": "128, capped by the kernel without a warning",
+                "B": "4096: NGINX's setting overrides the sysctl",
+                "C": "4224, the two added together",
+                "D": "NGINX refuses to start"
+              },
+              "answer": "A",
+              "explanation": "The kernel uses `min(backlog, somaxconn)` and says nothing. Day 3 Activity 3.2 showed `Send-Q` 128 with no log line."
+            },
+            {
+              "id": "s4d3q02",
+              "type": "scenario",
+              "category": "Accept Queue",
+              "question": "The workers stall for 1.5 seconds, and the accept queue fills. What do the clients that overflow experience?",
+              "options": {
+                "A": "An immediate TCP reset",
+                "B": "Their SYN is dropped; the client retries after about 1 s and then 3 s, so they wait several seconds without an error",
+                "C": "An HTTP 503 from NGINX",
+                "D": "Their connection is queued in the SYN queue instead, with no delay"
+              },
+              "answer": "B",
+              "explanation": "A full accept queue makes the kernel drop new handshakes. Clients retry the SYN on their own schedule. Activity 3.2: queued clients answered at 1.5 s, overflowed ones at about 3.2 s."
+            },
+            {
+              "id": "s4d3q03",
+              "type": "scenario",
+              "category": "reuseport",
+              "question": "Why does `listen 8084 reuseport;` limit the damage of one stalled worker?",
+              "options": {
+                "A": "It makes the kernel retry the connection on another port",
+                "B": "It enables SYN cookies for the listener",
+                "C": "Each worker gets its own socket and accept queue, so a stalled worker only stalls its share of new connections",
+                "D": "It disables the accept queue entirely"
+              },
+              "answer": "C",
+              "explanation": "With `reuseport`, the kernel spreads connections across one listening socket per worker. `ss` shows one listener per worker."
+            },
+            {
+              "id": "s4d3q04",
+              "type": "scenario",
+              "category": "File Descriptors",
+              "question": "`worker_connections 8192;`, the workers' open-file limit is 1024, and 3,000 clients keep connections open to a cached URL. What happens?",
+              "options": {
+                "A": "Nothing: `worker_connections` raises the file limit automatically",
+                "B": "NGINX refuses to start",
+                "C": "Clients over 1024 get a TCP reset from the kernel",
+                "D": "Some clients get 500s when opening the cached file fails with `Too many open files`, and some accepts fail"
+              },
+              "answer": "D",
+              "explanation": "Each worker runs out of descriptors. Activity 3.3: about 450 500s from `open() ... (24: Too many open files)` and a few `accept4()` failures."
+            },
+            {
+              "id": "s4d3q05",
+              "type": "scenario",
+              "category": "File Descriptors",
+              "question": "`worker_rlimit_nofile 16384;` in a container whose hard open-file limit is 1024. What happens?",
+              "options": {
+                "A": "The workers log `setrlimit ... failed (1: Operation not permitted)` and stay at 1024, while `nginx -t` passes",
+                "B": "`nginx -t` fails",
+                "C": "The workers run with 16384, because the master runs as root",
+                "D": "NGINX lowers `worker_connections` to fit"
+              },
+              "answer": "A",
+              "explanation": "Raising beyond the hard limit needs a privilege containers don't have by default. Activity 3.3 with `NOFILE=1024`."
+            },
+            {
+              "id": "s4d3q06",
+              "type": "scenario",
+              "category": "Ephemeral Ports",
+              "question": "An edge opens a new connection to one origin `address:port` for every request, at 2,000 requests per second, and closes it first. What fails?",
+              "options": {
+                "A": "The origin runs out of file descriptors",
+                "B": "The edge runs out of ephemeral ports (sockets in TIME_WAIT for 60 s); `connect()` fails with `Cannot assign requested address` and clients get 502s",
+                "C": "The accept queue overflows on the edge",
+                "D": "The kernel switches to SYN cookies"
+              },
+              "answer": "B",
+              "explanation": "About 28,000 ports and 60 seconds of TIME_WAIT allow about 470 new connections per second to one destination. Activity 3.4."
+            },
+            {
+              "id": "s4d3q07",
+              "type": "scenario",
+              "category": "TIME_WAIT",
+              "question": "What does `net.ipv4.tcp_tw_reuse=1` do?",
+              "options": {
+                "A": "Shortens TIME_WAIT to 1 second for all sockets",
+                "B": "Lets incoming connections reuse server ports",
+                "C": "Lets the kernel reuse a TIME_WAIT port for a new **outgoing** connection once it's at least a second old: relief, not a cure",
+                "D": "Recycles TIME_WAIT sockets for NAT'ed clients"
+              },
+              "answer": "C",
+              "explanation": "It applies to outgoing connections, using TCP timestamps. Activity 3.4: fewer 502s, but still thousands. Keepalive is the fix."
+            },
+            {
+              "id": "s4d3q08",
+              "type": "scenario",
+              "category": "TIME_WAIT",
+              "question": "The edge sends `Connection: close` to the origin, and the origin closes each connection after answering. Where do the TIME_WAIT sockets pile up?",
+              "options": {
+                "A": "On the edge",
+                "B": "On both, equally",
+                "C": "Nowhere: `Connection: close` skips TIME_WAIT",
+                "D": "On the origin, because it closed first"
+              },
+              "answer": "D",
+              "explanation": "TIME_WAIT stays with the side that closes first. Verified while building the sprint: about 5,300 TIME_WAIT on the origin, 0 on the edge."
+            },
+            {
+              "id": "s4d3q09",
+              "type": "config",
+              "category": "Accept Queue",
+              "question": "`net.core.somaxconn` is 4096. Which `listen` line gives port 8084 an accept queue of 4096?",
+              "options": {
+                "A": "```nginx\nlisten 8084 backlog=4096;\n```",
+                "B": "```nginx\nlisten 8084;\n```",
+                "C": "```nginx\nlisten 8084 so_keepalive=on;\n```",
+                "D": "```nginx\nlisten 8084 deferred;\n```"
+              },
+              "answer": "A",
+              "explanation": "Without `backlog=`, NGINX asks for 511 on Linux."
+            },
+            {
+              "id": "s4d3q10",
+              "type": "config",
+              "category": "Network Namespaces",
+              "question": "How do you set `net.core.somaxconn` for NGINX running in a container?",
+              "options": {
+                "A": "In `nginx.conf` with `worker_rlimit_somaxconn`",
+                "B": "On the container: `docker run --sysctl net.core.somaxconn=4096` (it's per network namespace)",
+                "C": "On the host with `sysctl -w`; containers inherit it",
+                "D": "With `ulimit -n` in the entrypoint"
+              },
+              "answer": "B",
+              "explanation": "Network sysctls belong to the network namespace. The host's values don't apply inside the container."
+            },
+            {
+              "id": "s4d3q11",
+              "type": "config",
+              "category": "File Descriptors",
+              "question": "A caching reverse proxy runs `worker_connections 4096;`. Which `worker_rlimit_nofile` is the sensible minimum?",
+              "options": {
+                "A": "1024",
+                "B": "4096",
+                "C": "At least 8192 (about twice `worker_connections`), plus headroom for cache files",
+                "D": "It isn't needed for a proxy"
+              },
+              "answer": "C",
+              "explanation": "Each proxied request uses a client and an upstream connection, and cache hits open files too."
+            },
+            {
+              "id": "s4d3q12",
+              "type": "config",
+              "category": "Upstream Keepalive",
+              "question": "On nginx 1.31:\n```nginx\nupstream origin {\n    server s4-origin:8014;\n    keepalive 0;\n}\n```\nWhat does `keepalive 0` change?",
+              "options": {
+                "A": "Nothing: keepalive is controlled only by `proxy_http_version`",
+                "B": "Connections are kept forever",
+                "C": "Health checks are disabled",
+                "D": "The idle connection cache is disabled, so every request opens a new connection"
+              },
+              "answer": "D",
+              "explanation": "Keepalive is on by default since 1.29.7. `keepalive 0` turns the cache off. Activity 3.4: 984 successes, then 94,000 502s on a 1,000-port range."
+            },
+            {
+              "id": "s4d3q13",
+              "type": "config",
+              "category": "Accept Queue",
+              "question": "You change `listen 8084;` to `listen 8084 backlog=4096;` and run `nginx -s reload`. When does the new queue length take effect?",
+              "options": {
+                "A": "Right after the reload, on the existing socket",
+                "B": "Only after a full restart",
+                "C": "Only for new worker processes after `worker_shutdown_timeout`",
+                "D": "Only after `somaxconn` is also changed"
+              },
+              "answer": "A",
+              "explanation": "NGINX applies the new backlog to the existing listening socket on reload. Activity 3.2: `Send-Q` changed after `./lab.sh reload`."
+            },
+            {
+              "id": "s4d3q14",
+              "type": "config",
+              "category": "reuseport",
+              "question": "`worker_processes 2;` and `listen 8084 reuseport backlog=4096;`. What does `ss -lnt 'sport = :8084'` show?",
+              "options": {
+                "A": "One listener with a limit of 8192",
+                "B": "Two listeners, each with a limit of 4096",
+                "C": "One listener with a limit of 4096",
+                "D": "Two listeners with a limit of 2048 each"
+              },
+              "answer": "B",
+              "explanation": "One socket per worker, each with its own queue."
+            },
+            {
+              "id": "s4d3q15",
+              "type": "diagnose",
+              "category": "Accept Queue",
+              "question": "`nstat` shows `TcpExtListenOverflows` climbing, and `ss -lnt` shows the listener's `Recv-Q` equal to its `Send-Q`. What's happening?",
+              "options": {
+                "A": "The workers ran out of file descriptors",
+                "B": "The origin is slow",
+                "C": "The accept queue is full: workers aren't accepting fast enough, or the queue is too short",
+                "D": "SYN cookies are being sent"
+              },
+              "answer": "C",
+              "explanation": "`Recv-Q` on a listener is the number waiting to be accepted; `Send-Q` is the limit."
+            },
+            {
+              "id": "s4d3q16",
+              "type": "diagnose",
+              "category": "Ephemeral Ports",
+              "question": "The error log fills with `connect() to 172.18.0.2:8014 failed (99: Cannot assign requested address)`. What's the cause?",
+              "options": {
+                "A": "The origin is down",
+                "B": "DNS resolution of the upstream failed",
+                "C": "The accept queue on the origin is full",
+                "D": "The edge has run out of ephemeral ports to that origin"
+              },
+              "answer": "D",
+              "explanation": "Error 99 (`EADDRNOTAVAIL`) on `connect()` means no free local port for that destination. Check keepalive first."
+            },
+            {
+              "id": "s4d3q17",
+              "type": "diagnose",
+              "category": "File Descriptors",
+              "question": "At reload, NGINX logs `[warn] 8192 worker_connections exceed open file resource limit: 1024`. What should you do?",
+              "options": {
+                "A": "Set `worker_rlimit_nofile` high enough (and make sure the hard limit allows it)",
+                "B": "Lower `worker_processes`",
+                "C": "Nothing: it's informational",
+                "D": "Raise `net.core.somaxconn`"
+              },
+              "answer": "A",
+              "explanation": "The warning is the only sign before traffic finds the limit. Activity 3.3."
+            },
+            {
+              "id": "s4d3q18",
+              "type": "recall",
+              "category": "Accept Queue",
+              "question": "What listen backlog does NGINX request on Linux when `backlog=` isn't set?",
+              "options": {
+                "A": "128",
+                "B": "511",
+                "C": "4096",
+                "D": "65535"
+              },
+              "answer": "B",
+              "explanation": "511 (`NGX_LISTEN_BACKLOG`). Sprint 1 Day 1 saw it in `ss`."
+            },
+            {
+              "id": "s4d3q19",
+              "type": "recall",
+              "category": "Accept Queue",
+              "question": "Which `nstat` counter counts accept queue overflows?",
+              "options": {
+                "A": "`TcpExtSyncookiesSent`",
+                "B": "`TcpRetransSegs`",
+                "C": "`TcpExtListenOverflows`",
+                "D": "`TcpExtTCPTimeouts`"
+              },
+              "answer": "C",
+              "explanation": "`TcpExtListenOverflows` (with `TcpExtListenDrops`)."
+            },
+            {
+              "id": "s4d3q20",
+              "type": "recall",
+              "category": "TIME_WAIT",
+              "question": "What does the default `net.ipv4.tcp_tw_reuse = 2` mean?",
+              "options": {
+                "A": "Reuse is disabled",
+                "B": "Reuse for all destinations",
+                "C": "Reuse after 2 seconds",
+                "D": "Reuse for loopback connections only"
+              },
+              "answer": "D",
+              "explanation": "0 = off, 1 = all outgoing connections, 2 = loopback only (the default on current kernels)."
+            }
+          ],
+          "extra_pools": [
+            {
+              "pool": "enterprise",
+              "title": "Enterprise (Optional): Purge on Demand, Cache Metrics",
+              "track": "enterprise",
+              "optional": true,
+              "questions": [
+                {
+                  "id": "s4d3e01",
+                  "type": "scenario",
+                  "category": "OSS Invalidation",
+                  "question": "With open source NGINX, `proxy_cache_bypass $http_x_refresh;` is configured. Sending one request with `X-Refresh: 1` refreshes the cached URL for everyone. Why?",
+                  "options": {
+                    "A": "A bypassed request's response is still stored (unless `proxy_no_cache` matches), replacing the entry",
+                    "B": "Bypass deletes the entry, and the next request refills it",
+                    "C": "`X-Refresh` is a standard header that NGINX honors",
+                    "D": "Bypass marks the entry expired"
+                  },
+                  "answer": "A",
+                  "explanation": "Day 1 showed bypass only stops reading. Here that's the point: the fresh response overwrites the entry. Protect the header, or anyone can push load onto the origin."
+                },
+                {
+                  "id": "s4d3e02",
+                  "type": "scenario",
+                  "category": "OSS Invalidation",
+                  "question": "For static assets (JavaScript, CSS) on open source NGINX, what's the most robust way to make a deploy visible immediately?",
+                  "options": {
+                    "A": "Restart NGINX after every deploy",
+                    "B": "Versioned URLs (`app.4f2c1.js`): a new version is a new key",
+                    "C": "Set `inactive=1m`",
+                    "D": "Delete the cache directory"
+                  },
+                  "answer": "B",
+                  "explanation": "A new URL needs no purge at all, and the old entries age out on their own."
+                },
+                {
+                  "id": "s4d3e03",
+                  "type": "scenario",
+                  "category": "Purge and the Key",
+                  "question": "`proxy_cache_key $scheme$host$request_uri;` and purge is enabled. Entries were filled with `Host: lumina.local`. You send `PURGE /courses/1` with `Host: other.example`. What happens to the cached `/courses/1`?",
+                  "options": {
+                    "A": "It's purged: purge matches on the URI only",
+                    "B": "Every host's entry for `/courses/1` is purged",
+                    "C": "It stays: the purge request's key doesn't match the entry's key",
+                    "D": "NGINX returns 400"
+                  },
+                  "answer": "C",
+                  "explanation": "Purge removes the entry for the key the purge request itself would use. Same `Host`, same URI, or it misses, and the purge still answers 204."
+                },
+                {
+                  "id": "s4d3e04",
+                  "type": "scenario",
+                  "category": "Wildcard Purge",
+                  "question": "What does `PURGE /courses/*` do with `proxy_cache_purge` enabled?",
+                  "options": {
+                    "A": "Purges only the literal URI `/courses/*`",
+                    "B": "Purges the whole cache",
+                    "C": "Returns 400: wildcards need the API",
+                    "D": "Purges every entry whose key starts with the part before the `*`"
+                  },
+                  "answer": "D",
+                  "explanation": "A key ending in `*` is a wildcard. `purger=on` lets a background process delete the matching files."
+                },
+                {
+                  "id": "s4d3e05",
+                  "type": "scenario",
+                  "category": "Purge in a Fleet",
+                  "question": "Four NGINX Plus nodes sit behind a load balancer, each with its own cache. How do you purge a URL?",
+                  "options": {
+                    "A": "Send the purge to every node: each cache is local to its instance",
+                    "B": "Send it once; `zone_sync` shares cache contents",
+                    "C": "Send it once to the node holding the API",
+                    "D": "Restart all nodes"
+                  },
+                  "answer": "A",
+                  "explanation": "Caches are per instance. Cluster state sharing covers things like sticky sessions and rate limits, not cached content."
+                },
+                {
+                  "id": "s4d3e06",
+                  "type": "scenario",
+                  "category": "Securing Purge",
+                  "question": "Why restrict who can send `PURGE`?",
+                  "options": {
+                    "A": "Purges are expensive in CPU",
+                    "B": "Anyone who can purge can force cache misses and push load onto the origin",
+                    "C": "Purges are logged with credentials",
+                    "D": "The API needs authentication for every request"
+                  },
+                  "answer": "B",
+                  "explanation": "Purge is a cheap way to empty the cache onto the origin. Allow it only from management addresses or with a credential, and reject everyone else."
+                },
+                {
+                  "id": "s4d3e07",
+                  "type": "config",
+                  "category": "Purge Config",
+                  "question": "```nginx\nmap $request_method $purge_method { PURGE 1; default 0; }\n...\nproxy_cache_purge $purge_method;\n```\nWhat does a successful purge return?",
+                  "options": {
+                    "A": "200 OK with the purged body",
+                    "B": "202 Accepted",
+                    "C": "204 No Content",
+                    "D": "410 Gone"
+                  },
+                  "answer": "C",
+                  "explanation": "A purge answers 204. Careful: it answers 204 even when no entry matched (a never-cached key, or the wrong `Host`), so confirm with the next request."
+                },
+                {
+                  "id": "s4d3e08",
+                  "type": "config",
+                  "category": "Purger",
+                  "question": "What does `purger=on` on `proxy_cache_path` add?",
+                  "options": {
+                    "A": "A cache purger process that walks the cache and deletes files matching wildcard purges",
+                    "B": "An HTTP endpoint for purging",
+                    "C": "Automatic purging of entries older than `inactive`",
+                    "D": "Purge support in open source NGINX"
+                  },
+                  "answer": "A",
+                  "explanation": "Wildcard purges take effect without it, but the files stay on disk. `purger=on` starts a background process that deletes them (in the lab, within about a minute)."
+                },
+                {
+                  "id": "s4d3e09",
+                  "type": "diagnose",
+                  "category": "Securing Purge",
+                  "question": "`proxy_cache_purge $purge_method;`, where `$purge_method` is `0` for clients outside the management network. The origin starts logging `PURGE` requests and answering 501. Why?",
+                  "options": {
+                    "A": "The purger process forwards purges to the origin",
+                    "B": "Unauthorized `PURGE` requests aren't purges, so they're proxied to the origin like any other request",
+                    "C": "The origin is the one doing the purging",
+                    "D": "The API mirrors purges upstream"
+                  },
+                  "answer": "B",
+                  "explanation": "A value of `0` just means \"not a purge\". Reject unauthorized purges explicitly (for example `return 403`) so they never reach the origin."
+                },
+                {
+                  "id": "s4d3e10",
+                  "type": "recall",
+                  "category": "Cache Metrics",
+                  "question": "Which NGINX Plus API path reports a cache zone's size and hit/miss/stale counters?",
+                  "options": {
+                    "A": "`/api/VERSION/cache/purge`",
+                    "B": "`/api/VERSION/http/upstreams/ZONE`",
+                    "C": "`/api/VERSION/stream/caches`",
+                    "D": "`/api/VERSION/http/caches/ZONE`"
+                  },
+                  "answer": "D",
+                  "explanation": "`/http/caches/ZONE`. The API reports on caches; purging is the `PURGE` request on the data plane."
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }
