@@ -76,5 +76,55 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 
 ---
 
-## Questions and Clarifications During the Sprint
-*(Add findings from questions asked while working through the days here.)*
+## Day 1
+
+### Day 1: "No invalidation in OSS? How is that production-viable?"
+* **Production designs avoid needing a purge.** Static assets get fingerprinted URLs (`app.4f2c1.js`) and long lifetimes, so a deploy means new keys. HTML and API responses get short lifetimes (microcaching: 1–10 s) plus stale serving (Day 2). Neither needs a "delete" button.
+* **Targeted refresh:** `proxy_cache_bypass` on a restricted header replaces one entry (verified while building Day 1). It works one exact key at a time.
+* **Flush everything:** put a generation variable in `proxy_cache_key` (for example `"$cache_gen$scheme$host$request_uri"`, with `$cache_gen` set in an included file) and change it with a reload. Every old entry becomes unreachable at once. They stay on disk until `inactive` or the LRU removes them. *(Not run in the lab.)*
+* **Third-party module:** `ngx_cache_purge` (FRiCKLE, plus maintained forks) adds a purge location to OSS. You compile it in, or install a distro package where one exists. Hosting stacks such as WordPress caching plugins rely on it. Not F5-supported.
+* **BIG-IP lens:** on BIG-IP, invalidation is a management-plane operation (tmsh/iControl). In NGINX it is a config design choice made on the data plane.
+
+### Day 1: What is LRU?
+* **Least Recently Used** is an eviction policy. When a bounded cache is full, it throws out the entry that hasn't been touched for the longest time. The usual structure is a hash table for lookup plus a doubly linked list ordered by last use: a hit moves the entry to the front, and eviction takes from the back. Both are O(1).
+* **NGINX:** the keys zone keeps each entry's node in a red-black tree (lookup) and a queue (LRU order). The cache manager evicts from the LRU end when `max_size` is exceeded, and the zone itself does so when it runs out of memory (the silent 216-of-400 finding). `inactive=` is a separate, time-based rule: it removes entries not used within that time, fresh or not.
+* **Python's `functools.lru_cache`:** the speedup in Advent of Code comes from **memoization** (a repeated subproblem is answered from the cache), not from the LRU policy. With `maxsize=None` (or `functools.cache`) nothing is ever evicted, so there is no LRU at all. The LRU part only matters when you cap memory. That is also the edge cache's situation: memoization for HTTP, with LRU deciding what to keep when space runs out.
+
+### Day 1: Does NGINX cache the new `QUERY` method?
+* **No, and it can't be configured to.** The test used nginx 1.31.6 with the solution config on an isolated copy, with the origin patched to accept `QUERY`.
+  * NGINX accepts and proxies `QUERY /courses/q` with a JSON body (200 from the origin).
+  * There is **no `X-Cache-Status` at all**, even with `max-age=60`. `$upstream_cache_status` is empty because the cache is never consulted for that method.
+  * The origin saw every request.
+* **`proxy_cache_methods GET HEAD QUERY;`** gives `[emerg] invalid value "QUERY"`. The directive only accepts `GET`, `HEAD` and `POST`.
+* **The contrast with the spec:** the IETF draft (safe method with body) defines `QUERY` responses as cacheable, with the **request body as part of the cache key**. NGINX's cache has no notion of that today. `POST` caching is the closest thing NGINX has: opt in with `proxy_cache_methods POST` and put `$request_body` in the key. That only works while the body fits in `client_body_buffer_size`, because `$request_body` is empty when the body was written to a temp file.
+* **Why it's safe as-is:** an uncached `QUERY` is simply passed through. The risk would be the opposite: caching by URI alone would serve one query's result to a different query.
+
+### Day 1: Why doesn't NGINX follow the RFC rule for `Authorization`?
+* **The rule:** RFC 9111 §3.5 says a shared cache MUST NOT reuse a response to a request carrying `Authorization` unless the response has `public`, `s-maxage` or `must-revalidate`.
+* **The 2009 nginx mailing-list thread** (August 2009, Kuramoto Eiji, Maxim Dounin, Igor Sysoev), when `proxy_cache` was new:
+  * Dounin: "You instructed nginx to cache response - and it will do so", and "If it's checked by backend server - there is no reason for nginx to do anything with it."
+  * Dounin gave a config workaround: `if ($http_authorization)` sends the request to a location without `proxy_cache`.
+  * Sysoev agreed authenticated responses shouldn't be cached, but wanted it configurable, because anyone can force a cache miss by sending a dummy `Authorization` header.
+  * A proposed `proxy_cache_ignore_for_authorization` option never landed in mainline. The answer became `proxy_cache_bypass` + `proxy_no_cache`, and the `proxy_cache_bypass` docs example lists `$http_authorization`.
+* **The spec angle:** RFC 9110 §3.7 defines a gateway (reverse proxy) as acting "as an origin server for the outbound connection." NGINX treats its cache as part of the origin, run by the same operator, whose config is the policy. RFC 9111 itself doesn't carve out reverse proxies; that view is NGINX's design stance, not an exemption in the spec.
+* **The same stance shows elsewhere:** NGINX ignores request-side `Cache-Control`/`Pragma` by default too. Only response headers, plus your config, decide caching.
+
+### Day 1: Host and the cache key, four combinations
+* The edge makes two independent choices: the `Host` the origin sees (`$proxy_host` by default) and whether the key includes the client's host (`$proxy_host` by default). Fixing only `proxy_set_header Host $host` is worse than fixing neither:
+  * **Neither fixed:** the cache and the origin agree, so it's wrong but consistent and visible.
+  * **Host only:** the origin builds per-tenant pages under a host-free key. That's a silent cross-tenant leak that depends on who asked first (Activity 3.4, `/h/2`).
+  * **Key only:** safe, but wasteful (duplicate generic copies).
+  * **Both fixed:** correct.
+* **General rule:** the key must include everything the origin uses to build the response. Origin uses more than the key → leak. Key uses more than the origin → only cost. `Authorization` (Activity 3.5) is the same rule.
+* BIG-IP delta: BIG-IP forwards the client `Host` unchanged, so the BIG-IP reflex (`proxy_set_header Host $host` alone) lands in the leak case on a caching location.
+* **Assets:** diagram page `Host and the Cache Key` (artifact https://claude.ai/artifact/M3LkYKrVNek5PGBjetRtSR), and blog draft `host-and-cache-key.md` (Markdown + Mermaid sequence diagrams; images only if the blog can't render Mermaid).
+
+### Day 1: Guide fix
+* Concept 1.2 said methods other than `GET`/`HEAD` are never cached. Corrected: that's the `proxy_cache_methods` default, and `POST` is the only other method it accepts (it needs the body in the key).
+
+### Day 1: Lab and quiz
+* Lab config built up through the activities: `proxy_cache_path ... keys_zone=lumina:10m`, `proxy_set_header Host $host`, `proxy_cache_key $scheme$host$request_uri`, `proxy_cache_valid 200 1m`, `proxy_cache_bypass` + `proxy_no_cache $http_authorization` (commented "read side" / "write side"), and `X-Cache-Status ... always`.
+* **Quiz:** 7/10 first attempt, 8/10 second (pass). The misses were on **keys zone sizing** and **NGINX ignoring `Authorization`**:
+  * **Sizing:** about 8,000 keys per MB of `keys_zone`. A full zone evicts LRU entries and their files, whatever `max_size` says, and logs nothing. `keys_zone=...:1m max_size=50g` holds about 8,000 entries, and the disk limit is never reached.
+  * **Authorization:** by default an authenticated response is stored and served to everyone. `proxy_cache_bypass` stops only reads and `proxy_no_cache` stops only writes, so you need both.
+* Day 1 recap written: `day01_recap.md`.

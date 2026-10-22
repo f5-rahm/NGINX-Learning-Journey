@@ -40,7 +40,7 @@ NGINX looks at the origin's response headers first, in this order:
 **Not cached, whatever the lifetime says**
 * A response that sets a cookie (`Set-Cookie`).
 * A response with `Vary: *`.
-* Methods other than `GET` and `HEAD`.
+* Methods other than `GET` and `HEAD` (the `proxy_cache_methods` default; `POST` is the only other method it accepts, and needs the body in the key).
 
 **Things that surprise people**
 * **No lifetime, no cache.** Browsers guess a lifetime from `Last-Modified`. NGINX doesn't: an origin that sends no caching headers is never cached until you set `proxy_cache_valid`.
