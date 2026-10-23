@@ -44,7 +44,7 @@ The cache's worth showed up in one load test: about 45,000 requests per second f
 
 ## Lab and quiz
 
-I drew all of today's rules as one decision flowchart: lookup, lock, expiry, refresh, origin answer, and the `X-Cache-Status` each path ends in. That turned a list of rules into a map I can actually remember. *(Diagrams: [Cache Under Pressure](cache-under-pressure.html), the decision flow plus a client/edge/origin sequence for each configuration.)*
+I drew all of today's rules as one decision flowchart: lookup, lock, expiry, refresh, origin answer, and the `X-Cache-Status` each path ends in. That turned a list of rules into a map I can actually remember. *(Diagrams: [Cache Under Pressure](cache-under-pressure.md), the decision flow plus a client/edge/origin sequence for each configuration.)*
 
 Quiz: 6/10, then 7/10, then 8/10. There's no single weak spot, just a lot of rules that each depend on another one. Next up, Day 3: kernel and connection limits, where the cache stops being the bottleneck.
 
