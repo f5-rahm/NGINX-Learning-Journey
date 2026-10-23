@@ -128,3 +128,38 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
   * **Sizing:** about 8,000 keys per MB of `keys_zone`. A full zone evicts LRU entries and their files, whatever `max_size` says, and logs nothing. `keys_zone=...:1m max_size=50g` holds about 8,000 entries, and the disk limit is never reached.
   * **Authorization:** by default an authenticated response is stored and served to everyone. `proxy_cache_bypass` stops only reads and `proxy_no_cache` stops only writes, so you need both.
 * Day 1 recap written: `day01_recap.md`.
+
+## Day 2
+
+### Day 2: Dashboards for cache status
+* **OSS has no cache counters.** `stub_status` reports only connections and requests, so the official `nginx-prometheus-exporter` and its OSS Grafana dashboard can't show `STALE`/`UPDATING`/`REVALIDATED`. In OSS the data lives in the access log (`$upstream_cache_status`): ship it to a log pipeline and count by value, or add the third-party VTS module, which keeps per-cache-zone counters.
+* **Plus counts them natively:** the API's cache zone stats (hit, stale, updating, revalidated, miss, expired, bypass), and the exporter turns them into Prometheus metrics. Sprint 11 builds the pipeline.
+* **`STALE` alone isn't an outage signal once background update is on.** The first request after every expiry is `STALE` in normal operation. An outage shows as a *sustained* `STALE` rate together with origin errors (`$upstream_status`), not as `STALE` being present.
+
+### Day 2: oha vs ab
+* `ab` is single-threaded, speaks HTTP/1.0 (keepalive only with `-k`), and becomes the bottleneck long before the cache does. It also counts responses whose length differs from the first one as "Failed requests".
+* `oha` is multi-threaded and async (Rust/tokio). It uses HTTP/1.1 keepalive by default, offers HTTP/2, a run duration (`-z`), a rate cap (`-q`), latency percentiles, and status and error distributions (e.g. `Cannot assign requested address` on Day 3).
+
+### Day 2: Where `REVALIDATED` goes with background update (verified, nginx 1.31.6)
+* Expired entry + `use_stale updating` + `background_update` + `revalidate`: the client request is answered at once from the old copy and logged `STALE`. A subrequest sends `If-None-Match`/`If-Modified-Since`, gets a 304, and extends the entry. The subrequest is the one that is `REVALIDATED`, and subrequests aren't logged by default.
+* With `log_subrequest on;` the subrequest shows up as its own line for the same URI: `200 ... upstream=<origin> cache=REVALIDATED`, written just before the client's `STALE` line (`upstream=-`). The origin counted `not_modified: 1` and one full response.
+* **Asset:** decision flowchart page `Cache Under Pressure` (artifact https://claude.ai/artifact/S4nAysV5j6VNhbmRoBoY8Q): lookup and lock, the expired-entry path, and what each `X-Cache-Status` means.
+
+### Day 2: Does any regulation require `log_subrequest on`?
+* None names it. PCI DSS Req. 10, HIPAA §164.312(b) and SOC 2 ask for an audit trail of *who accessed what*. The client's request is already logged (`STALE`). The background refresh has no client: it's the edge talking to its own origin, and the origin's log records it.
+* **The cache rule that does apply is storage:** a cached response is data at rest on the edge's disk. If it can hold cardholder data or ePHI, the cache directory is in scope (PCI DSS Req. 3, HIPAA encryption at rest), or the response must not be cached (`proxy_no_cache`, `Cache-Control: no-store`). Ties to the secure key storage work planned for Sprints 8, 11 and 14.
+
+### Day 2: Decision flowchart and compliance question
+* **Asset:** flowchart page `Cache Under Pressure` (artifact https://claude.ai/artifact/D6EtVGiMCDbcbdW46mcPdB): lookup/lock path, expired-entry path, X-Cache-Status table, monitoring notes. Key point it makes visible: the two `STALE` paths (background refresh vs a listed failure) look identical in the log.
+* **Module builds:** the journey plan has no compile-a-module activity yet. The user wants Sprint 11 to build VTS as a dynamic module and use a community Grafana dashboard.
+* **Does any regulation require `log_subrequest on`?** No. PCI DSS Req. 10, HIPAA audit controls and SOC 2 require audit trails of who accessed what, and the client's request is already logged (as `STALE`). The cache rule that does apply: a cached response is data at rest on the edge's disk, so cached cardholder data or ePHI falls under the storage rules (PCI DSS Req. 3, HIPAA). Keep such responses out of the cache with `proxy_no_cache`/`Cache-Control: no-store`, or protect the cache path like any other store.
+
+### Day 2: Activity 3.2 rerun
+* The first try reused `/s/2` and `/s/3` after they had expired: every request was `EXPIRED` and went to the origin (21 and 40 origin hits). The lock doesn't cover expired entries, which is the 1.1 rule, seen by accident.
+* With `proxy_cache_lock_timeout 10s` + `proxy_cache_lock_age 10s` on new URLs: `/s/4?delay=2` → 1 origin request, 2.5 s; `/s/5?delay=8` → 1 origin request, 8.0 s, log 1 `MISS` + 19 `HIT`. Waiters served from the new entry are logged `HIT`.
+* The extra ~0.5 s is the lock's polling: waiters recheck the entry on a 500 ms timer, so they can finish up to half a second after the fetch completes.
+
+### Day 2: Lab and quiz
+* Lab config built up through the activities, on top of Day 1's: `proxy_cache_lock on`, `proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504 updating`, `proxy_cache_background_update on`, `proxy_cache_revalidate on`. The 10 s lock timers from the Activity 3.2 experiment were removed again.
+* **Quiz:** 6/10 first attempt, 7/10 second, 8/10 third (pass). No single topic: the user found the number of rules (which status covers which path, which directive needs which) hard to hold in their head, and called the flowchart helpful for that.
+* Day 2 recap written: `day02_recap.md`.
