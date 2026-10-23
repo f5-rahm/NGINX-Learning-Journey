@@ -21,10 +21,10 @@ flowchart TD
     K -- fresh --> HIT1(["HIT<br/>served from the cache"])
     K -- expired --> EXP[["Expired entry:<br/>continues in Figure 2"]]
     K -- not cached --> L{"Is proxy_cache_lock on?<br/>off by default"}
-    L -- no --> M1(["MISS<br/>every concurrent miss goes: a herd"])
+    L -- no --> M1(["MISS<br/>every concurrent miss fetches<br/>from the origin: a herd"])
     L -- yes --> F{"Is another request<br/>fetching this key?"}
     F -- no --> M2(["MISS<br/>takes the lock, fetches, stores"])
-    F -. "holder slower than<br/>proxy_cache_lock_age (5s)" .-> AGE["one more request<br/>is let through"]
+    F -. "holder slower than<br/>proxy_cache_lock_age (5s)" .-> AGE["one more request also<br/>fetches from the origin"]
     F -- yes --> W["Wait for that entry<br/>proxy_cache_lock_timeout 5s"]
     W --> T{"Filled before<br/>the timeout?"}
     T -- yes --> HIT2(["HIT<br/>served from the new entry"])
@@ -191,7 +191,7 @@ sequenceDiagram
 
 **Origin:** 20 requests: the lock protected nothing. **Waits:** 1 for 7 s, 19 for 12 s. **Log:** 20 `MISS`.
 
-Raise both timers above the slowest normal response. Raising only `proxy_cache_lock_timeout` to 10 s still lets one more request through at 5 s (`proxy_cache_lock_age`): 2 origin requests. With both at 10 s: 1 request, 7 s.
+Raise both timers above the slowest normal response. Raising only `proxy_cache_lock_timeout` to 10 s still sends one more request to the origin at 5 s (`proxy_cache_lock_age`): 2 origin requests. With both at 10 s: 1 request, 7 s.
 
 ### 4. Expired Entry, Lock Only
 
