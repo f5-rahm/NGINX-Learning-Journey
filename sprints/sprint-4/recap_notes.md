@@ -163,3 +163,30 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 * Lab config built up through the activities, on top of Day 1's: `proxy_cache_lock on`, `proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504 updating`, `proxy_cache_background_update on`, `proxy_cache_revalidate on`. The 10 s lock timers from the Activity 3.2 experiment were removed again.
 * **Quiz:** 6/10 first attempt, 7/10 second, 8/10 third (pass). No single topic: the user found the number of rules (which status covers which path, which directive needs which) hard to hold in their head, and called the flowchart helpful for that.
 * Day 2 recap written: `day02_recap.md`.
+
+### Day 3: Is there an NGINX-tuned Linux, and are there published TCP profiles?
+* **BIG-IP delta:** TMM runs its own TCP stack, with profiles per virtual server and per side. NGINX uses the kernel's stack. There is one set of `sysctl` globals per network namespace, shared by the client side and the upstream side.
+* **No "NGINX distro".** The kernel version matters more than the distro (BBR, `SO_REUSEPORT` balancing, TCP Fast Open, kTLS). RHEL/Fedora's `tuned` has `network-latency`/`network-throughput` profiles, and cloud kernels (`linux-aws`) mostly tune the NIC driver. Netflix Open Connect runs NGINX on FreeBSD for kTLS + sendfile. Kernel bypass (DPDK) isn't stock NGINX, but F-Stack is a third-party fork that does it.
+* **Containers share the host kernel:** the Sprint 4+ container labs get a current userland, but TCP features come from the host's 5.19 kernel. Only the `sysctl` *values* are per namespace.
+* **Closest thing to separate client-side and server-side TCP profiles:** listener options (`backlog`, `reuseport`, `fastopen`, `deferred`, `so_keepalive`, `rcvbuf`/`sndbuf`), `proxy_socket_keepalive`, and per-route `ip route ... initcwnd/initrwnd/congctl` toward clients or origins.
+* **Published profiles:** the NGINX blog's "Tuning NGINX for Performance" (somaxconn, netdev_max_backlog, port range, file descriptors: the Day 3 set), Netflix's EC2 tuning talk (Brendan Gregg, re:Invent 2017), Red Hat's network performance tuning guide, and ESnet fasterdata (long-distance, high-bandwidth paths, not web edges). There's no F5-blessed "f5-tcp-progressive" equivalent. Modern defaults are good: tune what `ss`/`nstat` show you're running out of.
+
+### Day 3: F-Stack, Brendan Gregg, and NGINX + kernel metrics together
+* **F-Stack:** Tencent's open-source DPDK stack (a FreeBSD TCP stack running in user space), with an NGINX port. Used inside Tencent (it came from DNSPod) and in some telecom and gaming builds. It's niche because the NIC belongs to DPDK, cores busy-poll at 100%, and `ss`/`nstat`/`tcpdump`/iptables no longer see the traffic. That's also why BIG-IP has its own TMM statistics instead of netstat.
+* **Brendan Gregg:** yes, the person behind flame graphs, the USE method and the BPF performance tools (bcc/bpftrace).
+* **Bringing NGINX and system data together:** a shared time axis plus shared labels (host, instance, request ID). Metrics: Prometheus scrapes the NGINX exporter *and* `node_exporter` (which exports `nstat` counters such as ListenOverflows, TIME_WAIT and file descriptors), and Grafana puts them on one dashboard. Logs: JSON access logs → Loki/Elasticsearch. Traces: OpenTelemetry, with `traceparent` linking the edge to the upstream logs. The OpenTelemetry Collector can gather all three.
+* **Gap in the plan:** Sprint 11 as written is NGINX-side only (JSON logs, OTel, NGINX exporter). The user asked whether host/kernel metrics come back there. Candidate addition: `node_exporter` next to the NGINX exporter so the Day 3 counters land on the same dashboard.
+
+### Day 3: Activity 3.2 guide fix: warm-up cached the wrong key
+* **Symptom (user's run):** Fastest 1.58 s, Slowest 2.10 s, Average 1.94 s, instead of a flat ~1.5 s.
+* **Cause:** the cache key is `$scheme$host$request_uri`. The warm-up `r /o/1` sends `Host: 127.0.0.1`, while `oha` inside the lab network sends `Host: s4-edge`, so the load test missed. After the stall one request went to the origin and `proxy_cache_lock` held the rest: 70 logged `HIT` at rt≈0.50 s (the lock's 500 ms recheck) and 29 at 0.000. That's stall + polling ≈ 1.58 s, or stall + one lock tick ≈ 2.1 s. Same lock behavior as the Day 2 Activity 3.2 rerun, and the Day 1 `$host`-in-the-key lesson showing up by accident.
+* **Fix:** `day_03.md` warm-up is now `r /o/1 -H 'Host: s4-edge'`. The 4096 rerun needs no change: an expired entry is served `STALE` right away (`use_stale updating` + background update).
+* **Also seen:** the user's `nginx.conf` still had `listen 8084;` (limit 511), so that run had no overflows and no ~3.2 s SYN-retry group.
+
+### Day 3: Guide fix and lab
+* **Guide fix:** `day_03.md` now has a line under the "New today" table: `./lab.sh load` is `oha`, run on the lab network and aimed at the edge (so it sends `Host: s4-edge`). Day 3 used `oha`'s output in Activity 3.3 without ever naming the command. The user asked "where is oha called?"
+* **Activity 3.2 rerun (backlog=16, correct warm-up):** Fastest 1.58 s, Slowest 3.44 s, Average 2.85 s. 17 queued at about 1.58 s, the other 83 averaged about 3.1 s (the 1 s SYN retry landed during the stall, so they got in on the 3 s one).
+* **Sprint lab:** all 10 tests passed. The user needed notes from all three days to get the final config.
+* **Quiz:** 9/10 on the first attempt.
+* **Plan change:** README Sprint 11 now includes `node_exporter` next to the NGINX exporter (host/kernel counters on the same dashboard).
+* **Assets:** `kernel-limits.svg` + `kernel-limits.png` (the infographic for `day03_recap.md`: the three limits, who owns each one, symptom and evidence). Rendered with rsvg-convert, Lato + DejaVu Sans Mono.

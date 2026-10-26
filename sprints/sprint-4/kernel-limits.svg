@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="945" viewBox="0 0 1200 945" font-family="Lato" xml:space="preserve">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8A8A86"/></marker></defs>
+<rect width="1200" height="945" fill="#FFFFFF"/>
+<text x="24" y="40" font-size="26" fill="#1F1F1F" font-weight="bold" text-anchor="start">Who sets the limits on a busy NGINX edge</text>
+<text x="24" y="68" font-size="15" fill="#555555" text-anchor="start">On BIG-IP, TMM owns the TCP stack and a TCP profile holds these settings. NGINX runs on the Linux kernel: nginx.conf asks, the kernel and the platform decide.</text>
+<rect x="24" y="98" width="104" height="26" rx="13" fill="#E8F5E9" stroke="#2E7D32"/>
+<circle cx="39" cy="111" r="5" fill="#2E7D32"/>
+<text x="50" y="116" font-size="13" fill="#2E7D32" font-weight="bold" text-anchor="start">nginx.conf</text>
+<rect x="140.0" y="98" width="304" height="26" rx="13" fill="#E3F2FD" stroke="#1565C0"/>
+<circle cx="155.0" cy="111" r="5" fill="#1565C0"/>
+<text x="166.0" y="116" font-size="13" fill="#1565C0" font-weight="bold" text-anchor="start">Kernel sysctl (per network namespace)</text>
+<rect x="455.8" y="98" width="311" height="26" rx="13" fill="#FFF1E6" stroke="#C2410C"/>
+<circle cx="470.8" cy="111" r="5" fill="#C2410C"/>
+<text x="481.8" y="116" font-size="13" fill="#C2410C" font-weight="bold" text-anchor="start">Platform: systemd or container runtime</text>
+<text x="24" y="148" font-size="12" fill="#555555" font-weight="bold" text-anchor="start">WHAT HAPPENS</text>
+<text x="290" y="148" font-size="12" fill="#555555" font-weight="bold" text-anchor="start">THE LIMITS, AND WHO OWNS THEM</text>
+<text x="666" y="148" font-size="12" fill="#555555" font-weight="bold" text-anchor="start">WHEN IT RUNS OUT</text>
+<text x="972" y="148" font-size="12" fill="#555555" font-weight="bold" text-anchor="start">WHERE YOU SEE IT</text>
+<line x1="24" y1="162" x2="1176" y2="162" stroke="#D6D3D1"/>
+<text x="24" y="202" font-size="18" fill="#1F1F1F" font-weight="bold" text-anchor="start">1  A client connects</text>
+<text x="24" y="230.0" font-size="14" fill="#555555" text-anchor="start">The kernel completes the TCP</text>
+<text x="24" y="249.6" font-size="14" fill="#555555" text-anchor="start">handshake. The connection waits in</text>
+<text x="24" y="269.2" font-size="14" fill="#555555" text-anchor="start">the listener&#x27;s accept queue until a</text>
+<text x="24" y="288.8" font-size="14" fill="#555555" text-anchor="start">worker calls accept().</text>
+<text x="290" y="200.0" font-size="13" fill="#555555" text-anchor="start">The queue is the smaller of:</text>
+<rect x="290" y="218.2" width="360" height="30" rx="6" fill="#E8F5E9" stroke="#2E7D32"/>
+<rect x="290" y="218.2" width="6" height="30" rx="3" fill="#2E7D32"/>
+<text x="306" y="238.2" font-size="13" fill="#2E7D32" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">listen ... backlog=N  (default 511)</text>
+<rect x="290" y="256.2" width="360" height="30" rx="6" fill="#E3F2FD" stroke="#1565C0"/>
+<rect x="290" y="256.2" width="6" height="30" rx="3" fill="#1565C0"/>
+<text x="306" y="276.2" font-size="13" fill="#1565C0" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">net.core.somaxconn  (caps it silently)</text>
+<text x="290" y="310.2" font-size="13" fill="#555555" text-anchor="start">And per worker, if you want it:</text>
+<rect x="290" y="328.4" width="360" height="30" rx="6" fill="#E8F5E9" stroke="#2E7D32"/>
+<rect x="290" y="328.4" width="6" height="30" rx="3" fill="#2E7D32"/>
+<text x="306" y="348.4" font-size="13" fill="#2E7D32" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">reuseport  (one queue per worker)</text>
+<text x="666" y="202" font-size="13" fill="#B71C1C" font-weight="bold" text-anchor="start">Symptom</text>
+<text x="666" y="226.0" font-size="14" fill="#1F1F1F" text-anchor="start">A stalled worker lets the queue fill. New</text>
+<text x="666" y="245.6" font-size="14" fill="#1F1F1F" text-anchor="start">handshakes are dropped and clients retry</text>
+<text x="666" y="265.2" font-size="14" fill="#1F1F1F" text-anchor="start">after 1 s, then 3 s. A 1.5 s stall cost</text>
+<text x="666" y="284.8" font-size="14" fill="#1F1F1F" text-anchor="start">most clients over 3 s.</text>
+<text x="972" y="202" font-size="13" fill="#555555" font-weight="bold" text-anchor="start">Evidence</text>
+<text x="972" y="226.0" font-size="14" fill="#555555" text-anchor="start">ss -lnt (Recv-Q waiting, Send-Q</text>
+<text x="972" y="245.6" font-size="14" fill="#555555" text-anchor="start">limit) and nstat</text>
+<text x="972" y="265.2" font-size="14" fill="#555555" text-anchor="start">ListenOverflows. Nothing in</text>
+<text x="972" y="284.8" font-size="14" fill="#555555" text-anchor="start">NGINX&#x27;s logs.</text>
+<line x1="36" y1="374.4" x2="36" y2="392.4" stroke="#8A8A86" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="64" y1="384.4" x2="1176" y2="384.4" stroke="#D6D3D1" stroke-dasharray="3 4"/>
+<text x="24" y="428.4" font-size="18" fill="#1F1F1F" font-weight="bold" text-anchor="start">2  A worker takes it</text>
+<text x="24" y="456.4" font-size="14" fill="#555555" text-anchor="start">Every client connection, every</text>
+<text x="24" y="476.0" font-size="14" fill="#555555" text-anchor="start">origin connection and every open</text>
+<text x="24" y="495.59999999999997" font-size="14" fill="#555555" text-anchor="start">cache file is a file descriptor.</text>
+<rect x="290" y="410.4" width="360" height="30" rx="6" fill="#E8F5E9" stroke="#2E7D32"/>
+<rect x="290" y="410.4" width="6" height="30" rx="3" fill="#2E7D32"/>
+<text x="306" y="430.4" font-size="13" fill="#2E7D32" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">worker_connections  (per worker)</text>
+<rect x="290" y="448.4" width="360" height="30" rx="6" fill="#E8F5E9" stroke="#2E7D32"/>
+<rect x="290" y="448.4" width="6" height="30" rx="3" fill="#2E7D32"/>
+<text x="306" y="468.4" font-size="13" fill="#2E7D32" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">worker_rlimit_nofile  (raises soft limit)</text>
+<rect x="290" y="486.4" width="360" height="30" rx="6" fill="#FFF1E6" stroke="#C2410C"/>
+<rect x="290" y="486.4" width="6" height="30" rx="3" fill="#C2410C"/>
+<text x="306" y="506.4" font-size="13" fill="#C2410C" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">hard limit: LimitNOFILE / --ulimit</text>
+<text x="290" y="540.4" font-size="13" fill="#555555" text-anchor="start">The soft limit can&#x27;t go above the hard one. NGINX logs</text>
+<text x="290" y="558.6" font-size="13" fill="#555555" text-anchor="start">an alert and carries on.</text>
+<text x="666" y="428.4" font-size="13" fill="#B71C1C" font-weight="bold" text-anchor="start">Symptom</text>
+<text x="666" y="452.4" font-size="14" fill="#1F1F1F" text-anchor="start">accept() fails, so connections wait in</text>
+<text x="666" y="472.0" font-size="14" fill="#1F1F1F" text-anchor="start">the queue. Opening a cached file fails,</text>
+<text x="666" y="491.59999999999997" font-size="14" fill="#1F1F1F" text-anchor="start">so the client gets a 500.</text>
+<text x="972" y="428.4" font-size="13" fill="#555555" font-weight="bold" text-anchor="start">Evidence</text>
+<text x="972" y="452.4" font-size="14" fill="#555555" text-anchor="start">/proc/PID/limits and &quot;Too many</text>
+<text x="972" y="472.0" font-size="14" fill="#555555" text-anchor="start">open files&quot; in the error log.</text>
+<text x="972" y="491.59999999999997" font-size="14" fill="#555555" text-anchor="start">nginx -t and health checks stay</text>
+<text x="972" y="511.2" font-size="14" fill="#555555" text-anchor="start">green.</text>
+<line x1="36" y1="584.8" x2="36" y2="602.8" stroke="#8A8A86" stroke-width="2" marker-end="url(#arr)"/>
+<line x1="64" y1="594.8" x2="1176" y2="594.8" stroke="#D6D3D1" stroke-dasharray="3 4"/>
+<text x="24" y="638.8" font-size="18" fill="#1F1F1F" font-weight="bold" text-anchor="start">3  The edge calls the origin</text>
+<text x="24" y="666.8" font-size="14" fill="#555555" text-anchor="start">Each new origin connection takes an</text>
+<text x="24" y="686.4" font-size="14" fill="#555555" text-anchor="start">ephemeral port. Whoever closes</text>
+<text x="24" y="706.0" font-size="14" fill="#555555" text-anchor="start">first holds that port in TIME_WAIT</text>
+<text x="24" y="725.5999999999999" font-size="14" fill="#555555" text-anchor="start">for 60 s.</text>
+<rect x="290" y="620.8" width="360" height="30" rx="6" fill="#E3F2FD" stroke="#1565C0"/>
+<rect x="290" y="620.8" width="6" height="30" rx="3" fill="#1565C0"/>
+<text x="306" y="640.8" font-size="13" fill="#1565C0" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">ip_local_port_range  (about 28k ports)</text>
+<rect x="290" y="658.8" width="360" height="30" rx="6" fill="#E3F2FD" stroke="#1565C0"/>
+<rect x="290" y="658.8" width="6" height="30" rx="3" fill="#1565C0"/>
+<text x="306" y="678.8" font-size="13" fill="#1565C0" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">tcp_tw_reuse  (relief, not a cure)</text>
+<rect x="290" y="696.8" width="360" height="30" rx="6" fill="#E8F5E9" stroke="#2E7D32"/>
+<rect x="290" y="696.8" width="6" height="30" rx="3" fill="#2E7D32"/>
+<text x="306" y="716.8" font-size="13" fill="#2E7D32" font-weight="bold" font-family="DejaVu Sans Mono, monospace" text-anchor="start">upstream keepalive  (the cure, default on)</text>
+<text x="290" y="750.8" font-size="13" fill="#555555" text-anchor="start">28k ports / 60 s = about 470 new connections a second</text>
+<text x="290" y="769.0" font-size="13" fill="#555555" text-anchor="start">to one origin.</text>
+<text x="666" y="638.8" font-size="13" fill="#B71C1C" font-weight="bold" text-anchor="start">Symptom</text>
+<text x="666" y="662.8" font-size="14" fill="#1F1F1F" text-anchor="start">connect() fails with &quot;Cannot assign</text>
+<text x="666" y="682.4" font-size="14" fill="#1F1F1F" text-anchor="start">requested address&quot;, and clients get 502s.</text>
+<text x="972" y="638.8" font-size="13" fill="#555555" font-weight="bold" text-anchor="start">Evidence</text>
+<text x="972" y="662.8" font-size="14" fill="#555555" text-anchor="start">ss state time-wait on the edge,</text>
+<text x="972" y="682.4" font-size="14" fill="#555555" text-anchor="start">502s in the access log, the</text>
+<text x="972" y="702.0" font-size="14" fill="#555555" text-anchor="start">origin&#x27;s connection count.</text>
+<rect x="24" y="817.1999999999999" width="1152" height="104" rx="10" fill="#F5F5F4" stroke="#D6D3D1"/>
+<text x="44" y="847.1999999999999" font-size="16" fill="#1F1F1F" font-weight="bold" text-anchor="start">Three things to remember</text>
+<text x="44" y="873.1999999999999" font-size="14" fill="#555555" text-anchor="start">•  Each limit fails quietly, and only under load: the config test and health checks pass.</text>
+<text x="44" y="892.1999999999999" font-size="14" fill="#555555" text-anchor="start">•  One set of sysctl values per network namespace, shared by the client side and the origin side. A container sets its own at run time.</text>
+<text x="44" y="911.1999999999999" font-size="14" fill="#555555" text-anchor="start">•  Measure first: ss and nstat show which limit you&#x27;re actually hitting.</text>
+</svg>

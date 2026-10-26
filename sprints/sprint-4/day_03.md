@@ -94,6 +94,8 @@ source helpers.sh
 | `./lab.sh freeze [S]` | Pauses the edge's workers (SIGSTOP) until connections start queuing, holds them for S seconds (default 2), then resumes them: a stalled event loop |
 | `SOMAXCONN=` `NOFILE=` `PORTS=` `TW_REUSE=` `./lab.sh edge` | Recreate the edge with those kernel settings. Plain `./lab.sh edge` goes back to the defaults. |
 
+Reminder from Day 2: `./lab.sh load [oha args] /path` is `oha`, run in a container on the lab network and aimed at the edge (so it sends `Host: s4-edge`).
+
 ---
 
 ## 3. Hands-on Guided Discovery Activities (23 Minutes)
@@ -111,7 +113,7 @@ for p in $(./lab.sh workers | awk '/worker process/ { print $1 }'); do grep 'ope
 Make the queue short: change the `listen` line to `listen 8084 backlog=16;`.
 ```bash
 ./lab.sh reload
-r /o/1 >/dev/null                         # cache the page the load test will ask for
+r /o/1 -H 'Host: s4-edge' >/dev/null     # cache the page under the Host oha sends (the key includes $host)
 ./lab.sh nstat >/dev/null                 # reset the counters
 ( ./lab.sh freeze 1.5 & ./lab.sh load -n 100 -c 100 --disable-keepalive /o/1; wait )
 ./lab.sh nstat | grep -i listen
