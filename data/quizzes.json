@@ -3782,6 +3782,1020 @@
           ]
         }
       ]
+    },
+    {
+      "sprint": 5,
+      "title": "Traffic Control, Rate Limiting & Concurrency",
+      "days": [
+        {
+          "day": 1,
+          "title": "Rate Limiting and the Leaky Bucket",
+          "questions": [
+            {
+              "id": "s5d1q01",
+              "type": "scenario",
+              "category": "Rate as a Gap",
+              "question": "`rate=10r/s` with no `burst`. A client sends exactly 12 requests per second, evenly spaced. How many are rejected?",
+              "options": {
+                "A": "About half: every request that follows an accepted one arrives 83 ms later, inside the 100 ms gap",
+                "B": "About 1 in 6, the 20% over the rate",
+                "C": "None: the average over a second is close enough",
+                "D": "All of them after the first second"
+              },
+              "answer": "A",
+              "explanation": "Without `burst`, the rate is a minimum gap per key, enforced in milliseconds. Activity 3.2 showed `200 503 200 503 ...` at 12/s."
+            },
+            {
+              "id": "s5d1q02",
+              "type": "scenario",
+              "category": "Burst Queue",
+              "question": "`limit_req zone=api burst=5;` (no `nodelay`) at `10r/s`. 20 requests from one client arrive at the same moment. What happens?",
+              "options": {
+                "A": "6 are answered at once and 14 are rejected",
+                "B": "All 20 are queued and answered over 2 seconds",
+                "C": "1 is answered at once, 5 wait in a queue and are answered 100 ms apart, 14 are rejected at once",
+                "D": "1 is answered and 19 are rejected"
+              },
+              "answer": "C",
+              "explanation": "Within the burst, requests are delayed to the rate; beyond it they're rejected immediately. Activity 3.3: `200 x1 @0.0s ... 200 x1 @0.5s`, 14 rejected."
+            },
+            {
+              "id": "s5d1q03",
+              "type": "scenario",
+              "category": "Queue vs nodelay",
+              "question": "A client sends 60 requests at 12 per second, each one after the previous answer arrives. With `burst=5` (queue) all 60 succeed; with `burst=5 nodelay` some fail. Why?",
+              "options": {
+                "A": "`nodelay` halves the burst size",
+                "B": "The queue's delays slow this client to the rate, so it never overflows; `nodelay` answers at once, the burst fills, and then about 1 in 6 is rejected",
+                "C": "The queue raises the rate to match the client",
+                "D": "`nodelay` switches the rate from requests to connections"
+              },
+              "answer": "B",
+              "explanation": "A queue paces a sequential client down to the rate. `nodelay` turns the gap rule into an average: Activity 3.3 showed the first 30 passing, then 1 in 6 rejected."
+            },
+            {
+              "id": "s5d1q04",
+              "type": "scenario",
+              "category": "Empty Key",
+              "question": "`limit_req_zone $http_x_api_key zone=by_key:10m rate=1r/s;` is applied to `/api/`. What happens to requests that send no `X-Api-Key` header?",
+              "options": {
+                "A": "They all share one bucket for the empty key",
+                "B": "They're rejected with 400",
+                "C": "NGINX falls back to the client address as the key",
+                "D": "They aren't counted by that zone at all: an empty key is never limited"
+              },
+              "answer": "D",
+              "explanation": "Requests whose key is empty aren't accounted. Activity 3.4: 10 of 10 passed without a key. It's a hole by accident, and an exemption technique on purpose (Day 3)."
+            },
+            {
+              "id": "s5d1q05",
+              "type": "scenario",
+              "category": "Inheritance",
+              "question": "The `server` has `limit_req zone=perip burst=20 nodelay;`. `location /api/` adds only `limit_req zone=by_key;` (keyed on an API-key header). A client without a key floods `/api/`. What limits it?",
+              "options": {
+                "A": "The per-address limit, inherited from the server",
+                "B": "Nothing: the location's own `limit_req` drops the inherited one, and its own key is empty",
+                "C": "Both limits",
+                "D": "`nginx -t` rejects the mix of levels"
+              },
+              "answer": "B",
+              "explanation": "`limit_req` is inherited only by contexts with no `limit_req` of their own, the `add_header` rule. Activity 3.4: 40 of 40 passed in `/api/` while `/about` stopped at 21."
+            },
+            {
+              "id": "s5d1q06",
+              "type": "scenario",
+              "category": "Zone Size",
+              "question": "`limit_req_zone $binary_remote_addr zone=tiny:32k rate=1r/m;` and 600 different clients each send one request. Then the first five clients send another. What do they get?",
+              "options": {
+                "A": "200 again: their states were evicted to make room, so they're treated as new, and nothing is logged",
+                "B": "429: one per minute is enforced",
+                "C": "500: the zone is full",
+                "D": "503 with `could not allocate node` in the error log"
+              },
+              "answer": "A",
+              "explanation": "A full zone evicts the least recently used states. An evicted client gets a fresh allowance. Activity 3.6 showed the first five passing and the last five refused."
+            },
+            {
+              "id": "s5d1q07",
+              "type": "scenario",
+              "category": "Status",
+              "question": "Why change `limit_req`'s default rejection status?",
+              "options": {
+                "A": "503 makes clients retry instantly, 429 makes them stop forever",
+                "B": "Browsers can't display a 503 page",
+                "C": "The default is 400, which hides the reason",
+                "D": "The default 503 says the service is unavailable; 429 tells the client (and monitoring) that this client sent too many"
+              },
+              "answer": "D",
+              "explanation": "The default is 503. `limit_req_status 429` gives the semantically right answer, and dashboards stop counting rate-limited clients as outages."
+            },
+            {
+              "id": "s5d1q08",
+              "type": "scenario",
+              "category": "Phase",
+              "question": "A location contains `limit_req zone=api;` and `return 200 \"ok\";`. A client floods it. What happens?",
+              "options": {
+                "A": "Requests over the rate get 503, the others 200",
+                "B": "`nginx -t` fails: `return` can't be combined with `limit_req`",
+                "C": "Every request gets 200: `return` runs in the rewrite phase, before `limit_req` in PREACCESS",
+                "D": "The first request gets 200 and the rest 429"
+              },
+              "answer": "C",
+              "explanation": "Phases decide, not file order. The recap notes show 10 of 10 passing with `return` in the location."
+            },
+            {
+              "id": "s5d1q09",
+              "type": "config",
+              "category": "Slow Rates",
+              "question": "```nginx\nlimit_req_zone $binary_remote_addr zone=login:10m rate=6r/m;\nlimit_req zone=login burst=4 nodelay;\n```\nA client sends 8 requests at once, waits 10.5 seconds, then sends 3 more at once. How many succeed in each round?",
+              "options": {
+                "A": "8, then 3",
+                "B": "6, then 6",
+                "C": "5, then 1",
+                "D": "1, then 1"
+              },
+              "answer": "C",
+              "explanation": "1 + `burst=4` = 5 at once. At 6 per minute one slot refills every 10 seconds, so after 10.5 s exactly one more passes."
+            },
+            {
+              "id": "s5d1q10",
+              "type": "config",
+              "category": "Two-Stage",
+              "question": "```nginx\nlimit_req zone=api burst=8 delay=3;   # rate=10r/s\n```\n20 requests arrive at once. What happens?",
+              "options": {
+                "A": "9 are answered at once, 11 rejected",
+                "B": "3 are answered at once and 17 queued",
+                "C": "1 is answered, 8 queued, 11 rejected",
+                "D": "4 are answered at once, 5 more are answered 100 ms apart, 11 are rejected"
+              },
+              "answer": "D",
+              "explanation": "1 plus the `delay=3` allowance go immediately, the rest of the burst (5) is queued, and everything beyond `burst=8` is rejected (Activity 3.3)."
+            },
+            {
+              "id": "s5d1q11",
+              "type": "config",
+              "category": "Stacking",
+              "question": "```nginx\nlimit_req_zone $binary_remote_addr zone=perip:1m rate=10r/s;\nlimit_req_zone $server_name zone=global:1m rate=20r/s;\nlocation /stack/ {\n    limit_req zone=perip burst=50 nodelay;\n    limit_req zone=global burst=5 nodelay;\n}\n```\n(`server_name` is set.) Three clients each send 10 requests at the same moment. About how many succeed in total?",
+              "options": {
+                "A": "6",
+                "B": "30",
+                "C": "18",
+                "D": "21"
+              },
+              "answer": "A",
+              "explanation": "Every `limit_req` in a context applies. Each client is far within its per-address burst, but the global zone allows 1 + 5 for all of them together."
+            },
+            {
+              "id": "s5d1q12",
+              "type": "config",
+              "category": "Retry-After",
+              "question": "```nginx\nmap $limit_req_status $retry_after {\n    REJECTED  1;\n    default   \"\";\n}\nadd_header Retry-After $retry_after always;\n```\nWhat do clients see?",
+              "options": {
+                "A": "Every response carries `Retry-After`, empty on successes",
+                "B": "Rejected responses carry `Retry-After: 1`; successful ones carry no `Retry-After` header",
+                "C": "Only 200s carry it, because `add_header` skips errors",
+                "D": "Nothing: `add_header` can't use a variable"
+              },
+              "answer": "B",
+              "explanation": "`add_header` doesn't send a header whose value is empty, and `always` covers the 429. Activity 3.5 showed `429 x 9 (Retry-After: 1)` and a bare 200."
+            },
+            {
+              "id": "s5d1q13",
+              "type": "config",
+              "category": "Dry Run",
+              "question": "```nginx\nlimit_req zone=api burst=20 nodelay;\nlimit_req_dry_run on;\n```\nA client sends 30 requests at once. What happens?",
+              "options": {
+                "A": "21 succeed and 9 get 503, but nothing is logged",
+                "B": "All 30 succeed and nothing is recorded",
+                "C": "21 succeed; the 9 others are delayed instead of rejected",
+                "D": "All 30 succeed; the ones over the limit are logged with `$limit_req_status` = `REJECTED_DRY_RUN` and `limiting requests, dry run` in the error log"
+              },
+              "answer": "D",
+              "explanation": "Dry run evaluates the limit without enforcing it, so you can measure a new limit before switching it on (Activity 3.5)."
+            },
+            {
+              "id": "s5d1q14",
+              "type": "config",
+              "category": "Burst Arithmetic",
+              "question": "```nginx\nlimit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\nlimit_req zone=api burst=20 nodelay;\n```\nA client sends 40 requests as fast as it can, at most 4 at a time, all within a few dozen milliseconds. About how many succeed?",
+              "options": {
+                "A": "40",
+                "B": "21",
+                "C": "10",
+                "D": "24"
+              },
+              "answer": "B",
+              "explanation": "One request plus a burst of 20 go at once; the rest are rejected until slots refill at 10 per second. The sprint lab's test 2 expects 21 to 23."
+            },
+            {
+              "id": "s5d1q15",
+              "type": "diagnose",
+              "category": "Error Log",
+              "question": "A client paces requests at 12 per second against `rate=10r/s` with no `burst`. The error log shows `limiting requests, excess: 0.170 by zone \"api\"`. What does 0.170 mean?",
+              "options": {
+                "A": "17% of the zone's memory is used",
+                "B": "The client is 17% over the rate on average",
+                "C": "The request arrived 17 ms early: 0.17 of the 100 ms gap, more than the burst of 0 allows",
+                "D": "The request was delayed 170 ms"
+              },
+              "answer": "C",
+              "explanation": "The excess is measured in requests: 0.17 of one request's gap. With no `burst`, any positive excess is over the limit (Activity 3.2)."
+            },
+            {
+              "id": "s5d1q16",
+              "type": "diagnose",
+              "category": "503 Alerts",
+              "question": "Monitoring pages the on-call team for a spike of 503s from the gateway. The origin is healthy, and the gateway's error log is full of `limiting requests`. What's going on?",
+              "options": {
+                "A": "`limit_req` is rejecting clients with its default status, 503; set `limit_req_status 429`",
+                "B": "The upstream is returning 503 and NGINX logs it as limiting",
+                "C": "The keys zone is full",
+                "D": "Upstream keepalive is exhausted"
+              },
+              "answer": "A",
+              "explanation": "Rate-limit rejections default to 503, which looks like an outage. 429 separates \"too many from this client\" from \"service down\"."
+            },
+            {
+              "id": "s5d1q17",
+              "type": "diagnose",
+              "category": "Unlimited Location",
+              "question": "After moving the per-address `limit_req` from `location /api/` to the `server` block, `/about` is limited as expected, but floods of `/api/` without an API key all succeed. `/api/` still has `limit_req zone=by_key;`. Why?",
+              "options": {
+                "A": "`/api/` has its own `limit_req`, so it inherits none from the server, and its own key is empty for these requests",
+                "B": "Server-level `limit_req` applies only to the default location",
+                "C": "The per-address zone was reset by the reload",
+                "D": "Keyless requests are routed to `/about`"
+              },
+              "answer": "A",
+              "explanation": "The inheritance trap from Activity 3.4. Repeat every needed limit in a location that has its own."
+            },
+            {
+              "id": "s5d1q18",
+              "type": "recall",
+              "category": "Zone Size",
+              "question": "About how many client states does a 1 MB `limit_req` zone hold?",
+              "options": {
+                "A": "About 1,000",
+                "B": "About 8,000",
+                "C": "About 128,000",
+                "D": "About 16,000"
+              },
+              "answer": "D",
+              "explanation": "The docs give about 16 thousand 64-byte states per megabyte. (Sprint 4's cache keys zone held about 8,000 keys per MB.)"
+            },
+            {
+              "id": "s5d1q19",
+              "type": "recall",
+              "category": "Variables",
+              "question": "Which values can `$limit_req_status` take?",
+              "options": {
+                "A": "`OK`, `LIMITED`, `DROPPED`",
+                "B": "`PASSED`, `DELAYED`, `REJECTED`, `DELAYED_DRY_RUN`, `REJECTED_DRY_RUN`",
+                "C": "The HTTP status code of the response",
+                "D": "`HIT`, `MISS`, `BYPASS`"
+              },
+              "answer": "B",
+              "explanation": "Log it in the access log to see what every limit decided (the lab's `req=` field)."
+            },
+            {
+              "id": "s5d1q20",
+              "type": "recall",
+              "category": "Defaults",
+              "question": "What status does `limit_req` send by default when it rejects a request?",
+              "options": {
+                "A": "429",
+                "B": "403",
+                "C": "503",
+                "D": "444"
+              },
+              "answer": "C",
+              "explanation": "503. `limit_req_status` changes it; the lab uses 429."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "title": "Concurrency, Bandwidth and Slow Clients",
+          "questions": [
+            {
+              "id": "s5d2q01",
+              "type": "scenario",
+              "category": "What limit_conn Counts",
+              "question": "What does `limit_conn per_client 2;` actually count for a client?",
+              "options": {
+                "A": "Open TCP connections, including idle keepalive ones",
+                "B": "New connections per second",
+                "C": "Requests in progress, once their header has been read, not idle or half-sent TCP connections",
+                "D": "Requests per minute"
+              },
+              "answer": "C",
+              "explanation": "A connection counts only while it has a request being processed. Activity 3.5 showed a slowloris connection not using a slot."
+            },
+            {
+              "id": "s5d2q02",
+              "type": "scenario",
+              "category": "HTTP/2",
+              "question": "With `limit_conn per_client 2;` and `http2 on;`, a browser sends 5 requests at once over a single HTTP/2 connection. What happens?",
+              "options": {
+                "A": "All 5 succeed: it's one connection",
+                "B": "2 succeed and 3 are rejected: each stream counts",
+                "C": "The connection is closed",
+                "D": "1 succeeds: HTTP/2 connections count double"
+              },
+              "answer": "B",
+              "explanation": "In HTTP/2 and HTTP/3, each concurrent request counts as a separate connection. Activity 3.2: `5 over HTTP/2, 1 TCP connection(s): 200 x 2, 429 x 3`."
+            },
+            {
+              "id": "s5d2q03",
+              "type": "scenario",
+              "category": "Slowloris",
+              "question": "A slowloris client sends one header line every 2 seconds. The gateway has `limit_conn per_client 1;` and the default timeouts. What protects you?",
+              "options": {
+                "A": "`limit_conn`, which counts the connection from the first byte",
+                "B": "`client_body_timeout`, reset by every header line",
+                "C": "`keepalive_timeout`, which applies while the request is incomplete",
+                "D": "`client_header_timeout`, a total for the whole header; `limit_conn` doesn't count the connection until the header is complete"
+              },
+              "answer": "D",
+              "explanation": "The header timeout (60 s by default) is the defense. Activity 3.5 cut the client off at 5.0 s with a 5 s timeout, and Alice's two requests still succeeded."
+            },
+            {
+              "id": "s5d2q04",
+              "type": "scenario",
+              "category": "Slow POST",
+              "question": "A client sends a complete header, then the body one byte every 2 seconds. `client_body_timeout 5s;` and `limit_conn per_client 2;`. What happens?",
+              "options": {
+                "A": "The upload is never cut off (each read resets the timer), but it holds one of the client's two `limit_conn` slots",
+                "B": "It's cut off after 5 seconds",
+                "C": "It isn't counted by `limit_conn` until the body is complete",
+                "D": "The origin holds the connection open and times out first"
+              },
+              "answer": "A",
+              "explanation": "`client_body_timeout` measures gaps between reads. The request is in progress, so it counts (Activity 3.5)."
+            },
+            {
+              "id": "s5d2q05",
+              "type": "scenario",
+              "category": "Bandwidth",
+              "question": "`limit_rate 200k;` on `/downloads/`. A download manager opens 4 parallel connections for one file. How much bandwidth does it get, and what fixes that?",
+              "options": {
+                "A": "About 800 KB/s, because the limit is per response; add a `limit_conn` on the location",
+                "B": "200 KB/s shared by all four connections",
+                "C": "50 KB/s each",
+                "D": "Unlimited, because `limit_rate` applies only to HTTP/2"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.4: four 1 MB downloads finished together in about 4.9 s, the same as one. `limit_conn` makes it per client."
+            },
+            {
+              "id": "s5d2q06",
+              "type": "scenario",
+              "category": "Request Buffering",
+              "question": "During a slow upload to `/api/`, what does the origin see?",
+              "options": {
+                "A": "An open connection that receives each byte as it arrives",
+                "B": "A 408 from NGINX",
+                "C": "Nothing yet: NGINX buffers the whole body before connecting upstream (`proxy_request_buffering on`)",
+                "D": "A request with an empty body"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.5: `./lab.sh stats` showed 0 requests in flight at the origin while the upload dribbled."
+            },
+            {
+              "id": "s5d2q07",
+              "type": "scenario",
+              "category": "max_conns vs limit_conn",
+              "question": "How does `limit_conn` differ from the upstream `server ... max_conns=` parameter?",
+              "options": {
+                "A": "They're the same counter configured in two places",
+                "B": "`max_conns` caps connections to each upstream server (open source answers 502 when all are full); `limit_conn` caps by any key on the way in, with your status",
+                "C": "`max_conns` counts clients, `limit_conn` counts upstream servers",
+                "D": "`limit_conn` only works with `max_conns` set"
+              },
+              "answer": "B",
+              "explanation": "Different place, different key. NGINX Plus can queue when every upstream server is at `max_conns`; open source can't."
+            },
+            {
+              "id": "s5d2q08",
+              "type": "scenario",
+              "category": "Body Size",
+              "question": "A client `POST`s 2,000,000 bytes with a correct `Content-Length` to a location without `client_max_body_size`. What happens?",
+              "options": {
+                "A": "The body is read, then 413",
+                "B": "The body is accepted and buffered to a temp file",
+                "C": "400 Bad Request",
+                "D": "413 before the body is read: the default limit is 1 MB"
+              },
+              "answer": "D",
+              "explanation": "The error log says `client intended to send too large body: 2000000 bytes` (Activity 3.6)."
+            },
+            {
+              "id": "s5d2q09",
+              "type": "config",
+              "category": "server_name Key",
+              "question": "```nginx\nlimit_conn_zone $server_name zone=origin:1m;\nserver {\n    listen 8095;\n    location /api/ { limit_conn origin 3; proxy_pass http://api; }\n}\n```\nSix slow requests arrive at once. How many reach the origin?",
+              "options": {
+                "A": "3",
+                "B": "6: there's no `server_name`, so the key is empty and nothing is limited",
+                "C": "0: `nginx -t` fails without `server_name`",
+                "D": "1"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3. Adding `server_name lumina;` made the cap work (3 in flight)."
+            },
+            {
+              "id": "s5d2q10",
+              "type": "config",
+              "category": "limit_rate_after",
+              "question": "```nginx\nlimit_rate_after 500k;\nlimit_rate       200k;\n```\nHow long do a 1 MB and a 400 KB download take, roughly?",
+              "options": {
+                "A": "About 2.5 s and almost nothing",
+                "B": "About 5 s and 2 s",
+                "C": "About 5 s each",
+                "D": "About 7.5 s and 2 s"
+              },
+              "answer": "A",
+              "explanation": "The first 500 KB goes at full speed and the remaining ~524 KB at 200 KB/s. The 400 KB file never reaches the throttle (Activity 3.4)."
+            },
+            {
+              "id": "s5d2q11",
+              "type": "config",
+              "category": "Retry-After for Both",
+              "question": "```nginx\nmap $limit_req_status$limit_conn_status $retry_after {\n    ~REJECTED  1;\n    default    \"\";\n}\n```\nWhich refusals get `Retry-After: 1`?",
+              "options": {
+                "A": "Only rate refusals",
+                "B": "Only concurrency refusals",
+                "C": "None: `map` can't combine two variables",
+                "D": "Both: a rate refusal gives `REJECTED`, a concurrency refusal `PASSEDREJECTED`, and the regex matches both"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.1's fix. Mapping only `$limit_req_status` misses `limit_conn` refusals."
+            },
+            {
+              "id": "s5d2q12",
+              "type": "config",
+              "category": "Header Timeout",
+              "question": "```nginx\nclient_header_timeout 5s;\n```\nA client sends a header line every 2 seconds and never finishes. What happens?",
+              "options": {
+                "A": "It stays connected as long as lines keep coming",
+                "B": "After 5 s it gets a 408 response page",
+                "C": "After 5 s the connection is closed with no response; the access log shows 408",
+                "D": "After 10 s it gets 400"
+              },
+              "answer": "C",
+              "explanation": "The header timeout is a total. NGINX logs 408 but sends nothing (Activity 3.5)."
+            },
+            {
+              "id": "s5d2q13",
+              "type": "config",
+              "category": "Shared Zone",
+              "question": "```nginx\nlimit_conn_zone $binary_remote_addr zone=per_client:10m;\nlocation /api/       { limit_conn per_client 2; proxy_pass http://api; }\nlocation /downloads/ { limit_conn per_client 1; proxy_pass http://api; }\n```\nA client has one slow `/api/` request in progress and starts a download. What happens?",
+              "options": {
+                "A": "The download succeeds: each location counts separately",
+                "B": "The API request is cancelled",
+                "C": "The download is refused: the zone keeps one count per client across both locations",
+                "D": "`nginx -t` rejects a zone used twice"
+              },
+              "answer": "C",
+              "explanation": "Each `limit_conn` only sets the maximum compared with the shared count. Activity 3.4 gives downloads their own zone."
+            },
+            {
+              "id": "s5d2q14",
+              "type": "config",
+              "category": "Body Limit Scope",
+              "question": "```nginx\nlocation /api/ { client_max_body_size 2m; proxy_pass http://api; }\nlocation /    { proxy_pass http://api; }\n```\nWhich uploads get 413?",
+              "options": {
+                "A": "Over 2 MB everywhere",
+                "B": "Over 1 MB everywhere: the http-level default wins",
+                "C": "None: `client_max_body_size` is only valid at `http` level",
+                "D": "Over 2 MB on `/api/`, over 1 MB anywhere else"
+              },
+              "answer": "D",
+              "explanation": "Set it per location: big where uploads belong, the 1 MB default elsewhere."
+            },
+            {
+              "id": "s5d2q15",
+              "type": "diagnose",
+              "category": "408s",
+              "question": "The access log shows many `408` entries from one address, each with `rt=60.000` and no bytes sent. What's happening?",
+              "options": {
+                "A": "Slow clients (slowloris) holding connections until the default 60 s `client_header_timeout`",
+                "B": "The origin timing out after 60 s",
+                "C": "`limit_req` delaying requests by 60 s",
+                "D": "Keepalive connections closing normally"
+              },
+              "answer": "A",
+              "explanation": "A 408 at 60 s is the default header timeout. Lowering it shortens how long each one is held."
+            },
+            {
+              "id": "s5d2q16",
+              "type": "diagnose",
+              "category": "413 Log Line",
+              "question": "Users report failed uploads; the error log shows `client intended to send too large body: 1572864 bytes`. What do you change?",
+              "options": {
+                "A": "Raise `client_body_buffer_size`",
+                "B": "Raise `client_max_body_size` for that location",
+                "C": "Raise `client_body_timeout`",
+                "D": "Turn off `proxy_request_buffering`"
+              },
+              "answer": "B",
+              "explanation": "The 1 MB default refused a 1.5 MB body from its `Content-Length`. The buffer size only decides when the body goes to a temp file."
+            },
+            {
+              "id": "s5d2q17",
+              "type": "diagnose",
+              "category": "HTTP/2 Refusals",
+              "question": "After adding `limit_conn per_client 2;`, only users on HTTP/2 browsers report occasional 429s on pages with many API calls. Why?",
+              "options": {
+                "A": "HTTP/2 connections are counted twice",
+                "B": "`limit_conn` doesn't work with HTTP/1.1, so only HTTP/2 is limited",
+                "C": "HTTP/2 disables keepalive",
+                "D": "Each HTTP/2 stream counts as a request in progress, so a page's parallel calls on one connection exceed 2"
+              },
+              "answer": "D",
+              "explanation": "Multiplexing doesn't bypass `limit_conn`; it's counted per stream (Activity 3.2)."
+            },
+            {
+              "id": "s5d2q18",
+              "type": "recall",
+              "category": "Defaults",
+              "question": "What is the default `client_header_timeout`?",
+              "options": {
+                "A": "5s",
+                "B": "60s",
+                "C": "75s",
+                "D": "10s"
+              },
+              "answer": "B",
+              "explanation": "60 seconds, the same as `client_body_timeout` and `send_timeout`. `keepalive_timeout` is 75 s."
+            },
+            {
+              "id": "s5d2q19",
+              "type": "recall",
+              "category": "Defaults",
+              "question": "What status does `limit_conn` send by default when it refuses a request?",
+              "options": {
+                "A": "429",
+                "B": "403",
+                "C": "503",
+                "D": "408"
+              },
+              "answer": "C",
+              "explanation": "503, like `limit_req`. `limit_conn_status` changes it."
+            },
+            {
+              "id": "s5d2q20",
+              "type": "recall",
+              "category": "Directives",
+              "question": "Which directive lets the first part of each response go at full speed before `limit_rate` applies?",
+              "options": {
+                "A": "`limit_rate_after`",
+                "B": "`limit_rate_burst`",
+                "C": "`proxy_limit_rate`",
+                "D": "`sendfile_max_chunk`"
+              },
+              "answer": "A",
+              "explanation": "`limit_rate_after 256k;` spares small files and the start of large ones."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "title": "Who Gets In: Access Control, Tiers and the Real Client & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s5d3q01",
+              "type": "scenario",
+              "category": "Phase Order",
+              "question": "`location /api/` has `deny 10.55.66.0/24;` and `limit_req zone=api burst=20 nodelay;`. A host in that network sends 30 requests at once. What does it mostly get?",
+              "options": {
+                "A": "429: the limits run in PREACCESS, before `deny` in ACCESS, so requests over the burst are refused by the limit first",
+                "B": "403 for all 30",
+                "C": "200 for 21, 403 for 9",
+                "D": "444, the connection is closed"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1: `403 x 21, 429 x 9`, and with 4 at a time almost all 429."
+            },
+            {
+              "id": "s5d3q02",
+              "type": "scenario",
+              "category": "Blocking Early",
+              "question": "Why block a network with `if ($tier = blocked) { return 403; }` at `server` level instead of `deny`?",
+              "options": {
+                "A": "`deny` doesn't support CIDR ranges",
+                "B": "`if` is evaluated after `proxy_pass`, saving origin load",
+                "C": "`return 403` is logged and `deny` isn't",
+                "D": "It runs in the rewrite phase, before any limit, so the client always gets 403 and never uses limit-zone state"
+              },
+              "answer": "D",
+              "explanation": "`return` inside `if` is safe, and the rewrite phase comes before PREACCESS. Activity 3.1: `403 x 30`."
+            },
+            {
+              "id": "s5d3q03",
+              "type": "scenario",
+              "category": "Exemption",
+              "question": "`map $tier $client_key { partner \"\"; default $binary_remote_addr; }` is the key of the API's `limit_req_zone` and `limit_conn_zone`. Why are partners exempt?",
+              "options": {
+                "A": "The map sends partners to a different location",
+                "B": "An empty key means an unlimited zone size",
+                "C": "An empty key is never limited, so partner requests aren't counted",
+                "D": "Partners share one large bucket"
+              },
+              "answer": "C",
+              "explanation": "The Day 1 empty-key rule, used on purpose (Activity 3.2)."
+            },
+            {
+              "id": "s5d3q04",
+              "type": "scenario",
+              "category": "Load Balancer",
+              "question": "The gateway sits behind a load balancer and has no realip configuration. What happens to per-client limits and `geo` tiers?",
+              "options": {
+                "A": "NGINX uses `X-Forwarded-For` automatically",
+                "B": "Limits are skipped for proxied traffic",
+                "C": "Every user appears as the load balancer's address: they share one bucket, and `geo` sees only that address",
+                "D": "Each TCP connection from the load balancer gets its own bucket"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.4: two users behind the load balancer got about a dozen answers together, and a blocked user wasn't blocked."
+            },
+            {
+              "id": "s5d3q05",
+              "type": "scenario",
+              "category": "Spoofing",
+              "question": "With `set_real_ip_from 10.55.0.5; real_ip_header X-Forwarded-For;`, a client at 10.55.100.12 (not the load balancer) sends `X-Forwarded-For: 10.55.20.20`, a partner address. What happens?",
+              "options": {
+                "A": "It's treated as the partner and exempt",
+                "B": "The request is rejected with 400",
+                "C": "Both addresses are rate limited",
+                "D": "The header is ignored: only connections from trusted addresses are rewritten, so the client is limited as itself"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.4: 21 of 40, Bob's normal limit."
+            },
+            {
+              "id": "s5d3q06",
+              "type": "scenario",
+              "category": "Zones and Reloads",
+              "question": "You change `limit_req_zone $binary_remote_addr zone=api ...` to `limit_req_zone $client_key zone=api ...` and run `nginx -t && nginx -s reload`. Both succeed. What's running now?",
+              "options": {
+                "A": "The old configuration: the master refused it with `[emerg] limit_req \"api\" uses the \"$client_key\" key while previously it used...`",
+                "B": "The new configuration, with the zone emptied",
+                "C": "The new configuration, keeping the old states",
+                "D": "Nothing: the master exited"
+              },
+              "answer": "A",
+              "explanation": "A zone's key can't change across a reload. `nginx -t` can't see the running zones, and `-s reload` only sends a signal. Restart, or give the zone a new name (Activity 3.2)."
+            },
+            {
+              "id": "s5d3q07",
+              "type": "scenario",
+              "category": "real_ip_recursive",
+              "question": "`set_real_ip_from 10.55.0.5;` trusts the load balancer, which sends `X-Forwarded-For: 10.55.100.70, 10.55.0.5` (its own address is in the list). What's the client address, without and with `real_ip_recursive on`?",
+              "options": {
+                "A": "10.55.100.70 both times",
+                "B": "Without: 10.55.0.5 (the last address). With: 10.55.100.70 (the last untrusted one)",
+                "C": "Without: 10.55.100.70. With: 10.55.0.5",
+                "D": "The first address in the list both times"
+              },
+              "answer": "B",
+              "explanation": "Recursive search skips trusted addresses from the right. It only matters when a trusted address appears inside the header (Activity 3.4)."
+            },
+            {
+              "id": "s5d3q08",
+              "type": "scenario",
+              "category": "What the Origin Sees",
+              "question": "A client sends a made-up `X-Forwarded-For` header. The gateway uses realip but sets no `proxy_set_header` for it. What does the origin receive?",
+              "options": {
+                "A": "The real client address only",
+                "B": "No `X-Forwarded-For` at all",
+                "C": "The gateway's address",
+                "D": "The client's header unchanged"
+              },
+              "answer": "D",
+              "explanation": "Request headers pass through by default. Set `X-Forwarded-For` or `X-Real-IP` deliberately if the origin relies on them."
+            },
+            {
+              "id": "s5d3q09",
+              "type": "config",
+              "category": "allow/deny Order",
+              "question": "```nginx\nlocation /admin/ {\n    deny  all;\n    allow 10.55.10.0/24;\n}\n```\nWho can use `/admin/`?",
+              "options": {
+                "A": "Only 10.55.10.0/24: `allow` is more specific",
+                "B": "Nobody: the first matching rule wins, and `deny all` matches everyone",
+                "C": "Everyone: the rules cancel out",
+                "D": "Only 10.55.10.0/24, with a warning from `nginx -t`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3. List specific rules first."
+            },
+            {
+              "id": "s5d3q10",
+              "type": "config",
+              "category": "geo Matching",
+              "question": "```nginx\ngeo $tier {\n    default        internet;\n    10.55.0.0/16   lab;\n    10.55.20.0/24  partner;\n}\n```\nWhat is `$tier` for 10.55.20.5?",
+              "options": {
+                "A": "`lab`: the first match wins",
+                "B": "`internet`",
+                "C": "`partner`: the most specific matching range wins",
+                "D": "Both, comma-separated"
+              },
+              "answer": "C",
+              "explanation": "`geo` uses the longest matching prefix, regardless of order."
+            },
+            {
+              "id": "s5d3q11",
+              "type": "config",
+              "category": "Rate by Tier",
+              "question": "```nginx\nmap $tier $download_rate {\n    partner  0;\n    default  512k;\n}\nlimit_rate $download_rate;\n```\nWhat download speed does a partner get?",
+              "options": {
+                "A": "Full speed: a rate of 0 means no limit",
+                "B": "Nothing: a rate of 0 blocks the response",
+                "C": "512 KB/s: `0` is ignored",
+                "D": "1 byte per second"
+              },
+              "answer": "A",
+              "explanation": "`limit_rate 0` turns the limit off. Activity 3.2: 1 MB in 0.00 s for the partner."
+            },
+            {
+              "id": "s5d3q12",
+              "type": "config",
+              "category": "No Recursive",
+              "question": "```nginx\nset_real_ip_from 10.55.0.5;\nreal_ip_header   X-Forwarded-For;\n```\nThe load balancer forwards `X-Forwarded-For: 10.55.20.1, 10.55.100.70`. What is `$remote_addr`?",
+              "options": {
+                "A": "10.55.100.70",
+                "B": "10.55.20.1",
+                "C": "10.55.0.5",
+                "D": "Empty"
+              },
+              "answer": "A",
+              "explanation": "Without `recursive`, the last address in the header is used. The forged first address is never used."
+            },
+            {
+              "id": "s5d3q13",
+              "type": "config",
+              "category": "Which Rule Answers",
+              "question": "```nginx\nif ($tier = blocked) { return 403; }       # server level\nlocation /admin/ {\n    allow 10.55.10.0/24;\n    deny  all;\n}\n```\nA host in the blocked network requests `/admin/`. What sends the 403?",
+              "options": {
+                "A": "`deny all` in the ACCESS phase",
+                "B": "Both, so two 403 responses are logged",
+                "C": "Neither: `if` doesn't apply to locations with their own rules",
+                "D": "The `if ... return` in the rewrite phase; the location's `allow`/`deny` never runs"
+              },
+              "answer": "D",
+              "explanation": "Server-level rewrite directives run before location access checks (Activity 3.3)."
+            },
+            {
+              "id": "s5d3q14",
+              "type": "config",
+              "category": "Separate Keys",
+              "question": "```nginx\nlimit_req_zone  $client_key         zone=api:10m rate=10r/s;\nlimit_conn_zone $binary_remote_addr zone=downloads:10m;\n```\n`$client_key` is empty for partners. Can a partner run two downloads at once on a location with `limit_conn downloads 1;`?",
+              "options": {
+                "A": "Yes: partners are exempt from every limit",
+                "B": "No: the downloads zone is keyed on the address, so partners are limited there too",
+                "C": "Yes: empty keys propagate to every zone",
+                "D": "Only if `limit_rate` is 0"
+              },
+              "answer": "B",
+              "explanation": "An exemption only applies to zones keyed on the tiered variable. The sprint lab exempts partners from `/api/` limits, not from the one-download rule."
+            },
+            {
+              "id": "s5d3q15",
+              "type": "diagnose",
+              "category": "Everyone Limited",
+              "question": "Behind a load balancer, users complain of 429s at modest load. The log shows `10.55.0.5 via=10.55.0.5` on every line. What's missing?",
+              "options": {
+                "A": "`real_ip_recursive on`",
+                "B": "A larger zone",
+                "C": "`set_real_ip_from` for the load balancer (and `real_ip_header`): all users share its address",
+                "D": "`limit_req_status 429`"
+              },
+              "answer": "C",
+              "explanation": "`$remote_addr` equal to `$realip_remote_addr` means realip didn't rewrite anything."
+            },
+            {
+              "id": "s5d3q16",
+              "type": "diagnose",
+              "category": "Refused Reload",
+              "question": "After a reload, the error log shows `[emerg] limit_req \"api\" uses the \"$client_key\" key while previously it used the \"$binary_remote_addr\" key`, yet `nginx -t` passed. What should you do?",
+              "options": {
+                "A": "Restart NGINX (or rename the zone): the master kept the old configuration",
+                "B": "Nothing: the new key is in use",
+                "C": "Run `nginx -t` again",
+                "D": "Delete the logs directory"
+              },
+              "answer": "A",
+              "explanation": "The running workers still use the old config. In the lab, `./lab.sh edge` recreates the gateway."
+            },
+            {
+              "id": "s5d3q17",
+              "type": "diagnose",
+              "category": "429 Instead of 403",
+              "question": "A blocked network was added with `deny` inside `location /api/`. During an attack, the log shows its requests mostly as `429 req=REJECTED` rather than 403. Why?",
+              "options": {
+                "A": "`deny` failed to load",
+                "B": "429 has priority over 403 in the status table",
+                "C": "The rate limit runs in PREACCESS, before `deny` in ACCESS",
+                "D": "The attacker sends `X-Forwarded-For`"
+              },
+              "answer": "C",
+              "explanation": "Block in the rewrite phase (`geo` + `if ... return 403`) so blocked clients never reach the limits."
+            },
+            {
+              "id": "s5d3q18",
+              "type": "recall",
+              "category": "Phases",
+              "question": "In which phase does the realip module replace the client address?",
+              "options": {
+                "A": "PREACCESS",
+                "B": "POST_READ",
+                "C": "ACCESS",
+                "D": "LOG"
+              },
+              "answer": "B",
+              "explanation": "The first phase, so `geo`, the limits, `allow`/`deny` and the logs all see the real client."
+            },
+            {
+              "id": "s5d3q19",
+              "type": "recall",
+              "category": "Variables",
+              "question": "Which variable holds the original peer address after realip has replaced `$remote_addr`?",
+              "options": {
+                "A": "`$proxy_add_x_forwarded_for`",
+                "B": "`$http_x_forwarded_for`",
+                "C": "`$server_addr`",
+                "D": "`$realip_remote_addr`"
+              },
+              "answer": "D",
+              "explanation": "The lab logs it as `via=`."
+            },
+            {
+              "id": "s5d3q20",
+              "type": "recall",
+              "category": "Phases",
+              "question": "In which phase do `allow` and `deny` run?",
+              "options": {
+                "A": "REWRITE",
+                "B": "ACCESS",
+                "C": "PREACCESS",
+                "D": "CONTENT"
+              },
+              "answer": "B",
+              "explanation": "After PREACCESS (`limit_req`, `limit_conn`) and before CONTENT (`proxy_pass`)."
+            }
+          ],
+          "extra_pools": [
+            {
+              "pool": "enterprise",
+              "title": "Enterprise (Optional): A Live Denylist and Cluster-Wide Limits",
+              "track": "enterprise",
+              "optional": true,
+              "questions": [
+                {
+                  "id": "s5d3e01",
+                  "type": "scenario",
+                  "category": "Per Instance",
+                  "question": "Two open source NGINX gateways sit behind a round-robin load balancer, each with `rate=10r/s` per client. About how fast can one client go before it's limited?",
+                  "options": {
+                    "A": "10 per second: the limit is per client",
+                    "B": "About 20 requests per second: each gateway sees half the traffic",
+                    "C": "5 per second: the limit is split",
+                    "D": "Unlimited: limits don't apply behind a load balancer"
+                  },
+                  "answer": "B",
+                  "explanation": "Each instance keeps its own zone. A.5 showed the per-node zone allowing 40 of 40 at twice the rate."
+                },
+                {
+                  "id": "s5d3e02",
+                  "type": "scenario",
+                  "category": "type=ip",
+                  "question": "A `keyval_zone ... type=ip` holds the key `10.55.66.0/24` with value `1`, looked up with `keyval $remote_addr $denied`. A request comes from 10.55.66.200. What is `$denied`?",
+                  "options": {
+                    "A": "`1`: with `type=ip`, an address matches a CIDR key",
+                    "B": "Empty: keys must match exactly",
+                    "C": "`10.55.66.0/24`",
+                    "D": "`0`"
+                  },
+                  "answer": "A",
+                  "explanation": "A.2: the whole range was blocked by one key."
+                },
+                {
+                  "id": "s5d3e03",
+                  "type": "scenario",
+                  "category": "No Reload",
+                  "question": "You `POST` a new denylist entry to the Plus API. What happens to the running NGINX?",
+                  "options": {
+                    "A": "It reloads, so new workers start",
+                    "B": "Only new connections see the change after a reload signal",
+                    "C": "It restarts the worker that owns the zone",
+                    "D": "Nothing visible: the shared memory store changes, with no reload, the same workers and the same `generation`"
+                  },
+                  "answer": "D",
+                  "explanation": "A.2 compared `generation` and `load_timestamp` before and after."
+                },
+                {
+                  "id": "s5d3e04",
+                  "type": "scenario",
+                  "category": "Deletes",
+                  "question": "In a two-node cluster with a synced denylist (`timeout=1h sync`), you remove a key on node A with `PATCH {\"key\": null}`. What happens on node B?",
+                  "options": {
+                    "A": "B removes it within a second",
+                    "B": "B removes it at the next reload",
+                    "C": "Nothing: deletes aren't synced, so B keeps blocking until the timeout; set the value to `\"0\"` instead",
+                    "D": "Both nodes block it permanently"
+                  },
+                  "answer": "C",
+                  "explanation": "A.3. Value changes travel; deletes don't."
+                },
+                {
+                  "id": "s5d3e05",
+                  "type": "scenario",
+                  "category": "Bursts Across Nodes",
+                  "question": "A synced `limit_req` zone with `rate=2r/s burst=2 nodelay` is shared by two nodes. A client sends 10 requests to each node at the same instant. How many succeed?",
+                  "options": {
+                    "A": "About 6: each node allows its own burst before the sync catches up",
+                    "B": "3: the cluster allows one burst",
+                    "C": "20",
+                    "D": "0"
+                  },
+                  "answer": "A",
+                  "explanation": "Sync runs on an interval (1 s), so simultaneous bursts aren't bounded. Sustained rates converge (A.5)."
+                },
+                {
+                  "id": "s5d3e06",
+                  "type": "scenario",
+                  "category": "Restarts",
+                  "question": "Node B of a two-node cluster restarts; later both nodes restart at the same time. The denylist has no `state=` file. What survives?",
+                  "options": {
+                    "A": "The list survives both, because zone_sync writes it to disk",
+                    "B": "After B's restart, B gets the list from A's snapshot; after both restart, the list is empty",
+                    "C": "Neither: a restarted node always starts empty",
+                    "D": "After both restart, each node recovers from the other"
+                  },
+                  "answer": "B",
+                  "explanation": "A.6. Persist it with `state=` or have the owning controller push it again."
+                },
+                {
+                  "id": "s5d3e07",
+                  "type": "config",
+                  "category": "Sync Requires Timeout",
+                  "question": "```nginx\nkeyval_zone zone=denylist:1m type=ip sync;\n```\nWhat does `nginx -t` say?",
+                  "options": {
+                    "A": "It passes",
+                    "B": "It passes but warns that sync is ignored",
+                    "C": "It fails: a synced keyval zone requires `timeout=`",
+                    "D": "It fails: `type=ip` can't be synced"
+                  },
+                  "answer": "C",
+                  "explanation": "`[emerg] \"keyval_zone\" directive sync requires timeout=`."
+                },
+                {
+                  "id": "s5d3e08",
+                  "type": "config",
+                  "category": "Self in the List",
+                  "question": "Both nodes use the same config, which lists both nodes in `zone_sync_server`. What does each node do with its own address?",
+                  "options": {
+                    "A": "Fails `nginx -t` with a duplicate address",
+                    "B": "Syncs with itself, doubling every counter",
+                    "C": "Waits for itself forever and never comes online",
+                    "D": "Connects, recognizes itself, and ignores that connection (`node is offline: ignore self`)"
+                  },
+                  "answer": "D",
+                  "explanation": "A.1. That's why one file can serve every node."
+                },
+                {
+                  "id": "s5d3e09",
+                  "type": "diagnose",
+                  "category": "Cluster Counters",
+                  "question": "Node A's `/api/10/http/limit_reqs/cluster` shows `rejected: 7`; node B's shows `rejected: 0`, although the zone is synced. Is something broken?",
+                  "options": {
+                    "A": "No: the zone's state is shared, but each node counts only the requests it handled",
+                    "B": "Yes: sync isn't working",
+                    "C": "Yes: node B's API is read-only",
+                    "D": "No: B shows only dry-run rejections"
+                  },
+                  "answer": "A",
+                  "explanation": "Add the counters from every node for a cluster view (A.4)."
+                },
+                {
+                  "id": "s5d3e10",
+                  "type": "recall",
+                  "category": "API",
+                  "question": "Where does the NGINX Plus API report `limit_req` results per zone?",
+                  "options": {
+                    "A": "`/api/VERSION/http/keyvals/ZONE`",
+                    "B": "`/api/VERSION/http/limit_reqs/ZONE`",
+                    "C": "`/api/VERSION/stream/zone_sync`",
+                    "D": "`/api/VERSION/http/caches/ZONE`"
+                  },
+                  "answer": "B",
+                  "explanation": "With `passed`, `delayed`, `rejected` and the dry-run counters; `/http/limit_conns/ZONE` for `limit_conn`."
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }
