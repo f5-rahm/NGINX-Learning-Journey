@@ -10,7 +10,8 @@
 ### 1.1 What `limit_req` Actually Enforces
 A limit has two halves:
 * **`limit_req_zone`** (at `http` level) defines a **key**, a shared memory **zone** that holds one small state per key, and a **rate**.
-* **`limit_req`** (in `http`, `server` or `location`) applies a zone to requests.
+* **`limit_req`** (in `http`, `server` or `location`) applies a zone to requests. It's one line, and everything that tunes it is a parameter on that line: `zone=`, `burst=`, `nodelay`, `delay=`.
+* **`burst`, `nodelay` and `delay` aren't directives** like `limit_req_status`, which is why they don't carry the `limit_req_` prefix. They can only appear on a `limit_req` line, so two `limit_req` lines using the same zone can each have their own burst.
 
 **The rate is a minimum gap, not an average.**
 * `rate=10r/s` means one request per **100 ms** per key. NGINX tracks time in milliseconds.
@@ -32,7 +33,7 @@ This is a **leaky bucket**: requests pour in, the bucket drains at the rate, and
 * It's the same trap as Sprint 4's keys zone, with the opposite effect: there, a small zone cost you hits; here, it lets traffic through.
 
 ### 1.2 Burst: Queue, `nodelay` and Two-Stage
-`burst=N` lets the excess grow to N. What happens to the requests within the burst depends on one more parameter:
+`burst=N` is a parameter on the `limit_req` line, not on the zone: it lets the excess grow to N. What happens to the requests within the burst depends on one more parameter on the same line:
 
 | Configuration | Requests within the burst | Requests beyond it |
 | :--- | :--- | :--- |

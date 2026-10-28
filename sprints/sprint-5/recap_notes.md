@@ -68,3 +68,38 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 * **A slow-header request isn't even rate limited:** it was logged `408 req=- conn=-`. A slow-body request logged `408 req=PASSED conn=PASSED`.
 * **The origin had 0 requests in flight during a slow upload** (`proxy_request_buffering` on by default).
 * **A `limit_conn` zone counts per key across locations.** With `per_client` used as `limit_conn per_client 2` in `/api/` and `limit_conn per_client 1` in `/downloads/`, one slow API request in progress made a download `429`, and a download in progress let only one of two API requests through. Each line only sets the maximum it compares the shared count with. Independent limits need separate zones (the Day 2 guide and `day3_nginx.conf` were fixed to use a `downloads` zone).
+
+## Day 1
+
+### Day 1: Must include in day01_recap.md (user request)
+* "`burst` turns the strict gap of Activity 3.2 into a tolerance, and `nodelay` decides whether the requests inside the tolerance wait." (from the end of Activity 3.3). For LinkedIn readers, "the strict gap of Activity 3.2" is the rule that, with no burst, any request arriving sooner than 1/rate after the last one is rejected.
+
+### Day 1: Why is it `limit_req_zone` but just `burst`?
+* **Two levels of naming.** Directives are namespaced by module (`ngx_http_limit_req_module` gives `limit_req_zone`, `limit_req`, `limit_req_status`, `limit_req_log_level`, `limit_req_dry_run`). `burst`, `nodelay` and `delay` are not directives. They are parameters of one `limit_req` line, so they are already scoped to it. Blocks (`http`, `server`, `location`, `upstream`, `map`, `geo`) exist only where a module needs a scope of its own.
+* **Define then attach.** `limit_req_zone` (http level) defines the shared counter; `limit_req` attaches it where it applies. This is the BIG-IP split between a profile and the virtual server that uses it.
+* **Structured front ends exist.** F5 NGINX Ingress Controller's `Policy` CRD has a `rateLimit` object (`rate`, `key`, `zoneSize`, `burst`, `noDelay`, `rejectCode`) that generates these lines (Sprint 8 side quest). Outside Kubernetes: crossplane parses nginx.conf to JSON and back, and Ansible/Jinja2, Puppet or NixOS modules build it from structured data. None replaces reading `nginx -T`: errors and behavior are always reported in raw-directive terms. AS3 → tmsh is the BIG-IP analog.
+
+### Day 1: Why `503` and not `429` by default?
+* **`429` didn't exist yet.** `limit_req` arrived in nginx 0.7.21 (2008); `429 Too Many Requests` was defined by RFC 6585 in 2012. `limit_req_status` and `limit_conn_status` came in 1.3.15 (2013), and the default stayed `503` so existing configs and monitoring behaved the same after an upgrade. (From the docs and changelog, not tested in the lab.)
+* **The module was built as load shedding.** `503` means "the server is overloaded, try later", seen from the server. `429` means "you sent too much", seen from the client. The default matches the first idea, the per-client use case matches the second.
+* **NGINX rarely changes defaults, but it does sometimes.** Upstream keepalive off, no `Retry-After` and `server_tokens on` have stayed the same for compatibility. Counterexample: 1.23.4 (2023) dropped TLSv1 and TLSv1.1 from the default `ssl_protocols`, so a server that never set it stopped offering them after an upgrade.
+* **BIG-IP practice applies to NGINX too (user correction).** BIG-IP defaults do change between versions, so the field rule is to build custom profiles with explicit values instead of relying on the parent defaults; the user has seen customer upgrades fail without it. In NGINX: set explicitly any value your behavior depends on (`limit_req_status`, `ssl_protocols`, timeouts, buffer sizes), read the changelog's "Change:" entries before an upgrade, and diff `nginx -T` before and after. NGINX has no parent profile, so the default lives only in the binary.
+
+### Day 1: NGINX Ingress Controller CRDs and crossplane
+* **NIC configures only the NGINX inside its own pods.** It can't manage a standalone NGINX. Inside the cluster, CRDs (`VirtualServer`, `VirtualServerRoute`, `TransportServer`, `Policy`, `GlobalConfiguration`) and ConfigMap keys cover the common features. Everything else goes through snippets (raw NGINX text, off unless `-enable-snippets` is set) or custom templates. The controller regenerates nginx.conf, so hand edits in the pod are lost.
+* **crossplane (tested with Python 0.5.8 on the solution config):** `crossplane parse` turns a config into JSON (`directive`, `line`, `args`, `block`), and `crossplane build` turns JSON back into a config. A script changed every `burst=` and rebuilt the file. It is structural, not semantic: `burst=20` is just the string `"burst=20"` in `args`, so the nesting the user wanted isn't there. It follows `include`, so a missing `/etc/nginx/mime.types` made the whole parse `failed` (`--single-file` skips includes). The last PyPI release is 0.5.8 (2022); the repo is not archived. F5's tooling uses the Go port, `nginx-go-crossplane`, which is more active.
+
+### Day 1: Burst timeline measured for the recap diagram (nginx 1.31.6)
+* Separate zones at `rate=10r/s`, one client sending 8 at once and 4 more at 350 ms, with raw sockets fired in a tight loop (threads spread a "burst" over ~80 ms and blur the result). Three runs, identical:
+  * no burst: 1 + 1 answered, 7 + 3 rejected;
+  * `burst=5`: 1 at once, 5 queued and answered at 100…500 ms, 2 rejected; the second wave gets 3 queued (answered at 600, 700, 800 ms) and 1 rejected;
+  * `burst=5 nodelay`: 6 + 3 answered at once, 2 + 1 rejected. The same 9 as the queue, none waiting.
+* **A queued request waits excess × gap.** The bucket is at 1.5 at 350 ms, so the new arrivals sit at 2.5, 3.5 and 4.5, which is 250, 350 and 450 ms after 350.
+* **A second wave at exactly 300 ms is a knife edge:** 2 or 3 got through depending on sub-millisecond jitter, because the bucket has drained exactly 3 slots at that moment. The diagram uses 350 ms.
+* Diagram: `burst-and-nodelay.svg` / `.png` (rendered like Sprint 4's kernel-limits: rsvg-convert in alpine:3.22, Lato from google/fonts).
+
+### Day 1: Lab and quiz
+* Quiz 6/10, then 9/10. All four misses were queue timing and rejections: when a queued request is answered, and when the bucket has room again.
+
+### Day 1: Guide fix
+* 1.1 and 1.2 now say `burst`, `nodelay` and `delay` are parameters on the `limit_req` line, not directives and not zone settings (the user's question above).
