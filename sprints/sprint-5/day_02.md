@@ -1,7 +1,7 @@
 # Sprint 5 &bull; Day 2: Concurrency, Bandwidth and Slow Clients
 **Day:** 2 of 3  
 **Estimated Time:** 65 Minutes (15 concepts, 3 setup, 37 activities, 10 quiz)  
-**Theme:** Day 1 limited how **often** a client may ask. Today limits how **much** it may hold at once: requests in progress, bytes per second, and the time it may spend sending a request. On BIG-IP these are a connection limit, a rate class and the timeouts in the TCP and HTTP profiles. NGINX has a directive for each, and each counts something slightly different from what its name suggests.
+**Theme:** Day 1 limited how **often** a client may ask. Today limits how **much** it may hold at once: requests in progress, bytes per second, and the time it may spend sending a request. On BIG-IP these are a connection limit, a rate class and the idle and slow-client timeouts in the TCP and HTTP profiles. On NGINX the TCP stack is the kernel's, but those timeouts are NGINX's own timers. NGINX has a directive for each, and each counts something slightly different from what its name suggests.
 
 ---
 

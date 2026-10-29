@@ -103,3 +103,51 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 
 ### Day 1: Guide fix
 * 1.1 and 1.2 now say `burst`, `nodelay` and `delay` are parameters on the `limit_req` line, not directives and not zone settings (the user's question above).
+
+## Day 2
+
+### Day 2: How can the timeouts be "like TCP profile settings" when the TCP stack is the kernel's?
+* **A BIG-IP TCP profile holds two kinds of setting**, because TMOS has its own stack: how TCP behaves (congestion control, Nagle, buffers, window, SACK, keepalive probes) and when to give up on a connection (idle timeout, zero-window timeout).
+* **On NGINX they live in different places.** TCP behavior is the kernel's: sysctls, plus socket options NGINX sets on `listen` (`backlog=`, `rcvbuf=`/`sndbuf=`, `so_keepalive=`, `fastopen=`, `deferred`) and `tcp_nodelay`/`tcp_nopush`. When to give up is NGINX's: `client_header_timeout`, `client_body_timeout`, `send_timeout`, `keepalive_timeout`. Day 2's settings are all in the second group.
+* **The timers are in NGINX's event loop.** Each wait for a socket to become readable or writable gets a timer; if the timer fires first, NGINX closes the socket. The kernel only ACKs, retransmits and buffers bytes. It doesn't know what an HTTP header is or when one is complete, so "the whole header within 5 s" can only be NGINX's rule (and is why `limit_conn` doesn't see slowloris).
+* **Kernel TCP keepalive doesn't help against slow clients.** `so_keepalive` probes find dead peers; a slowloris client is alive and answers them.
+* **Guide fix:** the Day 2 theme now says "the idle and slow-client timeouts in the TCP and HTTP profiles. On NGINX the TCP stack is the kernel's, but those timeouts are NGINX's own timers."
+
+### Day 2: From the 1.5 table to a lasting policy
+* **The 1.5 table reads as whack-a-mole** (user observation): one abuse, one directive. A lasting design starts from the other side: every request goes through phases, and each phase has dimensions that must all be bounded, whether or not anyone has attacked them yet.
+
+  | Phase | Time | Size | Count / rate |
+  | :--- | :--- | :--- | :--- |
+  | Connection idle | `keepalive_timeout` | n/a | `keepalive_requests`, `worker_connections` |
+  | Request header | `client_header_timeout` (total) | `large_client_header_buffers` | `limit_req` |
+  | Request body | `client_body_timeout` (gap) | `client_max_body_size` | `limit_conn` |
+  | Processing | `proxy_read_timeout` (Sprint 2) | n/a | `limit_conn`, `$server_name` cap, `max_conns` |
+  | Response | `send_timeout` (gap) | n/a | `limit_rate` (+ `limit_conn`) |
+
+* **Layer 1, a baseline at `http` level that applies to everything.** Explicit values (the Day 1 rule: don't rely on defaults), tighter than the defaults where the defaults are generous (`client_header_timeout 60s` is). A generous per-client `limit_conn` as a backstop. This is the custom parent profile.
+* **Layer 2, one profile per traffic class, not per incident.** API, static, uploads, downloads, admin. Each class loosens or tightens the baseline where its legitimate traffic differs (uploads: large body, longer body timeout, few in progress per client; downloads: `limit_rate_after` + `limit_rate`, `limit_conn` in its own zone). One `include` file per class, included by every location of that class, plays the role of a BIG-IP custom profile attached to many virtual servers.
+* **Layer 3, per-client tiers** (Day 3): `geo`/`map` turn the client into a tier and the tier into values (key, rate), so partners and offices change in one place.
+* **The numbers come from two budgets, not from the last attack.**
+  * **Capacity, from the top:** what the gateway (`worker_connections`, file descriptors, Sprint 4 Day 3) and the origin (its real concurrency) can hold. That sets the server-wide caps (`$server_name` `limit_conn`, `max_conns`).
+  * **Legitimate behavior, from the bottom:** the p99 of real clients from the access log (rate, requests in progress, body size, upload duration), times a margin of 2–3×. That sets the per-client limits. If a per-client limit would sit below the p99, the class is wrong or the key is wrong (NAT, the load balancer: Day 3).
+  * Timeouts are set by the slowest legitimate client you want to serve (a bad mobile network), not the fastest attack.
+* **Roll out like a profile change:** dry run first (`limit_req_dry_run`/`limit_conn_dry_run`, with `$limit_req_status`/`$limit_conn_status` in the log), then enforce, then review rejection rates as a metric. A new abuse then adjusts one class's values, not the design.
+* (Design guidance; the starting numbers above weren't measured in the lab.)
+* Infographic: `limits-policy.svg` / `.png` (generated from a script, rendered like `burst-and-nodelay`: rsvg-convert in alpine:3.22, Lato from google/fonts).
+
+### Day 2: How the `Retry-After` map works (Activity 3.1)
+* **`map` takes one input string.** For each request it builds the source string, takes the first matching pattern, and falls back to `default`. It's evaluated lazily, when `add_header` reads `$retry_after` for the response, so both limit checks have run by then. A plain pattern must equal the whole string; a `~` pattern is a regex and, unanchored, matches anywhere.
+* **There's no "OR" across two variables, so you concatenate them.** `$limit_req_status$limit_conn_status` joins the two values with nothing in between. From the user's own access log (`req=` / `conn=`; `-` in the log is an empty value):
+
+  | Log line | String the map sees | `Retry-After` |
+  | :--- | :--- | :--- |
+  | `/api/slow 200 req=PASSED conn=PASSED` | `PASSEDPASSED` | none (`default ""`) |
+  | `/api/slow 429 req=PASSED conn=REJECTED` | `PASSEDREJECTED` | `1` |
+  | `/tiny/ 429 req=REJECTED conn=-` | `REJECTED` (`limit_conn` never ran) | `1` |
+  | `/_stats 200 req=- conn=-` | empty | none |
+
+* **Unanchored `~REJECTED` also matches dry run** (tested on nginx:mainline, port 8088, `limit_req_dry_run on`): the dry-run "rejections" were served `200` **with** `Retry-After: 1`. `~REJECTED$` fixes it: no header under dry run, and a real `503` still got `Retry-After: 1`. It also still matches `PASSEDREJECTED` and `REJECTED`. (My first answer in chat stated this confusingly; this is the tested version. The guide keeps `~REJECTED`, since its labs never combine dry run with the map.)
+
+### Day 2: Lab and quiz
+* Lab went smoothly. Quiz 10/10 on the first attempt.
+* User's takeaway: none of it was hard on its own, but the number of settings and the nuances of each is hard to keep together. That's the reason for the phase grid in the policy infographic.
