@@ -169,7 +169,10 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
   * `/api/login` is its own location, so `/api/`'s `limit_req` doesn't add to it (6).
   * A `deny` in `/api/` loses to the limits and misses `/downloads/`; the block belongs in the server-level rewrite phase (11).
   * Changing a zone's key (`$binary_remote_addr` → `$client_key`) is refused on reload, with only an `[emerg]` in the error log to show it.
-* `lab/nginx.conf` at the end of the day matches `solution_nginx.conf` (comments aside).
+* `lab/nginx.conf` at the end of the day matches `solution_nginx.conf` (comments aside). **13 / 13** passed.
+
+### Day 3: Quiz
+* **8/10.** Both misses were on `$client_key`. The quiz asks about it four ways: why an empty key exempts partners (q03), what runs after reloading with a changed zone key (q06), whether partners are exempt from a zone keyed on `$binary_remote_addr` (q14: no, an exemption only reaches zones keyed on the tier variable), and what to do after the `[emerg]` (q16: restart or rename the zone).
 
 ---
 

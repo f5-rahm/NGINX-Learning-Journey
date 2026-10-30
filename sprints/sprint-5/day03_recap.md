@@ -41,7 +41,7 @@ This is the receiving end of BIG-IP's "Insert X-Forwarded-For". The same caution
 
 The sprint lab was the Lumina API gateway, with 13 requirements: rate and concurrency limits on the API, protection for the origin, an upload size limit, a strict login limit, throttled downloads, partner exemptions, an operations-only admin area, the blocked network, the load balancer and slow clients.
 
-None of the pieces is hard on its own. This was the most challenging lab so far, because it needs all three days at once, and because the mistakes don't show. A server-wide cap keyed on a server name that was never set counts nothing. Two locations sharing one concurrency zone limit each other. Changing a limit zone's key is refused on reload while the old configuration keeps running, and only the error log says so. Each of these passes the syntax check. Afterwards I mapped every requirement to the lines that meet it and the test that checks it, which is where the understanding really landed.
+None of the pieces is hard on its own. This was the most challenging lab so far, because it needs all three days at once, and because the mistakes don't show. A server-wide cap keyed on a server name that was never set counts nothing. Two locations sharing one concurrency zone limit each other. Changing a limit zone's key is refused on reload while the old configuration keeps running, and only the error log says so. Each of these passes the syntax check. I got all 13 tests passing, then mapped every requirement to the lines that meet it and the test that checks it, which is where the understanding really landed.
 
 ## Sprint 5 in one line
 
@@ -51,6 +51,8 @@ Day 1 decides **how often** a client may ask, Day 2 **how much it may hold**, an
 - **The phase decides the answer.** Which directive you use is half the design. Where NGINX runs it is the other half.
 
 Coming from BIG-IP, the mapping is close: DoS profiles and iRule tables become `limit_req`, connection limits become `limit_conn`, rate classes become `limit_rate`, data groups become `geo` and `map`. The difference is that it's all declarative configuration, evaluated in a fixed order, and that order is worth learning by heart.
+
+Quiz: 8 out of 10. Both misses were about the tier-based limit key: an exemption only reaches the zones keyed on it, and a zone's key can't be changed by a reload.
 
 ## What's next
 
