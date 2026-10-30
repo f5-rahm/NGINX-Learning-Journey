@@ -151,3 +151,50 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 ### Day 2: Lab and quiz
 * Lab went smoothly. Quiz 10/10 on the first attempt.
 * User's takeaway: none of it was hard on its own, but the number of settings and the nuances of each is hard to keep together. That's the reason for the phase grid in the policy infographic.
+
+## Day 3
+
+### Day 3: Control points by phase
+* Infographic: `control-points.svg` / `.png`, every Sprint 5 control placed on a request's path (accept, header read, POST_READ ... LOG, keepalive), with what each returns when it refuses and the `geo`/`map`/`keyval` lookups that feed it. Colored by day. Generated from a script and rendered like `limits-policy` (rsvg-convert in alpine:3.22, Lato from google/fonts, DejaVu Sans Mono).
+
+### Day 3: Activity 3.1 counts (user's run)
+* `burst 30 /api/x --from $BAD` with `deny` in `/api/` and Day 3's `burst=20 nodelay`: **21 × 403, 9 × 429** (log: `403 req=PASSED`, `429 req=REJECTED`). The same on the `--conc 4` run a few seconds later (the bucket had refilled). The guide asked why the client gets "mostly 429", which was true only in the build experiment with `burst=5` (6 × 403, 14 × 429). **Guide fix:** the question now asks why any requests get 429 and why exactly 21 get 403.
+
+### Day 3: Lab solution map
+* The sprint lab was the hard part of the day (user: "that was challenging"). It needs all three days at once: 13 requirements, 5 zones, 3 maps fed by one `geo`, realip, a server-level `if`, and an `error_page` for the `429`s.
+* At the user's request after working through it: `lab-solution-map.md`. For each requirement: the solution lines, what the test sends and expects, and why it works. Then the near-solutions the test catches (one requirement each) and the choices the requirements leave open (partners on login, the origin cap, download concurrency).
+* The details that make it hard are the ones that fail quietly:
+  * `$server_name` is empty without `server_name`, so the server-wide cap counts nothing (requirement 4).
+  * A shared `limit_conn` zone counts across locations, so downloads need their own zone (8).
+  * `/api/login` is its own location, so `/api/`'s `limit_req` doesn't add to it (6).
+  * A `deny` in `/api/` loses to the limits and misses `/downloads/`; the block belongs in the server-level rewrite phase (11).
+  * Changing a zone's key (`$binary_remote_addr` → `$client_key`) is refused on reload, with only an `[emerg]` in the error log to show it.
+* `lab/nginx.conf` at the end of the day matches `solution_nginx.conf` (comments aside).
+
+---
+
+## Sprint 5 Wrap-up
+
+### The sprint in one picture
+* **Day 1 decides how often** a client may ask (`limit_req`), **Day 2 how much it may hold** (requests in progress, bandwidth, time to send a request), **Day 3 who the client is** (realip, `geo` tiers) and **who gets in** (`allow`/`deny`, a server-level block).
+* The two diagrams fit together: `limits-policy.png` (Day 2) says *what* to bound in each phase of a request and where the numbers come from; `control-points.png` (Day 3) says *where* NGINX applies each control, and so what a client sees when it's refused.
+
+### Themes across the three days
+* **Order is behavior.** Phase order decides the outcome more than the directives do: `return` beats `limit_req`; `limit_req`/`limit_conn` beat `deny`; realip has to run before any of them. "Which directive" is half the design; "which phase" is the other half.
+* **The key is the policy.** Every limit is "per key", and the key decides who shares a bucket: `$binary_remote_addr` (per client), `$server_name` (everyone), `""` (exempt), the load balancer's address (everyone behind it, until realip). Getting the key wrong is the most common way a limit silently does nothing, or limits everyone.
+* **Quiet failures again** (as in Sprint 4 Day 3): an evicted zone forgets clients without a log line, an empty `$server_name` disables a cap, a zone key change is refused on reload while the old config keeps running, a `deny` turns into `429`s. Each one passes `nginx -t`.
+* **Explicit beats default.** `503` by default for refusals, a 60 s header timeout, 1 MB body limit: every default was either the wrong status or generous. The Day 1 rule (set it explicitly, even when the default is right) held all sprint.
+* **Measure, don't assume.** Several "obvious" readings were wrong when measured: 20 % over the rate rejected half, not 1 in 6; `limit_conn` counts HTTP/2 streams and ignores slowloris; `limit_rate` multiplies with parallel downloads; `real_ip_recursive` only matters when a trusted hop is inside the header.
+
+### BIG-IP → NGINX, in one line each
+* L7 DoS / iRule `table` → `limit_req`; connection limits → `limit_conn` (requests, not TCP connections); rate class → `limit_rate` + `limit_conn`; TCP/HTTP profile timeouts → NGINX's own timers on the kernel's stack; data groups + `class match` → `geo` and `map`; HTTP profile XFF insertion → realip on the receiving side; AFM / IP intelligence updated over iControl → Plus `keyval` over the API (side quest).
+
+### Guide fixes during the sprint
+* Day 1: `burst` is a parameter of `limit_req`, not a directive (1.1/1.2).
+* Day 2: the theme says timeouts are NGINX's timers, not the kernel's TCP stack.
+* Day 3: Activity 3.1 asked why the denied client gets "mostly 429"; with `burst=20` it gets 21 × 403 and 9 × 429. The question and answer now explain the 21.
+
+### What's next
+* **The Sprint 4 and Sprint 5 side quests will be done together, early next week, ahead of Sprint 6.** Sprint 4's: cache purge on demand and cache metrics (NGINX Plus). Sprint 5's: a `keyval` denylist changed through the API without a reload, and rate limits shared across a two-node cluster with `zone_sync`.
+* Findings from the side quest build are already above (Side quest section): sync is eventually consistent on a 1 s interval, deleting a key doesn't sync (set it to `0` instead), and `sync` bounds sustained rates, not an instant burst on each node.
+

@@ -93,12 +93,12 @@ burst 30 /api/x --from $BAD
 burst 30 /api/x --from $BAD --conc 4
 lim 2
 ```
-The client is denied. Why does it get mostly `429`, and not `403`?
+The client is denied. Why does it get `429` for some requests, and not `403` for all of them? And why exactly 21 × `403`?
 
 <details>
 <summary>Answer</summary>
 
-`limit_req` and `limit_conn` run in PREACCESS, **before** `deny` (ACCESS). Every request is first counted against the limits, and only those that pass reach the `deny`. Once the blocked client is over its burst, the limits answer first, with `429` and an invitation to retry. The log shows `req=REJECTED` for them. The blocked network is also using states in your limit zones.
+`limit_req` and `limit_conn` run in PREACCESS, **before** `deny` (ACCESS). Every request is first counted against the limits, and only those that pass reach the `deny`: 1 + `burst=20` = 21 get there and are answered `403`. Once the blocked client is over its burst, the limits answer first, with `429` and an invitation to retry. The log shows `req=PASSED` for the `403`s and `req=REJECTED` for the `429`s. The blocked network is also using states in your limit zones. The more it sends, the larger the share of `429`s.
 </details>
 
 Refuse it in the rewrite phase instead. Remove the `deny` line, and add a `geo` at `http` level, above `upstream api`:

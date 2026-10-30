@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1370" viewBox="0 0 1200 1370" font-family="Lato" xml:space="preserve">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#555555"/></marker></defs>
+<rect x="0" y="0" width="1200" height="1370" fill="#FFFFFF"/>
+<text x="24" y="46" font-size="28" fill="#1F1F1F" text-anchor="start" font-weight="bold">Where each control acts: Sprint 5 along a request's path</text>
+<text x="24" y="76" font-size="15.5" fill="#555555" text-anchor="start">NGINX runs a request through fixed phases. A refusal ends the request in the phase where it happens,</text>
+<text x="24" y="97" font-size="15.5" fill="#555555" text-anchor="start">so the order below decides what a client sees and which checks it costs you.</text>
+<rect x="24" y="116" width="16" height="16" rx="3" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.5"/>
+<text x="47" y="129" font-size="13.5" fill="#1F1F1F" text-anchor="start">Day 1</text>
+<rect x="110.75" y="116" width="16" height="16" rx="3" fill="#FFF7ED" stroke="#B45309" stroke-width="1.5"/>
+<text x="133.75" y="129" font-size="13.5" fill="#1F1F1F" text-anchor="start">Day 2</text>
+<rect x="197.5" y="116" width="16" height="16" rx="3" fill="#F0FDF4" stroke="#15803D" stroke-width="1.5"/>
+<text x="220.5" y="129" font-size="13.5" fill="#1F1F1F" text-anchor="start">Day 3</text>
+<rect x="284.25" y="116" width="16" height="16" rx="3" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5"/>
+<text x="307.25" y="129" font-size="13.5" fill="#1F1F1F" text-anchor="start">Plus side quest</text>
+<rect x="438.5" y="116" width="16" height="16" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+<text x="461.5" y="129" font-size="13.5" fill="#1F1F1F" text-anchor="start">Earlier sprints</text>
+<rect x="592.75" y="116" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="615.75" y="129" font-size="13.5" fill="#1F1F1F" text-anchor="start">refuses the request</text>
+<rect x="24" y="152" width="1152" height="30" rx="0" fill="#F5F5F4" stroke="none" stroke-width="1"/>
+<text x="36" y="172" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">PHASE</text>
+<text x="262" y="172" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">CONTROLS</text>
+<text x="812" y="172" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">IF IT REFUSES</text>
+<text x="980" y="172" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">FED BY</text>
+<line x1="24" y1="182" x2="1176" y2="182" stroke="#D6D3D1" stroke-width="1"/>
+<text x="36" y="208" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Accept</text>
+<text x="36" y="228" font-size="12.5" fill="#555555" text-anchor="start">TCP connection</text>
+<rect x="262" y="194" width="206.1" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="271" y="210.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">listen ... proxy_protocol</text>
+<rect x="476.125" y="194" width="153.4" height="24" rx="5" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.4"/>
+<text x="485.1" y="210.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">worker_connections</text>
+<text x="262" y="236" font-size="13" fill="#555555" text-anchor="start" font-style="italic">An L4 load balancer can send the client address in the PROXY header.</text>
+<text x="812" y="210.5" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">no slot: not accepted</text>
+<line x1="24" y1="256" x2="1176" y2="256" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="256" width="1152" height="86" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<text x="36" y="282" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Read the header</text>
+<text x="36" y="302" font-size="12.5" fill="#555555" text-anchor="start">before any phase</text>
+<rect x="262" y="268" width="176.0" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="271" y="284.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">client_header_timeout</text>
+<rect x="446.025" y="268" width="221.2" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="455.0" y="284.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">large_client_header_buffers</text>
+<text x="262" y="310" font-size="13" fill="#555555" text-anchor="start" font-style="italic">The timeout is a total. limit_conn can't see a slowloris client yet.</text>
+<rect x="812" y="268" width="145.9" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="284.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">408, nothing sent</text>
+<rect x="812" y="298" width="85.7" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="314.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">414 / 400</text>
+<line x1="24" y1="342" x2="1176" y2="342" stroke="#D6D3D1" stroke-width="1"/>
+<text x="36" y="368" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">POST_READ</text>
+<rect x="262" y="354" width="138.4" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="271" y="370.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">set_real_ip_from</text>
+<rect x="408.4" y="354" width="123.3" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="417.4" y="370.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">real_ip_header</text>
+<rect x="539.75" y="354" width="145.9" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="548.8" y="370.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">real_ip_recursive</text>
+<text x="262" y="396" font-size="13" fill="#555555" text-anchor="start" font-style="italic">$remote_addr becomes the real client, for every check below and the log.</text>
+<text x="980" y="368" font-size="12" fill="#555555" text-anchor="start" font-style="italic">trusted peers only</text>
+<text x="980" y="386" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">$realip_remote_addr</text>
+<text x="980" y="404" font-size="12" fill="#555555" text-anchor="start" font-style="italic">keeps the peer</text>
+<line x1="24" y1="422" x2="1176" y2="422" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="422" width="1152" height="80" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<text x="36" y="448" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">SERVER_REWRITE</text>
+<text x="36" y="468" font-size="12.5" fill="#555555" text-anchor="start">server-level if / return</text>
+<rect x="262" y="434" width="288.9" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="271" y="450.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">if ($tier = blocked) { return 403; }</text>
+<rect x="558.9" y="434" width="228.7" height="24" rx="5" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.4"/>
+<text x="567.9" y="450.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">if ($denied) { return 403; }</text>
+<text x="262" y="476" font-size="13" fill="#555555" text-anchor="start" font-style="italic">Refused before any limit zone sees the client: 20 of 20 got 403.</text>
+<rect x="812" y="434" width="40.6" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="450.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">403</text>
+<text x="980" y="448" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">geo $tier</text>
+<text x="980" y="466" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">keyval $denied</text>
+<text x="980" y="484" font-size="12" fill="#555555" text-anchor="start" font-style="italic">(changed via the API)</text>
+<line x1="24" y1="502" x2="1176" y2="502" stroke="#D6D3D1" stroke-width="1"/>
+<text x="36" y="528" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">FIND_CONFIG</text>
+<text x="36" y="548" font-size="12.5" fill="#555555" text-anchor="start">the location is chosen</text>
+<rect x="262" y="514" width="168.5" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="271" y="530.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">client_max_body_size</text>
+<text x="262" y="556" font-size="13" fill="#555555" text-anchor="start" font-style="italic">Checked against Content-Length, before a byte of the body is read.</text>
+<rect x="812" y="514" width="40.6" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="530.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">413</text>
+<line x1="24" y1="576" x2="1176" y2="576" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="576" width="1152" height="74" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<text x="36" y="602" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">REWRITE</text>
+<text x="36" y="622" font-size="12.5" fill="#555555" text-anchor="start">location-level</text>
+<rect x="262" y="588" width="63.1" height="24" rx="5" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.4"/>
+<text x="271" y="604.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">return</text>
+<text x="262" y="630" font-size="13" fill="#555555" text-anchor="start" font-style="italic">A location that returns is answered here and never reaches the limits.</text>
+<text x="812" y="604.5" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">its own status</text>
+<line x1="24" y1="650" x2="1176" y2="650" stroke="#D6D3D1" stroke-width="1"/>
+<text x="36" y="676" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">PREACCESS</text>
+<rect x="262" y="662" width="281.4" height="24" rx="5" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.4"/>
+<text x="271" y="678.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">limit_req  burst / nodelay / delay=</text>
+<rect x="551.375" y="662" width="93.2" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="560.4" y="678.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">limit_conn</text>
+<rect x="652.625" y="662" width="115.8" height="24" rx="5" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.4"/>
+<text x="661.6" y="678.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">zone ... sync</text>
+<text x="262" y="704" font-size="13" fill="#555555" text-anchor="start" font-style="italic">Counted before allow/deny. limit_req can also delay instead of refusing.</text>
+<rect x="812" y="662" width="40.6" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="678.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">429</text>
+<text x="812" y="708.5" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">(503 by default)</text>
+<text x="980" y="676" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">map $client_key</text>
+<text x="980" y="694" font-size="12" fill="#555555" text-anchor="start" font-style="italic">"" = exempt (partners)</text>
+<text x="980" y="712" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">map $origin_key</text>
+<line x1="24" y1="736" x2="1176" y2="736" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="736" width="1152" height="74" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<text x="36" y="762" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">ACCESS</text>
+<rect x="262" y="748" width="55.6" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="271" y="764.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">allow</text>
+<rect x="325.625" y="748" width="48.1" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="334.6" y="764.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">deny</text>
+<text x="262" y="790" font-size="13" fill="#555555" text-anchor="start" font-style="italic">First match wins. A denied flood got 6 x 403 and 14 x 429 (PREACCESS first).</text>
+<rect x="812" y="748" width="40.6" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="764.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">403</text>
+<line x1="24" y1="810" x2="1176" y2="810" stroke="#D6D3D1" stroke-width="1"/>
+<text x="36" y="836" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">CONTENT</text>
+<text x="36" y="856" font-size="12.5" fill="#555555" text-anchor="start">proxy_pass reads the body</text>
+<rect x="262" y="822" width="161.0" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="271" y="838.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">client_body_timeout</text>
+<rect x="430.975" y="822" width="221.2" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="440.0" y="838.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">limit_conn (still counting)</text>
+<rect x="262" y="852" width="153.4" height="24" rx="5" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.4"/>
+<text x="271" y="868.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">proxy_read_timeout</text>
+<text x="262" y="894" font-size="13" fill="#555555" text-anchor="start" font-style="italic">The body timeout is a gap between reads. A slow upload holds a limit_conn slot.</text>
+<rect x="812" y="822" width="40.6" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="838.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">408</text>
+<rect x="812" y="852" width="40.6" height="24" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.4"/>
+<text x="821" y="868.5" font-size="12.5" fill="#B91C1C" text-anchor="start" font-weight="bold">504</text>
+<line x1="24" y1="914" x2="1176" y2="914" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="914" width="1152" height="104" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<text x="36" y="940" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Send the response</text>
+<text x="36" y="960" font-size="12.5" fill="#555555" text-anchor="start">header and body filters</text>
+<rect x="262" y="926" width="236.2" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="271" y="942.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">limit_rate_after + limit_rate</text>
+<rect x="506.225" y="926" width="108.3" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="515.2" y="942.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">send_timeout</text>
+<rect x="262" y="956" width="183.5" height="24" rx="5" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.4"/>
+<text x="271" y="972.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">add_header Retry-After</text>
+<rect x="453.54999999999995" y="956" width="123.3" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="462.5" y="972.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">error_page 429</text>
+<text x="262" y="998" font-size="13" fill="#555555" text-anchor="start" font-style="italic">limit_rate is per connection: pair it with limit_conn.</text>
+<text x="812" y="942.5" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">slowed, not refused</text>
+<text x="980" y="940" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">map $download_rate</text>
+<text x="980" y="958" font-size="12" fill="#555555" text-anchor="start" font-style="italic">(partners: 0)</text>
+<text x="980" y="976" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">map $retry_after</text>
+<line x1="24" y1="1018" x2="1176" y2="1018" stroke="#D6D3D1" stroke-width="1"/>
+<text x="36" y="1044" font-size="14" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">LOG</text>
+<rect x="262" y="1030" width="145.9" height="24" rx="5" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.4"/>
+<text x="271" y="1046.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">$limit_req_status</text>
+<rect x="415.925" y="1030" width="153.4" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="424.9" y="1046.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">$limit_conn_status</text>
+<rect x="577.375" y="1030" width="161.0" height="24" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.4"/>
+<text x="586.4" y="1046.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">$realip_remote_addr</text>
+<text x="262" y="1072" font-size="13" fill="#555555" text-anchor="start" font-style="italic">Dry run shows up here as REJECTED_DRY_RUN while the request passes.</text>
+<line x1="24" y1="1092" x2="1176" y2="1092" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="1092" width="1152" height="74" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<text x="36" y="1118" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Keepalive</text>
+<text x="36" y="1138" font-size="12.5" fill="#555555" text-anchor="start">back to Read the header</text>
+<rect x="262" y="1104" width="145.9" height="24" rx="5" fill="#FFF7ED" stroke="#B45309" stroke-width="1.4"/>
+<text x="271" y="1120.5" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">keepalive_timeout</text>
+<text x="262" y="1146" font-size="13" fill="#555555" text-anchor="start" font-style="italic">An idle connection is closed; the next request on it starts over.</text>
+<text x="812" y="1120.5" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">closed</text>
+<line x1="24" y1="1166" x2="1176" y2="1166" stroke="#D6D3D1" stroke-width="1"/>
+<path d="M 30 1114 H 16 V 278 H 28" fill="none" stroke="#555555" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+<rect x="24.0" y="1200" width="368.0" height="118" rx="6" fill="#F5F5F4" stroke="none" stroke-width="1"/>
+<circle cx="52.0" cy="1230" r="13" fill="#1F1F1F"/>
+<text x="52.0" y="1235" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="bold">1</text>
+<text x="74.0" y="1235" font-size="16" fill="#1F1F1F" text-anchor="start" font-weight="bold">Refuse as early as you can</text>
+<text x="44.0" y="1264" font-size="13.5" fill="#1F1F1F" text-anchor="start">A refusal ends the request in its phase.</text>
+<text x="44.0" y="1284" font-size="13.5" fill="#1F1F1F" text-anchor="start">Block networks in SERVER_REWRITE, so</text>
+<text x="44.0" y="1304" font-size="13.5" fill="#1F1F1F" text-anchor="start">they never touch the limit zones.</text>
+<rect x="416.0" y="1200" width="368.0" height="118" rx="6" fill="#F5F5F4" stroke="none" stroke-width="1"/>
+<circle cx="444.0" cy="1230" r="13" fill="#1F1F1F"/>
+<text x="444.0" y="1235" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="bold">2</text>
+<text x="466.0" y="1235" font-size="16" fill="#1F1F1F" text-anchor="start" font-weight="bold">Fix the address first</text>
+<text x="436.0" y="1264" font-size="13.5" fill="#1F1F1F" text-anchor="start">realip runs in POST_READ, so geo, the</text>
+<text x="436.0" y="1284" font-size="13.5" fill="#1F1F1F" text-anchor="start">limits, allow/deny and the log all see the</text>
+<text x="436.0" y="1304" font-size="13.5" fill="#1F1F1F" text-anchor="start">client, if you trust only your own proxies.</text>
+<rect x="808.0" y="1200" width="368.0" height="118" rx="6" fill="#F5F5F4" stroke="none" stroke-width="1"/>
+<circle cx="836.0" cy="1230" r="13" fill="#1F1F1F"/>
+<text x="836.0" y="1235" font-size="14" fill="#FFFFFF" text-anchor="middle" font-weight="bold">3</text>
+<text x="858.0" y="1235" font-size="16" fill="#1F1F1F" text-anchor="start" font-weight="bold">Lookups are lazy</text>
+<text x="828.0" y="1264" font-size="13.5" fill="#1F1F1F" text-anchor="start">geo, map and keyval run only when a phase</text>
+<text x="828.0" y="1284" font-size="13.5" fill="#1F1F1F" text-anchor="start">reads them. One tier table feeds keys,</text>
+<text x="828.0" y="1304" font-size="13.5" fill="#1F1F1F" text-anchor="start">rates and blocks in every phase.</text>
+<text x="24" y="1348" font-size="12" fill="#555555" text-anchor="start">Counts quoted were measured in the Sprint 5 lab on nginx 1.31.6; the side quest on NGINX Plus R37.1.1.</text>
+</svg>
