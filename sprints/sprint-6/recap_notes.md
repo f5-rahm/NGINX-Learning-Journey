@@ -52,6 +52,27 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 ---
 
 ## Day 1
+* **Q: why are some ES5 things missing?** They're sloppy-mode features; both engines run strict mode only (njs shell, both `-n njs` and `-n QuickJS`): an undeclared assignment `x = 1` is a `ReferenceError`, `010` is a `SyntaxError`, `with` is refused, `arguments.callee` throws. ES5 strict features (getters, `Object.keys`, `JSON`) work in both. Regex lookbehind works in both.
+* **Running code from strings:** `eval` fails in both (`Not implemented` / `'eval' is not defined`). `new Function("return 1")` worked in the njs shell, but QuickJS has no `Function` global at all (`'Function' is not defined`).
+* **Why the njs engine is shaped this way:** it was written for NGINX, around a cheap context per request whose memory is released with the request (hence a fresh context each time, and no long-lived garbage to collect). Language features were added as configuration scripting needed them. QuickJS was added as a second engine for full modern JavaScript, at the cost of reusing contexts (`js_context_reuse`).
+* **Validating before going live:** `nginx -t` compiles the script, so syntax errors are caught before the reload, and a refused reload leaves the old script running. It doesn't catch run-time errors (the junk cookie → 500 passed `nginx -t`). BIG-IP also refuses an iRule with a syntax error when it's saved, but a saved iRule that's attached to a virtual server applies to new connections right away, with no separate test-then-apply step. Run-time Tcl errors abort the connection (a reset).
+* **Q: can it all be in code, like an iRule?** Mostly not, by design: the config is the program and njs is a library it calls. iRule events fire by name and commands steer the traffic (`pool`, `HTTP::header insert`). In NGINX each hook is a directive, and choosing the upstream or adding a header to the proxied request always takes one (`proxy_pass http://$pool`, `proxy_set_header X-User $session_user`). The closest to an iRule is one `js_content` handler that decides and then hands off with `r.internalRedirect('@app')`. Proxying with `ngx.fetch` would really be all code, but it loses upstream balancing, keepalive, buffering, caching and retries. To keep the extra wiring safe, compute each decision once (one `js_set`) and use that variable in every proxying location. The upside: `grep js_` shows every place a script runs.
+* **A `js_set` function that isn't exported passes `nginx -t`.** With `lang` missing from `export default`, the reload succeeded. Each request using `$client_lang` logged `js function "lumina.lang" not found` and still got 200. The variable was empty, and `add_header` with an empty value sends no header, so the only sign was in `error.log`.
+* **Native vs script, my rule:** use native config when it covers the job (`map` for `$client_lang`: no script, can't throw) and code when it's required. My exception: when *all* the logic for a feature can live in code, keep it there, so I don't have to analyze, feature by feature, which parts belong in config. The trade-off: every decision in code is one more place a run-time error can turn into a 500 or an empty variable.
+* **Logging bad input at scale: count everything, sample the details.** Verified in an isolated test: 1000 garbage cookies. A `js_shared_dict_zone ... type=number` counter with `incr('bad_cookie', 1, 0)` read exactly 1000 (all workers). The script set a `js_var $bad_session`, and a native `access_log ... if=$log_bad` with `split_clients $request_id` at 10% wrote 105 lines to a separate log. The script only flags and counts, and NGINX does the sampling and logging. Sampling alone can hide a slow, targeted probe; the counter can't. BIG-IP comparison: `rand()` sampling in an iRule and `HSL::send` for volume.
+* **BIG-IP mapping:** njs context per request ≈ iRule variables scoped to the connection; QuickJS globals persisting per worker ≈ changing `static::` at run time, which only changes that TMM's copy.
+
+### Day 1: Activity 3.4 (user's run)
+* The first check showed no `X-Lang` and a count of 0: `lang` had been added to `nginx.conf` but not to `export default` in `lumina.js`. That gave the missing-export finding above.
+* The `log_format` change (the activity's second half) was already in place on the rerun, so the count was **3**, not 2: the log line made `/edge/hello` call `lang()` too.
+* **Guide fix:** the expected results after the first check are now a block (`X-Lang: fr`, `X-Lang: en`, `2`), with a line per result and a pointer to `./lab.sh logs` if `X-Lang` is missing.
+
+### Day 1: Infographic
+* `where-mistakes-show.svg` / `.png`: five Day 1 mistakes (syntax error, missing export, uncaught bad input, caught bad input, per-request data in a QuickJS global), each with what `nginx -t`, the client and `error.log` show, colored by where you first find out. Generated from a script, rendered like Sprint 5's (rsvg-convert in alpine:3.22, Lato from google/fonts, DejaVu Sans Mono, 1.5×).
+
+### Day 1: Quiz
+* **9/10.** The miss was a `js_set` question on what gets read when: the function runs only when something reads the variable, and once per request however many times it's used (questions "js_set Evaluation" / "Lazy js_set").
+* Recap written: `day01_recap.md`.
 
 ## Day 2
 

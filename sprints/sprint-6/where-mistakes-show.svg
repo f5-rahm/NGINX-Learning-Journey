@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="902" viewBox="0 0 1200 902" font-family="Lato" xml:space="preserve">
+<rect x="0" y="0" width="1200" height="902" fill="#FFFFFF"/>
+<text x="24" y="46" font-size="28" fill="#1F1F1F" text-anchor="start" font-weight="bold">nginx -t proves the script compiles. Only traffic proves the rest.</text>
+<text x="24" y="78" font-size="15.5" fill="#555555" text-anchor="start">Five njs mistakes from Sprint 6 Day 1, and the first place each one shows up. Only the first is caught</text>
+<text x="24" y="99" font-size="15.5" fill="#555555" text-anchor="start">before the reload; the rest load cleanly and surface in a response, in error.log, or nowhere at all.</text>
+<text x="24" y="133" font-size="13.5" fill="#555555" text-anchor="start" font-weight="bold">First found by:</text>
+<rect x="136" y="120" width="16" height="16" rx="3" fill="#F0FDF4" stroke="#15803D" stroke-width="1.5"/>
+<text x="159" y="133" font-size="13.5" fill="#1F1F1F" text-anchor="start">nginx -t</text>
+<rect x="244.2" y="120" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="267.2" y="133" font-size="13.5" fill="#1F1F1F" text-anchor="start">the client</text>
+<rect x="367.2" y="120" width="16" height="16" rx="3" fill="#FFF7ED" stroke="#B45309" stroke-width="1.5"/>
+<text x="390.2" y="133" font-size="13.5" fill="#1F1F1F" text-anchor="start">error.log only</text>
+<rect x="519.8" y="120" width="16" height="16" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+<text x="542.8" y="133" font-size="13.5" fill="#1F1F1F" text-anchor="start">nowhere: only a test</text>
+<rect x="24" y="156" width="1152" height="30" rx="0" fill="#F5F5F4" stroke="none" stroke-width="1"/>
+<text x="36" y="176" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">THE MISTAKE</text>
+<text x="352" y="176" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">NGINX -T AND RELOAD</text>
+<text x="590" y="176" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">WHAT THE CLIENT GETS</text>
+<text x="846" y="176" font-size="12" fill="#555555" text-anchor="start" font-weight="bold">WHAT ERROR.LOG SAYS</text>
+<line x1="24" y1="186" x2="1176" y2="186" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="186" width="6" height="104" rx="0" fill="#15803D" stroke="none" stroke-width="1"/>
+<text x="36" y="212" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">A syntax error</text>
+<text x="36" y="231" font-size="13" fill="#1F1F1F" text-anchor="start">in lumina.js</text>
+<text x="352" y="212" font-size="13" fill="#1F1F1F" text-anchor="start">Fails: the reload is refused</text>
+<text x="352" y="231" font-size="13" fill="#1F1F1F" text-anchor="start">and the old script keeps</text>
+<text x="352" y="250" font-size="13" fill="#1F1F1F" text-anchor="start">serving.</text>
+<text x="590" y="212" font-size="13" fill="#1F1F1F" text-anchor="start">Nothing changes.</text>
+<text x="846" y="212" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">[emerg] SyntaxError:</text>
+<text x="846" y="231" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">Unexpected token ";"</text>
+<text x="846" y="250" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">at /lab/lumina.js:15</text>
+<rect x="1090.8" y="262" width="73.2" height="20" rx="10" fill="#F0FDF4" stroke="#15803D" stroke-width="1.2"/>
+<text x="1127.4" y="276" font-size="11.5" fill="#15803D" text-anchor="middle" font-weight="bold">nginx -t</text>
+<line x1="24" y1="290" x2="1176" y2="290" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="290" width="1152" height="104" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<rect x="24" y="290" width="6" height="104" rx="0" fill="#B45309" stroke="none" stroke-width="1"/>
+<text x="36" y="316" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">A js_set function left</text>
+<text x="36" y="335" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">out of export default</text>
+<text x="36" y="354" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">js_set $client_lang lumina.lang;</text>
+<text x="352" y="316" font-size="13" fill="#1F1F1F" text-anchor="start">Passes. NGINX looks the</text>
+<text x="352" y="335" font-size="13" fill="#1F1F1F" text-anchor="start">function up only when a</text>
+<text x="352" y="354" font-size="13" fill="#1F1F1F" text-anchor="start">request reads the variable.</text>
+<text x="590" y="316" font-size="13" fill="#1F1F1F" text-anchor="start">200, but X-Lang is missing:</text>
+<text x="590" y="335" font-size="13" fill="#1F1F1F" text-anchor="start">the variable is empty, and</text>
+<text x="590" y="354" font-size="13" fill="#1F1F1F" text-anchor="start">add_header skips empty values.</text>
+<text x="846" y="316" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">js function "lumina.lang"</text>
+<text x="846" y="335" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">not found</text>
+<text x="846" y="354" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">on every request that reads it</text>
+<rect x="1049.4" y="366" width="114.60000000000001" height="20" rx="10" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="1106.7" y="380" font-size="11.5" fill="#B45309" text-anchor="middle" font-weight="bold">error.log only</text>
+<line x1="24" y1="394" x2="1176" y2="394" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="394" width="6" height="104" rx="0" fill="#B91C1C" stroke="none" stroke-width="1"/>
+<text x="36" y="420" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Client input parsed</text>
+<text x="36" y="439" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">without try/catch</text>
+<text x="36" y="458" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">lumina_session=garbage</text>
+<text x="352" y="420" font-size="13" fill="#1F1F1F" text-anchor="start">Passes. The code is valid;</text>
+<text x="352" y="439" font-size="13" fill="#1F1F1F" text-anchor="start">the input isn't.</text>
+<text x="590" y="420" font-size="13" fill="#1F1F1F" text-anchor="start">500 for that request.</text>
+<text x="590" y="439" font-size="13" fill="#1F1F1F" text-anchor="start">The client chose to break it.</text>
+<text x="846" y="420" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">js exception: TypeError:</text>
+<text x="846" y="439" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">first argument undefined is</text>
+<text x="846" y="458" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">not a string or Buffer-like</text>
+<rect x="1077.0" y="470" width="87.0" height="20" rx="10" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.2"/>
+<text x="1120.5" y="484" font-size="11.5" fill="#B91C1C" text-anchor="middle" font-weight="bold">the client</text>
+<line x1="24" y1="498" x2="1176" y2="498" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="498" width="1152" height="104" rx="0" fill="#FAFAF9" stroke="none" stroke-width="1"/>
+<rect x="24" y="498" width="6" height="104" rx="0" fill="#B45309" stroke="none" stroke-width="1"/>
+<text x="36" y="524" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">The same, with try/catch</text>
+<text x="36" y="543" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">and a safe default</text>
+<text x="36" y="562" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">return null;  // no session</text>
+<text x="352" y="524" font-size="13" fill="#1F1F1F" text-anchor="start">Passes.</text>
+<text x="590" y="524" font-size="13" fill="#1F1F1F" text-anchor="start">200, with "session": null.</text>
+<text x="590" y="543" font-size="13" fill="#1F1F1F" text-anchor="start">The request carries on.</text>
+<text x="846" y="524" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">[warn] unreadable session</text>
+<text x="846" y="543" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">cookie: ... (one per request)</text>
+<text x="846" y="562" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">At scale: count all, sample 10%.</text>
+<rect x="1049.4" y="574" width="114.60000000000001" height="20" rx="10" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="1106.7" y="588" font-size="11.5" fill="#B45309" text-anchor="middle" font-weight="bold">error.log only</text>
+<line x1="24" y1="602" x2="1176" y2="602" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="602" width="6" height="104" rx="0" fill="#6B7280" stroke="none" stroke-width="1"/>
+<text x="36" y="628" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">Per-request data in a</text>
+<text x="36" y="647" font-size="13" fill="#1F1F1F" text-anchor="start" font-weight="bold">global, under QuickJS</text>
+<text x="36" y="666" font-size="12" fill="#1F1F1F" text-anchor="start" font-family="DejaVu Sans Mono">js_engine qjs;</text>
+<text x="352" y="628" font-size="13" fill="#1F1F1F" text-anchor="start">Passes.</text>
+<text x="590" y="628" font-size="13" fill="#1F1F1F" text-anchor="start">200 with the wrong data:</text>
+<text x="590" y="647" font-size="13" fill="#1F1F1F" text-anchor="start">calls=1, 2, 3 ... kept per</text>
+<text x="590" y="666" font-size="13" fill="#1F1F1F" text-anchor="start">worker, seen by the next user.</text>
+<text x="846" y="628" font-size="13" fill="#1F1F1F" text-anchor="start">Nothing.</text>
+<text x="846" y="647" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">The default engine starts fresh</text>
+<text x="846" y="666" font-size="12.5" fill="#555555" text-anchor="start" font-style="italic">each request; QuickJS reuses.</text>
+<rect x="1008.0" y="678" width="156.0" height="20" rx="10" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.2"/>
+<text x="1086.0" y="692" font-size="11.5" fill="#6B7280" text-anchor="middle" font-weight="bold">nowhere: only a test</text>
+<line x1="24" y1="706" x2="1176" y2="706" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="730" width="1152" height="148" rx="8" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.5"/>
+<text x="44" y="762" font-size="17" fill="#1D4ED8" text-anchor="start" font-weight="bold">The habit that follows</text>
+<text x="44" y="788" font-size="14.5" fill="#1F1F1F" text-anchor="start">After every reload, send one good request and one bad one, then read error.log. Wrap every parse of client</text>
+<text x="44" y="810" font-size="14.5" fill="#1F1F1F" text-anchor="start">input in try/catch with a safe default, and keep per-request data out of globals.</text>
+<text x="44" y="840" font-size="13" fill="#555555" text-anchor="start" font-style="italic">BIG-IP: the same split. The iRule editor rejects syntax errors on save, and run-time TCL errors reset the</text>
+<text x="44" y="859" font-size="13" fill="#555555" text-anchor="start" font-style="italic">connection. The difference: NGINX tests before it applies, while a saved iRule is live on its virtual server at once.</text>
+</svg>

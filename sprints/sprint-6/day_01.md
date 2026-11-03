@@ -209,7 +209,15 @@ rh /api/ping | grep -i x-lang
 r /edge/hello > /dev/null
 grep -c 'lang() called' logs/error.log
 ```
-`X-Lang: fr`, then `en`, and the count is **2**: `/edge/hello` never used `$client_lang`, so the function never ran for it.
+You should see three results, one per check:
+```
+X-Lang: fr
+X-Lang: en
+2
+```
+* The French request gets `fr`, and the request with no `Accept-Language` gets the default `en`.
+* `lang()` logged **2** calls for 3 requests: `/edge/hello` never used `$client_lang`, so the function never ran for it.
+* No `X-Lang` at all? Check `./lab.sh logs` for an error.
 
 Now use the variable twice in one request. Add `lang=$client_lang` to the end of the `log_format edge` line, so it reads `'$remote_addr "$request" $status rt=$request_time lang=$client_lang'`:
 ```bash
