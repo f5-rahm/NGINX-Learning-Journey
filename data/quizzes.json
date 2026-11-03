@@ -4796,6 +4796,870 @@
           ]
         }
       ]
+    },
+    {
+      "sprint": 6,
+      "title": "Programmability & Extensibility (njs)",
+      "days": [
+        {
+          "day": 1,
+          "title": "How njs Runs",
+          "questions": [
+            {
+              "id": "s6d1q01",
+              "type": "scenario",
+              "category": "Where njs Runs",
+              "question": "Where does an njs function called by `js_content` execute?",
+              "options": {
+                "A": "Inside the NGINX worker process, on its event loop, between NGINX's own steps",
+                "B": "In a separate Node.js process that NGINX talks to over a socket",
+                "C": "In the master process, which hands the result to a worker",
+                "D": "In a thread pool next to the worker, so it can never delay other requests"
+              },
+              "answer": "A",
+              "explanation": "njs is a module inside the worker: no IPC, no network hop, and a slow script delays that worker (Day 3)."
+            },
+            {
+              "id": "s6d1q02",
+              "type": "scenario",
+              "category": "Reload",
+              "question": "You edit `lumina.js` and save it, without reloading. What do new requests run?",
+              "options": {
+                "A": "The new script: njs reads the file on every request",
+                "B": "The old script: scripts are compiled when the configuration loads",
+                "C": "Nothing: the location returns 500 until you reload",
+                "D": "The new script on new connections, the old one on keepalive connections"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.1: the answer still said \"Hello\" until `./lab.sh reload`."
+            },
+            {
+              "id": "s6d1q03",
+              "type": "scenario",
+              "category": "Syntax Errors",
+              "question": "A reload is attempted with a syntax error in an imported script. What happens?",
+              "options": {
+                "A": "The reload succeeds, and only the locations that call the script return 500",
+                "B": "The master stops, because it can't compile the script for the new workers",
+                "C": "`nginx -t` fails, the reload is refused, and the old configuration keeps serving",
+                "D": "The reload succeeds, and NGINX skips the function with the error"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.1: `[emerg] SyntaxError: Unexpected token \";\" at /lab/lumina.js:15`, and `/edge/count` kept working."
+            },
+            {
+              "id": "s6d1q04",
+              "type": "scenario",
+              "category": "Default Engine",
+              "question": "With the default engine, a script increments a global `var calls = 0;` on each request. What do four sequential requests report?",
+              "options": {
+                "A": "1, 2, 3, 4",
+                "B": "1, 2, 3, 4 on each worker separately",
+                "C": "0, 0, 0, 0: globals are read-only",
+                "D": "1, 1, 1, 1: every request gets a fresh context"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.2: the default `njs` engine clones a fresh context per request."
+            },
+            {
+              "id": "s6d1q05",
+              "type": "scenario",
+              "category": "QuickJS Contexts",
+              "question": "The same counter runs under `js_engine qjs;`, with two workers. What do you see?",
+              "options": {
+                "A": "It grows across requests, separately on each worker",
+                "B": "1 every time, exactly like the default engine",
+                "C": "One count that both workers share and increment",
+                "D": "It grows, but resets whenever a client reconnects"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: QuickJS reuses contexts, so globals persist per worker; they are never shared across workers."
+            },
+            {
+              "id": "s6d1q06",
+              "type": "scenario",
+              "category": "State",
+              "question": "Lumina needs a counter that every request on every worker increments. Where should it live?",
+              "options": {
+                "A": "In a global variable with `js_engine qjs`",
+                "B": "In a shared dictionary (`js_shared_dict_zone`)",
+                "C": "In a global variable with the default engine",
+                "D": "In `process.env`"
+              },
+              "answer": "B",
+              "explanation": "Globals are per context and per worker. A shared dictionary lives in shared memory, like a BIG-IP `table`."
+            },
+            {
+              "id": "s6d1q07",
+              "type": "scenario",
+              "category": "Decoding vs Verifying",
+              "question": "`/edge/info` decodes the session cookie's claims and shows `plan: beta` for a token Mallory signed with a guessed key. What does this show?",
+              "options": {
+                "A": "Mallory guessed Lumina's signing key, so the token is genuine",
+                "B": "base64url encoding can't be produced without the key",
+                "C": "Decoding isn't verifying: only the signature proves Lumina issued the claims",
+                "D": "The edge cached an earlier valid session for the same user"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.5. Day 2 adds the HMAC check."
+            },
+            {
+              "id": "s6d1q08",
+              "type": "scenario",
+              "category": "Native First",
+              "question": "You need the first two letters of `Accept-Language`, or `en`. Which is the better tool, and why?",
+              "options": {
+                "A": "`js_set`: only JavaScript can parse headers",
+                "B": "`js_content`: the variable must be computed in the content phase",
+                "C": "`js_periodic`: compute it once and share it",
+                "D": "`map` with a regex: native, can't throw, no script to maintain"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.4's answer: keep njs for what `map` can't do, like checking a signature."
+            },
+            {
+              "id": "s6d1q09",
+              "type": "config",
+              "category": "js_set Evaluation",
+              "question": "```nginx\njs_set $client_lang lumina.lang;\nadd_header X-Lang $client_lang;     # in /api/\nlog_format edge '... lang=$client_lang';\n```\nHow many times does `lang()` run for one request to `/api/ping`?",
+              "options": {
+                "A": "Once: computed when first used, then reused for the request",
+                "B": "Twice: once for the response header and once for the log line",
+                "C": "Once per worker, when the configuration loads",
+                "D": "Never: `add_header` and `log_format` don't evaluate js_set variables"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.4: one `lang() called` line per request, although the variable was used twice."
+            },
+            {
+              "id": "s6d1q10",
+              "type": "config",
+              "category": "Lazy js_set",
+              "question": "`$client_lang` is used only in `location /api/`'s `add_header`, and nowhere else. A request goes to `/edge/hello`. Does `lang()` run?",
+              "options": {
+                "A": "Yes: every `js_set` handler runs at the start of every request",
+                "B": "No: a `js_set` variable is computed only when something reads it",
+                "C": "Yes, but its result is discarded because nothing uses it",
+                "D": "Only if the client sends an `Accept-Language` header"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.4: the count stayed at 2 until the log line started using the variable."
+            },
+            {
+              "id": "s6d1q11",
+              "type": "config",
+              "category": "Modules",
+              "question": "```js\nfunction hello(r) { ... }\nfunction helper(x) { ... }\nexport default { hello };\n```\nWith `js_import lumina from lumina.js;`, which can nginx.conf call?",
+              "options": {
+                "A": "Both `lumina.hello` and `lumina.helper`",
+                "B": "`hello` and `helper` without the prefix",
+                "C": "`lumina.hello` only: nginx.conf can call what the module exports",
+                "D": "Neither: functions must be declared with `export function`"
+              },
+              "answer": "C",
+              "explanation": "`export default { ... }` lists what the module offers; unexported helpers are still callable from inside the script."
+            },
+            {
+              "id": "s6d1q12",
+              "type": "config",
+              "category": "js_engine Scope",
+              "question": "```nginx\nlocation = /edge/count {\n    js_engine qjs;\n    js_content lumina.count;\n}\n```\nWhich requests use QuickJS?",
+              "options": {
+                "A": "All requests, because the engine is global",
+                "B": "None: `js_engine` is only valid at `http` level",
+                "C": "All requests after the first one to `/edge/count`",
+                "D": "Only requests handled by that location"
+              },
+              "answer": "D",
+              "explanation": "`js_engine` is valid in `http`, `server` and `location` (Activity 3.2)."
+            },
+            {
+              "id": "s6d1q13",
+              "type": "config",
+              "category": "Default Engine Syntax",
+              "question": "Which line fails in the default njs engine but works with `-n QuickJS`?",
+              "options": {
+                "A": "`var [a, b] = [1, 2];`",
+                "B": "`var s = `t=${1 + 1}`;`",
+                "C": "`var x = y ?? 'default';`",
+                "D": "`var f = (x) => x * 2;`"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.3: destructuring, `class`, spread and `Map` fail in the default engine; template strings, `??` and arrows work in both."
+            },
+            {
+              "id": "s6d1q14",
+              "type": "config",
+              "category": "Cookies",
+              "question": "Which expression gives the value of the `lumina_session` cookie in a request handler?",
+              "options": {
+                "A": "`r.cookies.lumina_session`",
+                "B": "`r.variables.cookie_lumina_session`",
+                "C": "`r.headersIn.lumina_session`",
+                "D": "`ngx.cookie('lumina_session')`"
+              },
+              "answer": "B",
+              "explanation": "Any NGINX variable is readable through `r.variables`; `$cookie_NAME` is NGINX parsing the Cookie header."
+            },
+            {
+              "id": "s6d1q15",
+              "type": "diagnose",
+              "category": "500 From a Cookie",
+              "question": "Clients sending `lumina_session=garbage` get `500`, and the error log says `js exception: TypeError: first argument undefined is not a string or Buffer-like object`. What's the fix?",
+              "options": {
+                "A": "Raise `client_header_buffer_size` so the cookie fits",
+                "B": "Switch to `js_engine qjs`, which turns exceptions into warnings",
+                "C": "Parse the cookie in `try`/`catch`, treating failure as no session",
+                "D": "Add `proxy_intercept_errors on` to the location"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.6: `'garbage'.split('.')[1]` is `undefined`, and `Buffer.from(undefined)` throws. A run-time exception ends that request with 500."
+            },
+            {
+              "id": "s6d1q16",
+              "type": "diagnose",
+              "category": "Missing Map",
+              "question": "A script copied from the web fails `nginx -t` with `ReferenceError: \"Map\" is not defined`. What's going on?",
+              "options": {
+                "A": "The script is missing `import Map from 'map'` at the top",
+                "B": "`Map` needs `js_engine njs` set explicitly",
+                "C": "The script file isn't inside the `js_path` directory",
+                "D": "The default engine has no `Map`: use objects or QuickJS"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.3. The `njs` shell shows which constructs each engine supports."
+            },
+            {
+              "id": "s6d1q17",
+              "type": "diagnose",
+              "category": "No require",
+              "question": "A script runs fine with the default engine, then fails after `js_engine qjs` with `require is not defined`. Why?",
+              "options": {
+                "A": "QuickJS has no `require()`; use `import` instead",
+                "B": "QuickJS needs `js_path` set before it can find modules",
+                "C": "`require` works only inside `js_periodic` handlers",
+                "D": "The crypto module isn't compiled into the QuickJS build"
+              },
+              "answer": "A",
+              "explanation": "In the njs shell, `typeof require` is `function` under njs and `undefined` under QuickJS."
+            },
+            {
+              "id": "s6d1q18",
+              "type": "recall",
+              "category": "Handlers",
+              "question": "Which directive replaces `proxy_pass` with a script that produces the response?",
+              "options": {
+                "A": "`js_set`",
+                "B": "`js_content`",
+                "C": "`js_body_filter`",
+                "D": "`js_preread`"
+              },
+              "answer": "B",
+              "explanation": "`js_content` runs in the content phase; the function answers with `r.return()` or hands the request on."
+            },
+            {
+              "id": "s6d1q19",
+              "type": "recall",
+              "category": "Engines",
+              "question": "What does `njs.engine` return when a location uses `js_engine qjs`?",
+              "options": {
+                "A": "`qjs`",
+                "B": "`njs`",
+                "C": "`QuickJS`",
+                "D": "`quickjs-ng`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.2: `engine=QuickJS`."
+            },
+            {
+              "id": "s6d1q20",
+              "type": "recall",
+              "category": "The Shell",
+              "question": "Which command checks a JavaScript snippet against the QuickJS engine in this lab?",
+              "options": {
+                "A": "`nginx -t -n QuickJS`",
+                "B": "`node --engine quickjs -e 'code'`",
+                "C": "`./lab.sh t qjs`",
+                "D": "`./lab.sh njs -q -n QuickJS -c 'code'`"
+              },
+              "answer": "D",
+              "explanation": "The `njs` shell ships in the image; `-n` picks the engine."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "title": "Signatures, Bodies and Shared State",
+          "questions": [
+            {
+              "id": "s6d2q01",
+              "type": "scenario",
+              "category": "Fail Closed",
+              "question": "The edge container has `LUMINA_KEY` set, but `process.env` in the script is `{}` and every valid session is rejected. Why?",
+              "options": {
+                "A": "NGINX clears the workers' environment; `env LUMINA_KEY;` passes it through",
+                "B": "Docker doesn't pass `-e` variables to a container's main process",
+                "C": "`process.env` is only filled in `js_periodic` handlers",
+                "D": "The key must be base64url-encoded before njs can read it"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1: `\"env\":[]` until `env LUMINA_KEY;` was added."
+            },
+            {
+              "id": "s6d2q02",
+              "type": "scenario",
+              "category": "What env Protects",
+              "question": "The key is in an environment variable instead of `nginx.conf`. Who can still read it?",
+              "options": {
+                "A": "Nobody: Docker encrypts environment variables",
+                "B": "Anyone who can run `docker inspect` on the host",
+                "C": "Anyone who runs `nginx -T` inside the container",
+                "D": "Any client, through the `$env_LUMINA_KEY` variable"
+              },
+              "answer": "B",
+              "explanation": "It keeps the key out of files, git and `nginx -T`, not out of reach of whoever runs the container. Production keys come from a secrets manager."
+            },
+            {
+              "id": "s6d2q03",
+              "type": "scenario",
+              "category": "JWT Checks",
+              "question": "A session's HMAC signature is correct. Which other checks does Lumina's edge make before trusting it?",
+              "options": {
+                "A": "None: a correct signature already proves everything",
+                "B": "The client's address matches an address claim in the token",
+                "C": "The expected algorithm, an `exp` in the future, and a `jti` not revoked",
+                "D": "The token is under 4 KB and contains only base64url"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.1; the lab's `session()` checks all three."
+            },
+            {
+              "id": "s6d2q04",
+              "type": "scenario",
+              "category": "secure_link",
+              "question": "Why might you choose njs over the native `secure_link` module for signed links?",
+              "options": {
+                "A": "`secure_link` can't tell expired links from forged ones",
+                "B": "`secure_link` is only available in NGINX Plus builds",
+                "C": "njs runs faster than a native module written in C",
+                "D": "Native is MD5 with the secret in `nginx.conf`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.2: the native version works, but the secret sits in the configuration file."
+            },
+            {
+              "id": "s6d2q05",
+              "type": "scenario",
+              "category": "Refused Before Origin",
+              "question": "A forged signed link is refused by the njs `download()` handler. Does the application see the request?",
+              "options": {
+                "A": "No: `js_content` answers with 403 before anything is proxied",
+                "B": "Yes: NGINX always proxies first and the script filters the response",
+                "C": "Yes, but with an `X-Refused` header",
+                "D": "Only if the link has expired"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: one valid request reached the application, the refusals never left the edge."
+            },
+            {
+              "id": "s6d2q06",
+              "type": "scenario",
+              "category": "Spoofed X-User",
+              "question": "`location /api/` has `proxy_set_header X-User $session_user;`; `location /` proxies to the same application without it. A client sends `X-User: admin` to `/me`. What does the application receive?",
+              "options": {
+                "A": "No `X-User`: NGINX strips unknown request headers",
+                "B": "`X-User: admin`, passed through untouched",
+                "C": "`X-User` with an empty value",
+                "D": "The `sub` of the session, if there is one"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.1's question. Every location that proxies must set (or clear) the header."
+            },
+            {
+              "id": "s6d2q07",
+              "type": "scenario",
+              "category": "Body Pieces",
+              "question": "A body filter masks card numbers with a regex. On a large response, one card number isn't masked. What's a likely cause?",
+              "options": {
+                "A": "The regex engine stops after the first 64 KB",
+                "B": "`js_body_filter` only sees the first piece of a body",
+                "C": "The number was split across two body pieces",
+                "D": "The header filter ran after the body filter had finished"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.3: pieces have edges. Small JSON responses arrive in one piece; large ones need buffering or a pattern-aware design."
+            },
+            {
+              "id": "s6d2q08",
+              "type": "scenario",
+              "category": "One Worker Fetches",
+              "question": "`js_periodic` refreshes the revocation list on worker 0 only. How do requests on worker 1 see the list?",
+              "options": {
+                "A": "They don't; each worker needs its own `js_periodic` location",
+                "B": "Worker 0 takes over every request that checks the list",
+                "C": "Through a global variable that worker 0 updates",
+                "D": "Through the shared dictionary in shared memory"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.5's question."
+            },
+            {
+              "id": "s6d2q09",
+              "type": "config",
+              "category": "Content-Length",
+              "question": "```nginx\nlocation /api/ {\n    proxy_pass http://stable;\n    js_body_filter lumina.maskCards;\n}\n```\nMasking makes one response 3 bytes longer. What does the client get?",
+              "options": {
+                "A": "The old `Content-Length`, so the JSON is cut 3 bytes short",
+                "B": "A complete response: NGINX recomputes the length itself",
+                "C": "A 502: NGINX detects the length mismatch and gives up",
+                "D": "The unmasked body, because the filter is skipped"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.3: `Content-Length: 229`, and the closing `}` was missing until a header filter deleted the length."
+            },
+            {
+              "id": "s6d2q10",
+              "type": "config",
+              "category": "Empty Header",
+              "question": "```nginx\njs_set $session_user lumina.user;     # returns '' without a valid session\nproxy_set_header X-User $session_user;\n```\nA client without a session sends `X-User: admin`. What reaches the application?",
+              "options": {
+                "A": "`X-User: admin`",
+                "B": "No `X-User` header at all",
+                "C": "`X-User:` with an empty value",
+                "D": "`X-User: anonymous`"
+              },
+              "answer": "B",
+              "explanation": "`proxy_set_header` replaces the client's header, and an empty value means the header isn't sent."
+            },
+            {
+              "id": "s6d2q11",
+              "type": "config",
+              "category": "Handing On",
+              "question": "```js\nfunction orders(r) {\n    // ... validation passes ...\n    r.internalRedirect('@app');\n}\n```\nWhat does `@app` receive?",
+              "options": {
+                "A": "A new GET request without the body",
+                "B": "Only the body, sent as a subrequest",
+                "C": "The original request, body included",
+                "D": "Nothing until the script also calls `r.return()`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.4: the order reached the application as a POST with its 26-byte body."
+            },
+            {
+              "id": "s6d2q12",
+              "type": "config",
+              "category": "Resolver",
+              "question": "```js\nvar reply = await ngx.fetch('http://s6-origin:8016/_revoked');\n```\nThe error log says `no resolver defined`. What's missing?",
+              "options": {
+                "A": "An `upstream s6-origin` block in the http context",
+                "B": "An `env RESOLVER;` line in the main context",
+                "C": "`js_fetch_trusted_certificate` for the origin",
+                "D": "A `resolver`: `ngx.fetch` resolves names at run time"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.5: `resolver 127.0.0.11` (Docker's DNS) fixed it."
+            },
+            {
+              "id": "s6d2q13",
+              "type": "config",
+              "category": "js_set Must Be Sync",
+              "question": "```js\nasync function plan(r) {\n    var reply = await ngx.fetch('http://...');\n    return (await reply.json()).plan;\n}\n```\nUsed as `js_set $plan lumina.plan;`. What happens?",
+              "options": {
+                "A": "An `async operation inside ... variable handler` error, empty value",
+                "B": "It works: NGINX waits for the fetch before proxying",
+                "C": "`nginx -t` refuses the async function at load",
+                "D": "It works once, and the value is cached for the worker"
+              },
+              "answer": "A",
+              "explanation": "`js_set` handlers must be synchronous. Fetch in `js_periodic` into a shared dictionary, then read it in `js_set`."
+            },
+            {
+              "id": "s6d2q14",
+              "type": "config",
+              "category": "Native Signed Links",
+              "question": "```nginx\nsecure_link     $arg_md5,$arg_expires;\nsecure_link_md5 \"$secure_link_expires$uri lumina-native-secret\";\nif ($secure_link = \"\")  { return 403; }\nif ($secure_link = \"0\") { return 410; }\n```\nWhat does a correctly signed link whose `expires` has passed get?",
+              "options": {
+                "A": "`403`: expired links have an empty `$secure_link`",
+                "B": "`410`: `$secure_link` is `0` for a valid but expired link",
+                "C": "`200`: the module doesn't check expiry",
+                "D": "`500`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.2: empty = bad signature, `0` = expired, `1` = good."
+            },
+            {
+              "id": "s6d2q15",
+              "type": "diagnose",
+              "category": "Not Refreshing",
+              "question": "After revoking a session, it still works a minute later. The error log repeats `js: revocation list not refreshed: connect failed`. What does the edge do?",
+              "options": {
+                "A": "Treats every session as revoked until a fetch works",
+                "B": "Reloads the configuration every 2 seconds to retry",
+                "C": "Keeps the last list it fetched, as the `catch` decides",
+                "D": "Stops running `js_periodic` until the next reload"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.5: on a failed fetch, keep the last list and log. Fail open or closed is a policy decision."
+            },
+            {
+              "id": "s6d2q16",
+              "type": "diagnose",
+              "category": "Truncated JSON",
+              "question": "Clients of `/api/account` report `Unexpected end of JSON input` since masking was added. `curl -i` shows `Content-Length: 229`. What's the fix?",
+              "options": {
+                "A": "Increase `proxy_buffer_size` to hold the body",
+                "B": "Mask in a `js_set` variable instead",
+                "C": "Add `chunked_transfer_encoding off` to the location",
+                "D": "Delete `Content-Length` in a `js_header_filter`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.3."
+            },
+            {
+              "id": "s6d2q17",
+              "type": "diagnose",
+              "category": "Key Missing",
+              "question": "Every session is rejected and `createHmac` would throw `key is not a string or Buffer-like object` without the `if (!key) return null;` guard. What's the most likely cause?",
+              "options": {
+                "A": "`process.env.LUMINA_KEY` is undefined in the workers",
+                "B": "The tokens use base64url, which `createHmac` rejects",
+                "C": "The shared dictionary of revoked sessions is full",
+                "D": "The default engine's crypto module lacks SHA-256"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1: without `env LUMINA_KEY;`, the guard made the check fail closed instead of throwing."
+            },
+            {
+              "id": "s6d2q18",
+              "type": "recall",
+              "category": "HMAC",
+              "question": "Which call computes an HMAC-SHA256 in njs?",
+              "options": {
+                "A": "`crypto.hmac('sha256', msg, key).toString('hex')`",
+                "B": "`crypto.createHmac('sha256', key).update(msg).digest()`",
+                "C": "`ngx.crypto.hmac('sha256', key).update(msg)`",
+                "D": "`Buffer.from(msg).hmac('sha256', key)`"
+              },
+              "answer": "B",
+              "explanation": "From the `crypto` module (`import crypto from 'crypto'`)."
+            },
+            {
+              "id": "s6d2q19",
+              "type": "recall",
+              "category": "Shared Dictionary",
+              "question": "How does a script read the `revoked` zone defined by `js_shared_dict_zone zone=revoked:1m;`?",
+              "options": {
+                "A": "`r.variables.revoked`",
+                "B": "`process.shared.revoked`",
+                "C": "`ngx.shared.revoked`",
+                "D": "`njs.zone('revoked')`"
+              },
+              "answer": "C",
+              "explanation": "With `get`, `set`, `has`, `delete`, `keys`, `incr`."
+            },
+            {
+              "id": "s6d2q20",
+              "type": "recall",
+              "category": "Request Body",
+              "question": "In a `js_content` handler, where is the request body as text?",
+              "options": {
+                "A": "`r.body`",
+                "B": "`r.variables.request_body_text`",
+                "C": "`r.headersIn.Body`",
+                "D": "`r.requestText`"
+              },
+              "answer": "D",
+              "explanation": "The body is read before the handler runs; large bodies are read back from a temporary file."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "title": "Routing, TCP and the Price of a Script & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s6d3q01",
+              "type": "scenario",
+              "category": "Plain Cookie Routing",
+              "question": "`map $cookie_lumina_plan $plan_pool { beta beta; default stable; }` routes `/api/` with `proxy_pass http://$plan_pool;`. Who reaches the beta pool?",
+              "options": {
+                "A": "Anyone who sends the cookie `lumina_plan=beta`",
+                "B": "Only users whose session says `plan: beta`",
+                "C": "Nobody: `proxy_pass` can't use variables",
+                "D": "Only clients on the beta network"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1: `map` can't check a signature, so routing on a verified claim needs `js_set`."
+            },
+            {
+              "id": "s6d3q02",
+              "type": "scenario",
+              "category": "Routing Everywhere",
+              "question": "`/api/` uses `proxy_pass http://$pool;`, but beta customers' orders (handled by `js_content` and `internalRedirect('@app')`) reach stable. Why?",
+              "options": {
+                "A": "`internalRedirect` always resets variables",
+                "B": "`@app` has its own `proxy_pass`, which still names `stable`",
+                "C": "`js_set` variables aren't available in named locations",
+                "D": "POST requests can't be routed by a variable"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.1's last result. Apply routing and identity in every location that proxies."
+            },
+            {
+              "id": "s6d3q03",
+              "type": "scenario",
+              "category": "Revocation for Free",
+              "question": "Carol has a valid beta session, then her `jti` is revoked. Where does her next request go, and why?",
+              "options": {
+                "A": "Beta: routing only looks at the `plan` claim",
+                "B": "Nowhere: revoked sessions get 403 at the edge",
+                "C": "Stable: `pool()` relies on `session()`, which now fails",
+                "D": "Beta, until the edge is reloaded"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.1."
+            },
+            {
+              "id": "s6d3q04",
+              "type": "scenario",
+              "category": "Silent Client",
+              "question": "A TCP client connects to a `js_preread` server and sends nothing. With no `preread_timeout` set, how long does the edge hold the connection?",
+              "options": {
+                "A": "Forever",
+                "B": "Until `proxy_timeout`, 10 minutes",
+                "C": "0: preread closes idle connections at once",
+                "D": "Up to 30 seconds, the default `preread_timeout`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.2: still open after 10 s; with `preread_timeout 5s`, closed at 5.0 s."
+            },
+            {
+              "id": "s6d3q05",
+              "type": "scenario",
+              "category": "Denied Connection",
+              "question": "`s.deny()` is called in a `js_preread` handler. Does the upstream see a connection?",
+              "options": {
+                "A": "No: the connection is closed before an upstream connection is made",
+                "B": "Yes, briefly, then NGINX closes both",
+                "C": "Yes, and the upstream receives the bytes read so far",
+                "D": "Only if `proxy_pass` uses a variable"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: the intake counted only the valid device."
+            },
+            {
+              "id": "s6d3q06",
+              "type": "scenario",
+              "category": "Blocking",
+              "question": "Two requests each run a 3-second CPU loop in njs on a two-worker edge. What happens to a quick `/api/ping` sent meanwhile?",
+              "options": {
+                "A": "It's answered at once by a separate njs thread",
+                "B": "It waits until a worker finishes its loop, about the remaining spin time",
+                "C": "It's answered at once, because njs runs outside the worker",
+                "D": "It gets 503 at once"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3: every ping took about 2.7 s. A worker runs one thing at a time."
+            },
+            {
+              "id": "s6d3q07",
+              "type": "scenario",
+              "category": "Not Blocking",
+              "question": "Which of these does NOT block the worker while it waits?",
+              "options": {
+                "A": "A `while` loop until a time has passed",
+                "B": "A regular expression over a 50 MB body",
+                "C": "`await ngx.fetch(...)`",
+                "D": "Computing an HMAC over each of 100,000 list entries per request"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.3: awaiting I/O hands control back to the event loop; CPU work doesn't."
+            },
+            {
+              "id": "s6d3q08",
+              "type": "scenario",
+              "category": "TLS by Hostname",
+              "question": "You need to route TLS connections to different backends by SNI, without decrypting. What do you use?",
+              "options": {
+                "A": "`js_preread`, parsing the ClientHello by hand",
+                "B": "`js_body_filter` inside the stream block",
+                "C": "An `http` server with a certificate per name",
+                "D": "`ssl_preread` + `map $ssl_preread_server_name`"
+              },
+              "answer": "D",
+              "explanation": "Concept 1.2 and the native-vs-script table."
+            },
+            {
+              "id": "s6d3q09",
+              "type": "config",
+              "category": "Stream Import",
+              "question": "```nginx\nhttp   { js_path /lab/; js_import lumina from lumina.js; ... }\nstream { server { listen 8097; js_preread lumina.telemetry; proxy_pass telemetry; } }\n```\nWhat does `nginx -t` say?",
+              "options": {
+                "A": "It fails: the stream block needs its own `js_import`",
+                "B": "It passes: imports are global",
+                "C": "It passes, but telemetry is never called",
+                "D": "It fails: `js_preread` isn't valid in stream"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: the stream module doesn't see the http block's imports."
+            },
+            {
+              "id": "s6d3q10",
+              "type": "config",
+              "category": "Upload Handler",
+              "question": "```js\ns.on('upload', function (data, flags) {\n    buf += data;\n    if (buf.indexOf('\\n') == -1) { return; }\n    ...\n});\n```\nWhat does returning without `s.allow()` or `s.deny()` do?",
+              "options": {
+                "A": "Denies the connection, as if `s.deny()` was called",
+                "B": "Waits: the handler runs again when more bytes arrive",
+                "C": "Allows the connection with the bytes read so far",
+                "D": "Throws, because each call must make a decision"
+              },
+              "answer": "B",
+              "explanation": "The handler decides only when it has a full line; until then it waits (bounded by `preread_timeout`)."
+            },
+            {
+              "id": "s6d3q11",
+              "type": "config",
+              "category": "proxy_pass Variable",
+              "question": "```nginx\njs_set $pool lumina.pool;     # returns 'beta' or 'stable'\nupstream stable { server s6-origin:8016; }\nupstream beta   { server s6-origin:8026; }\nlocation /api/ { proxy_pass http://$pool; }\n```\nWhat does `http://$pool` resolve to when `pool()` returns `beta`?",
+              "options": {
+                "A": "A DNS lookup for a host called `beta`",
+                "B": "The first upstream defined",
+                "C": "The `beta` upstream block",
+                "D": "An error: upstream names can't come from variables"
+              },
+              "answer": "C",
+              "explanation": "A variable in `proxy_pass` that matches an upstream name selects that group, with no resolver needed."
+            },
+            {
+              "id": "s6d3q12",
+              "type": "config",
+              "category": "preread_timeout",
+              "question": "```nginx\nserver {\n    listen 8097;\n    preread_timeout 5s;\n    js_preread lumina.telemetry;\n    proxy_pass telemetry;\n}\n```\nA client connects and sends nothing. What happens?",
+              "options": {
+                "A": "Forwarded to the intake, empty, after 5 seconds",
+                "B": "The intake's own 2-second timeout closes it",
+                "C": "The edge waits the default 30 seconds anyway",
+                "D": "Closed after 5 seconds; the intake is never contacted"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.2: `closed without an answer after 5.0s`, intake count 0."
+            },
+            {
+              "id": "s6d3q13",
+              "type": "config",
+              "category": "Greeting Check",
+              "question": "The telemetry handler compares `f[2]` with the first 16 hex digits of `HMAC(key, f[1])`. A device sends `HELLO dev-B <a valid sig for dev-A>`. What happens?",
+              "options": {
+                "A": "Denied: the signature must match the claimed name",
+                "B": "Allowed: the signature is valid for a real device",
+                "C": "Allowed, and logged under `dev-A`'s identity",
+                "D": "Held until a second line arrives to confirm"
+              },
+              "answer": "A",
+              "explanation": "The test's \"another device's signature\" case. Binding the signature to the claimed name stops borrowing."
+            },
+            {
+              "id": "s6d3q14",
+              "type": "config",
+              "category": "Native Body Rewrite",
+              "question": "You need to replace the fixed string `http://internal.lumina` with `https://www.lumina.example` in HTML responses. Native or script?",
+              "options": {
+                "A": "Script: only `js_body_filter` can change bodies",
+                "B": "Native: `sub_filter` handles fixed strings",
+                "C": "Script: `sub_filter` needs NGINX Plus",
+                "D": "Neither: response bodies can't be changed in a proxy"
+              },
+              "answer": "B",
+              "explanation": "The native-vs-script table: patterns and structure-aware edits are where njs earns its place."
+            },
+            {
+              "id": "s6d3q15",
+              "type": "diagnose",
+              "category": "Stall",
+              "question": "Monitoring shows every request to the edge stalling for 2–3 seconds at a time, while CPU on two cores sits at 100%. A new njs function parses uploaded files with a regex. What's the likely story?",
+              "options": {
+                "A": "The shared dictionary of revoked sessions is full",
+                "B": "`preread_timeout` is too long",
+                "C": "The regex blocks each worker it runs on",
+                "D": "The resolver is slow to answer `ngx.fetch`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.3's lesson. Limit bodies, move heavy work off the request path, or don't script it."
+            },
+            {
+              "id": "s6d3q16",
+              "type": "diagnose",
+              "category": "Wrong Pool",
+              "question": "A beta customer is sent to stable. `/edge/info` with her cookie shows `\"user\": null`. What should you check first?",
+              "options": {
+                "A": "The health of the `beta` upstream servers",
+                "B": "The `split_clients` percentages for beta",
+                "C": "Whether `proxy_pass` uses HTTP/1.1 to beta",
+                "D": "Why her session fails verification"
+              },
+              "answer": "D",
+              "explanation": "`pool()` is built on `session()`; an invalid session always routes to stable."
+            },
+            {
+              "id": "s6d3q17",
+              "type": "diagnose",
+              "category": "Refused Devices",
+              "question": "After a key rotation, every device's telemetry connection is closed at once, and the error log fills with `telemetry refused: HELLO ...`. What happened?",
+              "options": {
+                "A": "The devices still sign with the old key",
+                "B": "`preread_timeout` is too short for the devices",
+                "C": "The telemetry intake behind the edge is down",
+                "D": "`js_preread` must be reloaded after a key change"
+              },
+              "answer": "A",
+              "explanation": "One key for many jobs makes rotation all-or-nothing (Extra 6.2): accept old and new during a rotation."
+            },
+            {
+              "id": "s6d3q18",
+              "type": "recall",
+              "category": "Stream Session",
+              "question": "What does a `js_preread` function receive as its argument?",
+              "options": {
+                "A": "The request object, `r`",
+                "B": "The stream session, `s`",
+                "C": "The raw client socket",
+                "D": "The chosen upstream address"
+              },
+              "answer": "B",
+              "explanation": "No headers or cookies in stream: the session has addresses and data events."
+            },
+            {
+              "id": "s6d3q19",
+              "type": "recall",
+              "category": "Allow",
+              "question": "Which call lets a stream connection through to the upstream from a preread handler?",
+              "options": {
+                "A": "`s.pass()`",
+                "B": "`s.done(403)`",
+                "C": "`s.allow()`",
+                "D": "`s.proxy()`"
+              },
+              "answer": "C",
+              "explanation": "`s.deny()` closes it; `s.allow()` finishes the phase successfully."
+            },
+            {
+              "id": "s6d3q20",
+              "type": "recall",
+              "category": "Data Event",
+              "question": "Which event delivers client bytes to a stream handler?",
+              "options": {
+                "A": "`download`",
+                "B": "`data`",
+                "C": "`preread`",
+                "D": "`upload`"
+              },
+              "answer": "D",
+              "explanation": "`s.on('upload', ...)`; `download` is data from the upstream."
+            }
+          ]
+        }
+      ]
     }
   ]
 }

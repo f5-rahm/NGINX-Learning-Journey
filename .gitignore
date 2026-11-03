@@ -238,3 +238,6 @@ sprints/*/lab/acme/state/
 sprints/*/lab/acme/pebble/
 sprints/*/lab/plus/state/*
 !sprints/*/lab/plus/state/.gitkeep
+
+# Sprint 6+: lab signing keys
+sprints/*/lab/secrets/

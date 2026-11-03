@@ -164,9 +164,18 @@ S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 * **Lab:** Lumina API Gateway, in containers with a client that sends from any lab address, validated by `test_sprint05.sh` (13 assertions). Details: [`sprints/sprint-5/README.md`](sprints/sprint-5/README.md).
 
 ### Sprint 6: Programmability & Extensibility (Nov 2–6, 3 Days)
-* **Focus:** Custom business logic at the edge using the NGINX JavaScript (`njs`) engine.
-* **Key Topics:** The `njs` execution model (synchronous, VM-per-request, memory safety), `js_import` and `js_set`, inspecting request/response headers and bodies, generating dynamic HMAC signatures, and conditional upstream routing based on cookie claims.
-* **Enterprise Side Quest:** Comparing `njs` with native OpenResty/Lua: performance, memory footprints, and security attack surfaces.
+* **Focus:** Custom business logic at the edge with the NGINX JavaScript engine (njs 1.0.1), and knowing when a native directive is the better tool.
+* **Daily Structure:**
+  * **Day 1:** How njs runs. A module inside the worker, compiled at configuration load; `js_content`, `js_set` (once per request, only when used), the two engines (`njs`: a fresh context per request; QuickJS: reused contexts, globals per worker), the JavaScript the default engine supports, exceptions as `500`, decoding vs verifying. Quiz: [Day 1 Quiz](quiz.html?sprint=6&day=1).
+  * **Day 2:** Signatures, bodies and shared state. HMAC/JWT checks with a key passed through `env`, `secure_link` vs njs signed links, `X-User` and spoofing, `js_header_filter`/`js_body_filter` and `Content-Length`, request-body validation with `internalRedirect`, `ngx.fetch` + `js_periodic` + `js_shared_dict_zone` as a revocation feed. Quiz: [Day 2 Quiz](quiz.html?sprint=6&day=2).
+  * **Day 3:** Routing on a verified cookie claim (`proxy_pass http://$pool`), stream njs (`js_preread`, `preread_timeout`, native `ssl_preread`), what a blocking script costs, native vs script, then the sprint lab. Quiz: [Day 3 Quiz](quiz.html?sprint=6&day=3).
+* **Enterprise Side Quest:** moves to the **Side Quest Gauntlet** below: njs with the NGINX Plus key-value store and API, and njs compared with OpenResty/Lua (performance, memory footprints, and security attack surfaces).
+* **Lab:** Lumina Edge Functions, in containers, validated by `test_sprint06.sh` (10 assertions). Details: [`sprints/sprint-6/README.md`](sprints/sprint-6/README.md).
+
+### Side Quest Gauntlet: Sprints 4–6 (after Sprint 6)
+* **Format:** one "Black Friday war room" business simulation that combines the Sprint 4, 5 and 6 enterprise side quests: incidents arrive as tickets, with an SLA timer and a scoreboard. Written up as a blog post and packaged so it can be released as a community challenge.
+* **Stages:** cache purge on demand and cache metrics (Sprint 4), a live denylist and cluster-wide limits (Sprint 5), and njs with Plus key-value data and an OpenResty/Lua comparison (Sprint 6).
+* **Editions:** the public edition is open source only, with OSS equivalents for the Plus stages; the private run keeps NGINX Plus. A combined enterprise quiz covers Sprints 4–6.
 
 ### Sprint 7: Security Hardening & Zero Trust (Nov 9–13, 3 Days)
 * **Focus:** Identity verification, client authentication, and access control.
