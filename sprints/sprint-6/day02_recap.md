@@ -6,13 +6,13 @@ Day 1 put JavaScript inside NGINX. Day 2 gave it real edge work to do: verify si
 
 The session cookie is a signed token. Checking it at the edge takes a few lines of njs: recompute the HMAC-SHA256, compare, then check the expiry and whether the session has been revoked. A correct signature on its own isn't enough.
 
-The more interesting part was the key. It comes from the platform as an environment variable, not from `nginx.conf`. NGINX starts its workers with an empty environment, so the script saw nothing until one `env LUMINA_KEY;` line let that single variable through. Because the code checks for a missing key first, it failed closed (every session refused) instead of crashing with a 500 on every request. That only moves the key from the config to the container, though. Real secret storage gets its own sprint later.
+The more interesting part was the key. It comes from the platform as an environment variable, not from `nginx.conf`. NGINX starts its workers with an empty environment, so the script saw nothing until one `env LUMINA_KEY;` line let that single variable through. Because the code checks for a missing key first, it failed closed (every session refused) instead of crashing with a 500 on every request. That only moves the key from the config to the container, though. On BIG-IP the device owns the secret (an iFile, or the FIPS/NetHSM key store for the serious cases). Here the platform injects it, and NGINX's only job is to let it through. Real secret storage gets its own sprint later.
 
-Once a session is verified, the edge tells the application who the user is with `proxy_set_header X-User`. That **replaces** whatever the client sent, and an empty value means no header at all. But it only applies to the location it's written in. A path served by another location passed a client's own `X-User: admin` straight through to the application. A header the application trusts has to be set, or cleared, everywhere the application can be reached.
+Once a session is verified, the edge tells the application who the user is with `proxy_set_header X-User`. That **replaces** whatever the client sent, and an empty value means no header at all. But it only applies to the location it's written in. An `HTTP::header replace` in `HTTP_REQUEST` covers the whole virtual server; `proxy_set_header` covers one location. A path served by another location passed a client's own `X-User: admin` straight through to the application. A header the application trusts has to be set, or cleared, everywhere the application can be reached.
 
 ## Native when it's enough
 
-NGINX already has signed links: `secure_link` worked with no script at all. The catch is in the configuration: the secret sits in `nginx.conf` in plain text (in git, in backups, in every `nginx -T` dump), and the hash is MD5. For low-value links, native wins. When policy requires SHA-256 and a key kept outside the config, the script does the check and then hands the request to a **named location** (`@files`), which clients can't reach directly. The script decides; configuration does the proxying.
+NGINX already has signed links: `secure_link` worked with no script at all. The catch is in the configuration: the secret sits in `nginx.conf` in plain text (in git, in backups, in every `nginx -T` dump), and the hash is MD5. For low-value links, native wins. When policy requires SHA-256 and a key kept outside the config, the script does the check and then hands the request to a **named location** (`@files`), which clients can't reach directly. The script decides; configuration does the proxying. It's the `pool` line at the end of an iRule, except the script can't pick the pool itself, so it hands the request to a piece of config that can.
 
 One detail I liked: check the signature *before* the expiry, so a forged link learns nothing, not even that it's expired.
 
@@ -29,11 +29,11 @@ The model is simple: one handler makes the response (`js_content`, `proxy_pass` 
 - **Filters can't wait.** An `await` in a filter gives the client an empty reply. Lookups belong earlier.
 - **Compression blinds a body filter.** When the client asked for gzip, the filter saw compressed bytes and masked 0 of 3,000 cards. The data leaked. Asking the origin for plain text fixed it.
 
-Coming from iRules, where you explicitly collect and release a payload, the shift is that njs streams by default. Every piece goes out unless the script holds it back.
+Coming from iRules, this was the biggest shift of the day. `HTTP::collect` is opt-in: the response waits, headers included, until `HTTP::release`, so the iRule can still fix the length after rewriting the payload. njs streams by default: every piece goes out unless the script holds it back, and the headers are already gone either way. It's closer to a Stream profile than to collect. Holding back a piece is the collect, a final `r.sendBuffer()` is the release, and `r.done()` is `STREAM::disable`. Like a Stream profile with Rechunk, NGINX handles the framing once the length is gone, but the script has to remove it.
 
 ## Reading a request, then letting it through
 
-For request bodies there's no filter. `js_content` gets the whole body before it runs (a 300 KB order was spooled to disk and still validated). After checking it, the script has two ways on:
+For request bodies there's no filter. `js_content` gets the whole body before it runs (a 300 KB order was spooled to disk and still validated). That's the `HTTP::collect` in `HTTP_REQUEST_DATA` dance, done by NGINX before the script starts. After checking it, the script has two ways on:
 - `r.internalRedirect('@app')` passes the **same** request (method, headers, body) on, and the application's answer goes straight back to the client.
 - `r.subrequest()` makes a **second** request and hands the answer to the script. It's the right tool when the script needs the answer to decide something.
 
@@ -43,7 +43,9 @@ A signed session stays valid until it expires, even after a logout. The fix is a
 - `js_periodic` runs the refresh on a timer, with no request involved, and only on worker 0, so the application gets one fetch, not one per worker.
 - `js_shared_dict_zone` puts the list in shared memory, where every worker reads it as `ngx.shared.revoked`.
 
-`ngx.fetch` turned out to be its own HTTP client, separate from NGINX's upstreams, so it needed a `resolver` before it could find the origin by name. And when the fetch fails, the script keeps the last list it had. That's fail-open on stale data, and it's a policy decision worth writing down, not a default to inherit.
+On BIG-IP that's `table` for the store and `after -periodic` or iCall for the timer.
+
+The fetch itself is where the comparison gets interesting. A sideband connection (`connect`/`send`/`recv`) is raw TCP: the iRule writes the HTTP request and parses the reply itself, but it can connect to a virtual server and use its pools, monitors and SSL profiles. `ngx.fetch` is the opposite trade: a real HTTP client (headers, JSON, TLS built in) that connects straight to a host and skips NGINX's upstreams. It even needed its own `resolver` before it could find the origin by name. And when the fetch fails, the script keeps the last list it had. That's fail-open on stale data, and it's a policy decision worth writing down, not a default to inherit.
 
 ## Quiz: 8 out of 10
 
