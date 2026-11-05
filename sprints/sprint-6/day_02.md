@@ -52,7 +52,7 @@ Native is the right answer when MD5 is acceptable and the secret can live in the
 * **`js_periodic function interval=2s`** (in a location, never reached by requests) runs a function on a timer, with no request. By default it runs **on worker 0 only**, so only one worker does the work; the shared dictionary carries the result to all of them.
 * Together they make a **pull-based policy feed**: every few seconds, fetch a list (revoked sessions, blocked keys, feature flags) and put it where every request can check it in microseconds.
 * If the fetch fails, keep the last list and log. Whether that's the right failure mode (fail open on stale data, or fail closed) is a policy decision. Write it down.
-* BIG-IP: `table` for the store, `after -periodic` or an iCall script for the timer, `HTTP::sideband` or an iCall-pushed data group for the fetch.
+* BIG-IP: `table` for the store, `after -periodic` or an iCall script for the timer, a sideband connection (`connect`/`send`/`recv`) or an iCall-pushed data group for the fetch.
 
 ### 1.6 BIG-IP Lens
 
@@ -63,7 +63,7 @@ Native is the right answer when MD5 is acceptable and the secret can live in the
 | Signed URLs | iRule (or APM) | `secure_link` (MD5) or njs (any hash) |
 | Rewrite response bodies | Stream profile, `HTTP::payload replace` | `js_header_filter` + `js_body_filter` |
 | Inspect request bodies | `HTTP::collect` in `HTTP_REQUEST_DATA` | `r.requestText` in `js_content` |
-| Call another service | `HTTP::sideband` / `SIDEBAND::` | `ngx.fetch`, `r.subrequest` |
+| Call another service | sideband (`connect`, `send`, `recv`) | `ngx.fetch`, `r.subrequest` |
 | Device-wide state | `table` | `js_shared_dict_zone` |
 | Timers | `after -periodic`, iCall | `js_periodic` |
 
@@ -175,8 +175,10 @@ r /me -H 'X-User: admin' | grep x_user
 <details>
 <summary>Three of these are right. Which one isn't, and why?</summary>
 
-* `/api/me`: Alice's session gives `"x_user": "alice"`, and a client's own `X-User: admin` becomes `null`, with or without a forged session. `proxy_set_header X-User $session_user` **replaces** whatever the client sent, and an empty value means the header isn't sent at all.
-* `/me` goes through `location /`, which has no `proxy_set_header X-User`, so the client's `X-User: admin` reaches the application untouched. Any location that proxies to an application that trusts `X-User` must set it (or clear it). Put the line at `server` level, or in every location (it's inherited only by locations with no `proxy_set_header` of their own, like `add_header`).
+**The fourth.** `/me` with `X-User: admin` reaches the application as `"x_user": "admin"`: a client typed a header and the app now believes it's admin.
+
+* **The three `/api/me` requests are right.** They go through `location /api/`, where `proxy_set_header X-User $session_user` **replaces** whatever the client sent. Alice's valid session gives `alice`. Without a session, or with a forged one, `$session_user` is empty, and an empty value means the header isn't sent at all, so the app sees `null`.
+* **`/me` goes through `location /`**, which has no `proxy_set_header X-User`, so the client's header passes through untouched. Any location that proxies to an application that trusts `X-User` must set it (or clear it). Put the line at `server` level, or in every location: it's inherited only by locations with no `proxy_set_header` of their own (like `add_header`).
 </details>
 
 ### Activity 3.2: Signed Links, Native and Scripted (8 min)

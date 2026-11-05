@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="904" viewBox="0 0 1200 904" font-family="Lato" xml:space="preserve">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#78716C"/></marker></defs>
+<rect x="0" y="0" width="1200" height="904" fill="#FFFFFF"/>
+<text x="24" y="46" font-size="28" fill="#1F1F1F" text-anchor="start" font-weight="bold">Who builds the response, and who changes it</text>
+<text x="24" y="78" font-size="15.5" fill="#555555" text-anchor="start">njs in an NGINX location: one handler makes the response, and two filters can change it on the way out.</text>
+<text x="24" y="99" font-size="15.5" fill="#555555" text-anchor="start">Each has its own timing, and the timing is where the limits come from.</text>
+<rect x="24" y="202" width="96" height="90" rx="8" fill="#F5F5F4" stroke="#D6D3D1" stroke-width="1"/>
+<text x="72.0" y="242" font-size="14" fill="#1F1F1F" text-anchor="middle" font-weight="bold">Client</text>
+<text x="72.0" y="262" font-size="12" fill="#555555" text-anchor="middle">request</text>
+<rect x="148" y="140" width="300" height="200" rx="8" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.5"/>
+<text x="162" y="164" font-size="11.5" fill="#1D4ED8" text-anchor="start" font-weight="bold">MAKES THE RESPONSE (ONE PER LOCATION)</text>
+<text x="162" y="190" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">js_content</text>
+<text x="162" y="220" font-size="13" fill="#1F1F1F" text-anchor="start">Or <tspan font-family="DejaVu Sans Mono" font-size="12">proxy_pass</tspan>, or a static file.</text>
+<text x="162" y="240" font-size="13" fill="#1F1F1F" text-anchor="start">The request body is already read:</text>
+<text x="162" y="260" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12">r.requestText</tspan>.</text>
+<text x="162" y="288" font-size="13" fill="#1F1F1F" text-anchor="start">Let it through: <tspan font-family="DejaVu Sans Mono" font-size="12">r.internalRedirect()</tspan></text>
+<text x="162" y="308" font-size="13" fill="#1F1F1F" text-anchor="start">Ask first: <tspan font-family="DejaVu Sans Mono" font-size="12">r.subrequest()</tspan></text>
+<rect x="472" y="140" width="268" height="200" rx="8" fill="#F0FDF4" stroke="#15803D" stroke-width="1.5"/>
+<text x="486" y="164" font-size="11.5" fill="#15803D" text-anchor="start" font-weight="bold">CHANGES THE HEADERS</text>
+<text x="486" y="190" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">js_header_filter</text>
+<text x="486" y="220" font-size="13" fill="#1F1F1F" text-anchor="start">Runs once, when headers arrive.</text>
+<text x="486" y="240" font-size="13" fill="#1F1F1F" text-anchor="start">Edits <tspan font-family="DejaVu Sans Mono" font-size="12">r.headersOut</tspan>.</text>
+<text x="486" y="268" font-size="13" fill="#1F1F1F" text-anchor="start">Body will change size?</text>
+<text x="486" y="288" font-size="13" fill="#1F1F1F" text-anchor="start">Delete Content-Length here.</text>
+<rect x="792" y="140" width="270" height="200" rx="8" fill="#FFF7ED" stroke="#B45309" stroke-width="1.5"/>
+<text x="806" y="164" font-size="11.5" fill="#B45309" text-anchor="start" font-weight="bold">CHANGES THE BODY</text>
+<text x="806" y="190" font-size="17" fill="#1F1F1F" text-anchor="start" font-weight="bold" font-family="DejaVu Sans Mono">js_body_filter</text>
+<text x="806" y="220" font-size="13" fill="#1F1F1F" text-anchor="start">Runs per piece: <tspan font-family="DejaVu Sans Mono" font-size="12">(r, data, flags)</tspan>.</text>
+<text x="806" y="240" font-size="13" fill="#1F1F1F" text-anchor="start">Passes data on: <tspan font-family="DejaVu Sans Mono" font-size="12">r.sendBuffer()</tspan>.</text>
+<text x="806" y="260" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12">flags.last</tspan> marks the final piece.</text>
+<text x="806" y="288" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12">r.done()</tspan>: the rest goes through</text>
+<text x="806" y="308" font-size="13" fill="#1F1F1F" text-anchor="start">without the filter.</text>
+<rect x="1086" y="202" width="90" height="90" rx="8" fill="#F5F5F4" stroke="#D6D3D1" stroke-width="1"/>
+<text x="1131.0" y="242" font-size="14" fill="#1F1F1F" text-anchor="middle" font-weight="bold">Client</text>
+<text x="1131.0" y="262" font-size="12" fill="#555555" text-anchor="middle">response</text>
+<line x1="124" y1="240.0" x2="145" y2="240.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="448" y1="240.0" x2="469" y2="240.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="742" y1="240.0" x2="789" y2="240.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="1062" y1="240.0" x2="1083" y2="240.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<line x1="766" y1="128" x2="766" y2="352" stroke="#B91C1C" stroke-width="1.5" stroke-dasharray="5,4"/>
+<text x="766" y="122" font-size="11.5" fill="#B91C1C" text-anchor="middle" font-weight="bold">headers sent</text>
+<line x1="472" y1="362" x2="1062" y2="362" stroke="#A8A29E" stroke-width="1.2"/>
+<line x1="472" y1="356" x2="472" y2="362" stroke="#A8A29E" stroke-width="1.2"/>
+<line x1="1062" y1="356" x2="1062" y2="362" stroke="#A8A29E" stroke-width="1.2"/>
+<text x="767" y="382" font-size="12.5" fill="#555555" text-anchor="middle">Filters work on any response: proxied, static, or one js_content made. They must be synchronous.</text>
+<text x="24" y="424" font-size="20" fill="#1F1F1F" text-anchor="start" font-weight="bold">Nuances and limits</text>
+<rect x="214" y="410" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="237" y="423" font-size="13.5" fill="#1F1F1F" text-anchor="start">breaks a response or leaks data</text>
+<rect x="463.20000000000005" y="410" width="16" height="16" rx="3" fill="#FFF7ED" stroke="#B45309" stroke-width="1.5"/>
+<text x="486.20000000000005" y="423" font-size="13.5" fill="#1F1F1F" text-anchor="start">a limit to design around</text>
+<rect x="669.0" y="410" width="16" height="16" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+<text x="692.0" y="423" font-size="13.5" fill="#1F1F1F" text-anchor="start">good to know</text>
+<rect x="24" y="446" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="446" width="6" height="96" rx="0" fill="#B91C1C" stroke="none" stroke-width="1"/>
+<text x="44" y="473" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Headers leave before the body filter runs</text>
+<text x="44" y="498" font-size="13" fill="#1F1F1F" text-anchor="start">A header set in <tspan font-family="DejaVu Sans Mono" font-size="12">js_body_filter</tspan> was ignored: "headers were already sent".</text>
+<text x="44" y="518" font-size="13" fill="#1F1F1F" text-anchor="start">Nothing the body filter finds can change the status or headers any more.</text>
+<rect x="606" y="446" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="606" y="446" width="6" height="96" rx="0" fill="#B91C1C" stroke="none" stroke-width="1"/>
+<text x="626" y="473" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">A size change needs the length gone</text>
+<text x="626" y="498" font-size="13" fill="#1F1F1F" text-anchor="start">Masking grew a 229-byte body to 232. With Content-Length kept, the client read</text>
+<text x="626" y="518" font-size="13" fill="#1F1F1F" text-anchor="start">229 bytes: invalid JSON, no error anywhere. Deleted, NGINX sends it chunked.</text>
+<rect x="24" y="554" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="554" width="6" height="96" rx="0" fill="#B45309" stroke="none" stroke-width="1"/>
+<text x="44" y="581" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">The body arrives in pieces</text>
+<text x="44" y="606" font-size="13" fill="#1F1F1F" text-anchor="start">A 228 KB response took 57 calls. Masking each piece caught 5,978 of 6,000 card</text>
+<text x="44" y="626" font-size="13" fill="#1F1F1F" text-anchor="start">numbers: 22 were split across two pieces. A small JSON reply fits in one.</text>
+<rect x="606" y="554" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="606" y="554" width="6" height="96" rx="0" fill="#B45309" stroke="none" stroke-width="1"/>
+<text x="626" y="581" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Buffering is yours to do, and to limit</text>
+<text x="626" y="606" font-size="13" fill="#1F1F1F" text-anchor="start">Holding pieces until <tspan font-family="DejaVu Sans Mono" font-size="12">flags.last</tspan> caught 6,000 of 6,000. There's no size cap, and</text>
+<text x="626" y="626" font-size="13" fill="#1F1F1F" text-anchor="start">a global buffer is per request only on the default engine, not QuickJS.</text>
+<rect x="24" y="662" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="662" width="6" height="96" rx="0" fill="#B91C1C" stroke="none" stroke-width="1"/>
+<text x="44" y="689" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Filters can't wait</text>
+<text x="44" y="714" font-size="13" fill="#1F1F1F" text-anchor="start">An <tspan font-family="DejaVu Sans Mono" font-size="12">await</tspan>, or even an <tspan font-family="DejaVu Sans Mono" font-size="12">ngx.fetch</tspan> nobody waits for, in either filter: "async</text>
+<text x="44" y="734" font-size="13" fill="#1F1F1F" text-anchor="start">operation inside ... filter" and an empty reply. Look things up earlier.</text>
+<rect x="606" y="662" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="606" y="662" width="6" height="96" rx="0" fill="#B91C1C" stroke="none" stroke-width="1"/>
+<text x="626" y="689" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">A compressed response blinds the filter</text>
+<text x="626" y="714" font-size="13" fill="#1F1F1F" text-anchor="start">The client asked for gzip, the origin compressed: 0 of 3,000 cards masked.</text>
+<text x="626" y="734" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12">proxy_set_header Accept-Encoding ""</tspan> brought back plain text to filter.</text>
+<rect x="24" y="770" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="24" y="770" width="6" height="96" rx="0" fill="#6B7280" stroke="none" stroke-width="1"/>
+<text x="44" y="797" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">One content handler per location</text>
+<text x="44" y="822" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12">js_content</tspan> replaces <tspan font-family="DejaVu Sans Mono" font-size="12">proxy_pass</tspan>. To decide and then proxy, hand the same</text>
+<text x="44" y="842" font-size="13" fill="#1F1F1F" text-anchor="start">request on with <tspan font-family="DejaVu Sans Mono" font-size="12">r.internalRedirect('@app')</tspan>; its response goes straight out.</text>
+<rect x="606" y="770" width="570" height="96" rx="6" fill="#FFFFFF" stroke="#D6D3D1" stroke-width="1"/>
+<rect x="606" y="770" width="6" height="96" rx="0" fill="#6B7280" stroke="none" stroke-width="1"/>
+<text x="626" y="797" font-size="15" fill="#1F1F1F" text-anchor="start" font-weight="bold">Request bodies have no filter</text>
+<text x="626" y="822" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12">js_content</tspan> gets the whole body before it runs (a 300 KB order was spooled to</text>
+<text x="626" y="842" font-size="13" fill="#1F1F1F" text-anchor="start">disk and still checked). Nothing streams through a script on the way in.</text>
+<text x="24" y="890" font-size="12" fill="#555555" text-anchor="start">Measured on nginx 1.31.6 with njs 1.0.1 (nginx:mainline), in the lab and in scratch containers.</text>
+<text x="1176" y="890" font-size="12" fill="#555555" text-anchor="end">NGINX Learning Journey · Sprint 6, Day 2</text>
+</svg>

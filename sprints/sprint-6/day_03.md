@@ -67,7 +67,7 @@ Native directives can't throw, are written in C, and are understood by every NGI
 | `HTTP::collect` / `HTTP::payload` | `r.requestText`; `js_header_filter` + `js_body_filter` |
 | `table` | `js_shared_dict_zone` |
 | `after -periodic`, iCall | `js_periodic` |
-| `HTTP::sideband` | `ngx.fetch`, `r.subrequest` |
+| sideband (`connect`/`send`/`recv`) | `ngx.fetch`, `r.subrequest` |
 | `CLIENT_DATA` + `TCP::collect` + `reject` | `js_preread` + `s.on('upload')` + `s.deny()` |
 | "iRules run on the TMM's data path: keep them short" | Scripts run on the worker's event loop: keep them short |
 

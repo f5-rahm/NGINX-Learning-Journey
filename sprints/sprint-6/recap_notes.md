@@ -46,7 +46,7 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 
 ## BIG-IP Mapping (for the recap)
 * iRule events → njs directives: `HTTP_REQUEST` → `js_content`/`js_set`, `HTTP_RESPONSE_DATA` → `js_body_filter`, `CLIENT_DATA` → `js_preread`.
-* `table` → `js_shared_dict_zone`; `after -periodic` / iCall → `js_periodic`; `HTTP::sideband` → `ngx.fetch`; `CRYPTO::sign` → `crypto.createHmac`; `static::` → constants, NGINX variables, `process.env`.
+* `table` → `js_shared_dict_zone`; `after -periodic` / iCall → `js_periodic`; sideband `connect`/`send`/`recv` → `ngx.fetch`; `CRYPTO::sign` → `crypto.createHmac`; `static::` → constants, NGINX variables, `process.env`.
 * Both run on the data path's thread (TMM, worker): keep them short.
 
 ---
@@ -75,5 +75,27 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 * Recap written: `day01_recap.md`.
 
 ## Day 2
+* **Q: does NGINX handle a changed body size for you?** Half. It doesn't recount: the script has to delete `Content-Length` in `js_header_filter`, because the headers go out before the body filter sees a byte. Once the length is gone, NGINX does the framing itself: chunked on HTTP/1.1, close on HTTP/1.0 (HTTP/2 and HTTP/3 frame the body anyway). The BIG-IP equivalent of that last part is the HTTP profile's Response Chunking set to Rechunk, the usual companion to a Stream profile.
+* **Body filter mechanics (verified in a scratch container, nginx 1.31.6 / njs 1.0.1, a 228,000-byte file with 6000 card numbers behind `proxy_pass`):**
+  * **Streaming** (`sendBuffer` on every piece): the filter ran **57 times**, and only **5978 of 6000** cards were masked. The other 22 were split across piece edges.
+  * **Buffering** (append each piece to a module-level string, return without sending until `flags.last`, then one `sendBuffer`): all 6000 masked, same 57 calls. Setting a header at that point was refused: `ignored setting of response header "X-Late" because headers were already sent`. So, unlike `HTTP::collect`, buffering the body doesn't hold the headers, and the length can't be fixed after the fact. (The module-level variable is per request only on the default engine. On QuickJS, globals survive between requests on a worker; see Day 1.)
+  * **`r.done()`** after the first piece: the rest passed through without calling the filter (no masking). With the header filter left out, `Content-Length: 228000` stayed while the body grew by 18 bytes, and the client got a truncated last line.
+* **BIG-IP mapping:** `HTTP::collect` is opt-in buffering that holds the response until `HTTP::release`; `js_body_filter` is streaming by default (each piece leaves unless the script holds it back), so it's closer to a Stream profile with `STREAM::expression`. Holding = not calling `sendBuffer`; release = `sendBuffer` with `last`; `r.done()` ≈ `STREAM::disable`. `js_content` is a different role: it *is* the response, like `HTTP::respond` with no pool. Filters work on whatever produced the response (`proxy_pass`, static files, or `js_content`).
+* **Q: is `ngx.fetch` a sideband connection?** Same role (an outbound call from inside the traffic path; the script waits, other traffic doesn't), different layer. Sideband is raw TCP/UDP (`connect`/`send`/`recv`/`close`): the iRule writes the HTTP request and parses the reply itself, and `connect` can target a virtual server by name, so the call gets LTM's pools, monitors and SSL profiles. `ngx.fetch` is an HTTP client (method, headers, body, `status`, `json()`), with TLS built in, but it connects straight to a host and port: no upstreams, a `resolver` for names (see above). The closest match to "sideband to a virtual" is `r.subrequest` to a location that proxies to an `upstream`, which needs a request (so not in `js_periodic`). Neither can be awaited in `js_set` (verified above).
+* **Guide fix:** there's no `HTTP::sideband` iRule command (clouddocs lists only `connect`, `send`, `recv`, `close`, `connect info`); `day_02.md` 1.5/1.6 and `day_03.md` now say sideband `connect`/`send`/`recv`.
+* **Guide fix (3.1, `X-User` question):** the hidden answer never said which of the four was wrong. It now leads with "The fourth" (`/me` → `location /`, no `proxy_set_header`, so `X-User: admin` reaches the app), then explains the three `/api/me` results.
+* **Q (3.4): why `internalRedirect` and not `r.subrequest`?** `internalRedirect` hands the original request (method, headers, the body already read) to `@app`, and the application's response goes straight back to the client. A subrequest builds a second request, waits for it, and leaves the script to copy the status, headers and body back by hand. Use `subrequest` when the script needs the answer to decide something (an authorization check, combining two calls), and `internalRedirect` when it just needs to let the request through.
+* **Filters must be synchronous (verified in a scratch container):** an `await` in `js_header_filter` or `js_body_filter`, or even a fire-and-forget `ngx.fetch(...).then(...)` in the header filter, logged `async operation inside "t.hAsync" header filter` (or `body filter`) and `pending events while closing request`, and the client got an empty reply (curl exit 52). Lookups belong in `js_content` or a `js_periodic` feed.
+* **A compressed upstream blinds the body filter (verified):** with the client sending `Accept-Encoding: gzip` and a gzipping origin, the filter saw compressed bytes: **0 of 3,000** cards masked, sent to the client. With `proxy_set_header Accept-Encoding "";` the origin sent plain text and the filter masked 2,990 of 3,000 (10 split across pieces). The lab's origin doesn't compress, so the lab doesn't show it.
+
+### Day 2: Activity 3.5 (user's run)
+* `elog` wasn't defined in the new shell after a break (helpers not sourced), and `apt install elog` installed an unrelated package (the ELOG web logbook) that started `elogd` on `0.0.0.0:8080`. Fix: `source helpers.sh`; removal of the package suggested.
+
+### Day 2: Infographic
+* `filters-and-content.svg` / `.png`: the response path (`js_content` or `proxy_pass` → `js_header_filter` → headers sent → `js_body_filter` → client) and eight measured nuances (headers leave first, size change needs the length gone, pieces, buffering, filters can't wait, gzip, one content handler, no request-body filter). No BIG-IP comparison, by choice. Same style as Day 1 (rsvg-convert in alpine:3.22, Lato, DejaVu Sans Mono, 1.5×; generator in the session scratchpad).
+
+### Day 2: Quiz
+* **8/10.** Misses: native `secure_link` 403 vs 410 (empty `$secure_link` = bad or missing signature → 403; `"0"` = valid but expired → 410; `"1"` = good) ("Native Signed Links"), and how a script reads the zone (`ngx.shared.revoked`, not a variable or `process`) ("Shared Dictionary").
+* Recap written: `day02_recap.md`.
 
 ## Day 3
