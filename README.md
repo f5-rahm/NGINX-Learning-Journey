@@ -225,9 +225,14 @@ S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 * **Lab:** Lumina Edge Functions, in containers, validated by `test_sprint06.sh` (10 assertions). Details: [`sprints/sprint-6/README.md`](sprints/sprint-6/README.md).
 
 ### Side Quest Gauntlet: Sprints 4–6 (after Sprint 6)
-* **Format:** one "Black Friday war room" business simulation that combines the Sprint 4, 5 and 6 enterprise side quests: incidents arrive as tickets, with an SLA timer and a scoreboard. Written up as a blog post and packaged so it can be released as a community challenge.
-* **Stages:** cache purge on demand and cache metrics (Sprint 4), a live denylist and cluster-wide limits (Sprint 5), and njs with Plus key-value data and an OpenResty/Lua comparison (Sprint 6).
-* **Editions:** the public edition is open source only, with OSS equivalents for the Plus stages; the private run keeps NGINX Plus. A combined enterprise quiz covers Sprints 4–6.
+* **Format:** [The Black Friday War Room](gauntlet/black-friday/README.md): one long session (about 2–2.5 hours) that combines the Sprint 4, 5 and 6 enterprise side quests. Northwind's storefront runs on two edge nodes behind a load balancer. Incidents arrive as nine tickets, each checked automatically and scored on a scoreboard (no clock). It's self-contained, so it can be released as a community challenge and written up as a blog post.
+* **Stages:**
+  * **The Cache (Sprint 4):** invalidating one page and a whole section on both nodes, and cache metrics.
+  * **Who Gets In (Sprint 5):** a denylist that changes all night, an exception inside it, and one rate limit for two nodes.
+  * **Code at the Edge (Sprint 6):** njs verifying a signed cookie with a VIP list that changes live, then njs vs Lua on OpenResty in a benchmark.
+  * **Midnight:** every fix again, under load.
+* **Editions:** both are public. The open source edition solves every ticket with OSS tools (cache-key generations, `geo` files, client affinity, njs shared memory). The NGINX Plus edition, for anyone with a trial or full license, uses `proxy_cache_purge`, the API, `keyval` and `zone_sync`.
+* **Quiz:** [Gauntlet Quiz](quiz.html?sprint=6&day=3&pool=gauntlet), 20 questions across both editions.
 
 ### Sprint 7: Security Hardening & Zero Trust (Nov 9–13, 3 Days)
 * **Focus:** Identity verification, client authentication, and access control.

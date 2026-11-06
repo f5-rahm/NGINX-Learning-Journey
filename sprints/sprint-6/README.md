@@ -1,7 +1,7 @@
 # Sprint 6: Programmability & Extensibility (njs)
 **Cadence:** 3 sessions, any days that week  
 **Milestone:** Lumina Edge Functions: sessions verified at the edge with a key that's never written down, identity passed to the application, beta customers routed by a signed claim, a revocation list every worker shares, signed download links, orders checked before they reach the application, card numbers masked on the way out, and a TCP telemetry port that only admits devices that sign their greeting  
-**Shape:** 3 days. Sprint 6's enterprise side quest moves into the **Side Quest Gauntlet** that follows this sprint (with Sprints 4 and 5's).
+**Shape:** 3 days. Sprint 6's enterprise side quest moves into the **Side Quest Gauntlet** that follows this sprint (with Sprints 4 and 5's): [The Black Friday War Room](../../gauntlet/black-friday/README.md).
 
 ---
 
@@ -167,7 +167,7 @@ All pools live in [`data/quizzes.json`](../../data/quizzes.json). Each day has 2
 * **Day 1:** where njs runs, compile at load, the handlers, `js_set` evaluation, the two engines and globals, the default engine's language, exceptions and `500`, decoding vs verifying.
 * **Day 2:** HMAC and JWT checks, `env`, `secure_link` vs njs, `proxy_set_header` and spoofing, filters and `Content-Length`, request bodies, `internalRedirect` / `subrequest` / `ngx.fetch`, shared dictionaries and `js_periodic`.
 * **Day 3:** `proxy_pass $var`, routing in every location, stream njs, `preread_timeout`, `ssl_preread`, blocking scripts, native vs script.
-* **Enterprise:** Sprint 6's enterprise questions are part of the Side Quest Gauntlet's quiz (Sprints 4–6).
+* **Enterprise:** Sprint 6's enterprise questions are part of the Side Quest Gauntlet's quiz (Sprints 4–6): [Gauntlet Quiz](../../quiz.html?sprint=6&day=3&pool=gauntlet).
 
 ```bash
 cd /srv/nginx-journey && python3 -m http.server 8090

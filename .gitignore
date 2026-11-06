@@ -241,3 +241,11 @@ sprints/*/lab/plus/state/*
 
 # Sprint 6+: lab signing keys
 sprints/*/lab/secrets/
+
+# Gauntlets: the player's working copies, scoreboard, logs and keys
+gauntlet/*/lab/.edition
+gauntlet/*/lab/edge/
+gauntlet/*/lab/lb/
+gauntlet/*/lab/state/
+gauntlet/*/lab/logs/
+gauntlet/*/lab/secrets/

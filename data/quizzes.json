@@ -5657,6 +5657,296 @@
               "answer": "D",
               "explanation": "`s.on('upload', ...)`; `download` is data from the upstream."
             }
+          ],
+          "extra_pools": [
+            {
+              "pool": "gauntlet",
+              "title": "Side Quest Gauntlet: The Black Friday War Room (Sprints 4–6, both editions)",
+              "track": "enterprise",
+              "optional": true,
+              "questions": [
+                {
+                  "id": "s6d3g01",
+                  "type": "scenario",
+                  "category": "Per-Node Cache",
+                  "question": "Two edges cache `/catalog/` behind a round-robin load balancer. Ops refreshes a wrong price on edge-a only. What do shoppers see?",
+                  "options": {
+                    "A": "The new price everywhere, because caches are shared",
+                    "B": "The old price on about every second request",
+                    "C": "The new price after one sync interval",
+                    "D": "An error until edge-b is refreshed too"
+                  },
+                  "answer": "B",
+                  "explanation": "Each node has its own cache, and nothing syncs cache entries. Through round robin, about half the requests reach edge-b's stale copy."
+                },
+                {
+                  "id": "s6d3g02",
+                  "type": "config",
+                  "category": "Refresh vs Purge",
+                  "question": "Open source, in `location /catalog/`: `proxy_cache shop; proxy_cache_bypass $refresh;`. Ops sends a request that sets `$refresh` to 1. What happens to the cached entry?",
+                  "options": {
+                    "A": "It's deleted, and the next shopper request misses",
+                    "B": "It stays, because bypass only skips the lookup",
+                    "C": "It's replaced by the fresh response from the origin",
+                    "D": "It's marked stale and refreshed in the background"
+                  },
+                  "answer": "C",
+                  "explanation": "`proxy_cache_bypass` skips the lookup; storing is controlled by `proxy_no_cache`, which is unset. The fresh response overwrites the entry, which makes it a refresh."
+                },
+                {
+                  "id": "s6d3g03",
+                  "type": "diagnose",
+                  "category": "The Default Key",
+                  "question": "You add `proxy_cache_key $scheme$proxy_host$request_uri$cache_gen;` with `$cache_gen` empty by default, and reload. Every page in every category is a MISS once. Why?",
+                  "options": {
+                    "A": "The reload emptied the cache's shared memory zone",
+                    "B": "The default key has `://` after the scheme, so every key changed",
+                    "C": "`$cache_gen` is evaluated only after the cache lookup",
+                    "D": "Variables in the key always disable the cache for one cycle"
+                  },
+                  "answer": "B",
+                  "explanation": "The default key is stored as `http://origin/...`. Without `://` the new key is `httporigin/...`, so every page moves to a new key."
+                },
+                {
+                  "id": "s6d3g04",
+                  "type": "scenario",
+                  "category": "Whole Section",
+                  "question": "Open source, no purge module. A whole category was repriced; the rest of the cache must stay. Which approach works without touching other categories?",
+                  "options": {
+                    "A": "Delete the cache directory on both nodes and reload them",
+                    "B": "Set `proxy_cache_valid` to 1s everywhere for a minute",
+                    "C": "Bump a per-section generation that is part of the cache key",
+                    "D": "Send `PURGE /catalog/tvs/*` to each node from the ops address"
+                  },
+                  "answer": "C",
+                  "explanation": "A generation in the key moves only that section to new keys. Deleting the directory loses everything, and `PURGE` needs NGINX Plus or a third-party module."
+                },
+                {
+                  "id": "s6d3g05",
+                  "type": "config",
+                  "category": "Who May Purge",
+                  "question": "Plus: `map \"$is_purge:$ops\" $purge_method { \"1:1\" 1; default 0; }` and `proxy_cache_purge $purge_method;`, with nothing else. A shopper sends `PURGE /catalog/tvs/tv-65`. What happens?",
+                  "options": {
+                    "A": "The request is proxied to the origin as a PURGE",
+                    "B": "NGINX refuses it with 403 automatically",
+                    "C": "The entry is purged, because PURGE is enabled",
+                    "D": "NGINX answers 405 Method Not Allowed"
+                  },
+                  "answer": "A",
+                  "explanation": "`proxy_cache_purge` acts only when its condition is set. Any other PURGE is an ordinary request and gets proxied; refusing it takes a rule of your own."
+                },
+                {
+                  "id": "s6d3g06",
+                  "type": "scenario",
+                  "category": "Forged Header",
+                  "question": "Edges trust only the load balancer for realip (`real_ip_recursive off`). A shopper sends `X-Forwarded-For: 10.58.0.5` (the ops address) through it. What does `geo $ops` see?",
+                  "options": {
+                    "A": "10.58.0.5, so the shopper is treated as ops",
+                    "B": "The load balancer's own address",
+                    "C": "The shopper's real address",
+                    "D": "Nothing; geo can't read X-Forwarded-For"
+                  },
+                  "answer": "C",
+                  "explanation": "The load balancer appends the address it saw, and realip takes the last entry. The shopper's forged value is ignored, and geo reads `$remote_addr` after realip."
+                },
+                {
+                  "id": "s6d3g07",
+                  "type": "recall",
+                  "category": "Cache Metrics",
+                  "question": "Where does NGINX Plus report per-zone counts of HIT, MISS, STALE and the other cache results?",
+                  "options": {
+                    "A": "`stub_status`, extended with a cache section",
+                    "B": "The API, under `/http/caches/<zone>`",
+                    "C": "Only in the access log, as `$upstream_cache_status`",
+                    "D": "The cache manager's process title"
+                  },
+                  "answer": "B",
+                  "explanation": "The API's cache zone object counts responses and bytes per result. Open source has no counters; you log `$upstream_cache_status` and count."
+                },
+                {
+                  "id": "s6d3g08",
+                  "type": "scenario",
+                  "category": "Denylist Without Reloads",
+                  "question": "Bot networks change every few minutes tonight. With open source NGINX and `geo` in an included file, what does each change cost?",
+                  "options": {
+                    "A": "Nothing: geo files are re-read on every request",
+                    "B": "A restart of every node, dropping connections",
+                    "C": "A reload of every node, with old workers draining",
+                    "D": "A reload of one node; the others follow"
+                  },
+                  "answer": "C",
+                  "explanation": "A geo file is read at configuration load, so each change is a reload on every node. Graceful, but each one starts new workers while old ones drain."
+                },
+                {
+                  "id": "s6d3g09",
+                  "type": "config",
+                  "category": "Most Specific Wins",
+                  "question": "Plus, `keyval_zone zone=denylist:1m type=ip sync;` contains `10.58.66.0/24` = \"1\" and `10.58.66.77` = \"0\". With `if ($denied) { return 403; }`, what do .77 and .76 get?",
+                  "options": {
+                    "A": "Both are refused: any match on 1 wins",
+                    "B": ".77 gets in, .76 is refused",
+                    "C": "Both get in: \"0\" applies to the whole range",
+                    "D": "The result alternates with the sync interval"
+                  },
+                  "answer": "B",
+                  "explanation": "A `type=ip` zone picks the most specific match. The /32 entry is \"0\" (false for `if`), the /24 still refuses the rest."
+                },
+                {
+                  "id": "s6d3g10",
+                  "type": "diagnose",
+                  "category": "Deletes Don't Sync",
+                  "question": "Plus, a synced denylist. You delete `10.58.66.0/24` through edge-a's API. Ten minutes later, half of that network's requests through the load balancer still get 403. Why?",
+                  "options": {
+                    "A": "The delete didn't sync; edge-b keeps the key until timeout",
+                    "B": "The load balancer is caching the earlier 403 responses",
+                    "C": "Deletes in a keyval zone are applied at the next reload",
+                    "D": "edge-b's sync connection dropped at the moment of the delete"
+                  },
+                  "answer": "A",
+                  "explanation": "Updates sync, but deleting a key doesn't. Unblock in a synced zone by setting the value to \"0\"."
+                },
+                {
+                  "id": "s6d3g11",
+                  "type": "diagnose",
+                  "category": "Sync on Reload",
+                  "question": "You add `sync` to an existing `limit_req_zone ... zone=checkout` and reload. `nginx -t` passed and `nginx -s reload` exited 0, but the limit still isn't cluster-wide. What happened?",
+                  "options": {
+                    "A": "zone_sync needs a minute to connect the nodes",
+                    "B": "The master refused the new config and kept the old one",
+                    "C": "`sync` only applies to keyval zones",
+                    "D": "The limit is cluster-wide, but only after a restart of the load balancer"
+                  },
+                  "answer": "B",
+                  "explanation": "The error log has `[emerg] the \"sync\" flag of shared memory zone \"checkout\" had previously a different state`. Use a new zone name, or restart."
+                },
+                {
+                  "id": "s6d3g12",
+                  "type": "config",
+                  "category": "One Limit, Open Source",
+                  "question": "Two open source edges each have `limit_req_zone $binary_remote_addr zone=checkout:1m rate=5r/s;`, behind your own NGINX load balancer with `upstream edges { server edge-a; server edge-b; }`. Which change makes it 5r/s per client for the whole site?",
+                  "options": {
+                    "A": "`rate=2.5r/s` on each edge, accepting the error",
+                    "B": "`least_conn;` in the load balancer's `upstream edges`",
+                    "C": "`hash $remote_addr consistent;` in `upstream edges`",
+                    "D": "`sync` on the edges' `limit_req_zone`, as in Plus"
+                  },
+                  "answer": "C",
+                  "explanation": "Client affinity sends each client to one edge, which then counts all of their requests. Open source has no zone_sync; halving the rate breaks as soon as traffic is uneven."
+                },
+                {
+                  "id": "s6d3g13",
+                  "type": "recall",
+                  "category": "Sync Timing",
+                  "question": "What does `limit_req ... sync` bound, according to how zone_sync works?",
+                  "options": {
+                    "A": "Instant bursts across all nodes, exactly",
+                    "B": "Sustained rates, approximately",
+                    "C": "Connections per client, exactly",
+                    "D": "Bandwidth per client, approximately"
+                  },
+                  "answer": "B",
+                  "explanation": "Counts are exchanged on the sync interval. A burst that hits every node in the same instant gets each node's burst before the counts meet."
+                },
+                {
+                  "id": "s6d3g14",
+                  "type": "scenario",
+                  "category": "Node Restart",
+                  "question": "Plus, a synced key-value denylist without a `state=` file. You restart edge-a alone while edge-b stays up. What does edge-a's denylist hold a few seconds later?",
+                  "options": {
+                    "A": "Nothing until the ops team re-adds every entry",
+                    "B": "The entries from its last configuration reload",
+                    "C": "The full list, synced back from edge-b",
+                    "D": "Only entries added after the restart"
+                  },
+                  "answer": "C",
+                  "explanation": "A node that joins gets the zone's data from its peers. Restarting both at once loses the list, because no node has a copy left."
+                },
+                {
+                  "id": "s6d3g15",
+                  "type": "config",
+                  "category": "Code vs Data",
+                  "question": "Plus: `js_set $member shop.member;` then `keyval_zone zone=vip:1m sync;` and `keyval $member $vip zone=vip;`. What does the njs code need to do for the VIP lookup?",
+                  "options": {
+                    "A": "Read the zone with `ngx.shared.vip.get()`",
+                    "B": "Nothing; NGINX looks up `$member` in the zone",
+                    "C": "Call the API to fetch the VIP list",
+                    "D": "Return the VIP status instead of the member ID"
+                  },
+                  "answer": "B",
+                  "explanation": "`keyval` maps any variable, including one set by `js_set`. The code only verifies the cookie; the lookup and the refusal are configuration."
+                },
+                {
+                  "id": "s6d3g16",
+                  "type": "config",
+                  "category": "Per-Node Dictionary",
+                  "question": "Open source: `js_shared_dict_zone zone=vip:1m;` and a handler that does `ngx.shared.vip.set(id, '1')` on POST. Ops posts a VIP to edge-a only. What happens on edge-b?",
+                  "options": {
+                    "A": "The VIP is known there after the sync interval",
+                    "B": "The VIP isn't known there; dictionaries are per node",
+                    "C": "edge-b refuses all members until it's updated",
+                    "D": "The VIP is known only to edge-a's first worker"
+                  },
+                  "answer": "B",
+                  "explanation": "A shared dictionary is shared by one node's workers. Nothing replicates it across nodes in open source, so ops updates each node."
+                },
+                {
+                  "id": "s6d3g17",
+                  "type": "scenario",
+                  "category": "Admin Endpoint",
+                  "question": "Open source: `location /ops/vip/ { js_content shop.vipAdmin; }` on the shop's port, with no access rules. Who can make themselves a VIP?",
+                  "options": {
+                    "A": "Only clients with a valid member cookie",
+                    "B": "Nobody: js_content locations are internal",
+                    "C": "Any shopper who can reach the shop",
+                    "D": "Only clients on the edge's own network"
+                  },
+                  "answer": "C",
+                  "explanation": "A write endpoint you write yourself is only as private as its access rule. It needs `allow`/`deny` on `$remote_addr` after realip."
+                },
+                {
+                  "id": "s6d3g18",
+                  "type": "recall",
+                  "category": "Lua's Reach",
+                  "question": "Which can Lua on OpenResty do that njs can't?",
+                  "options": {
+                    "A": "Verify an HMAC signature on a cookie",
+                    "B": "Read a request header in the access phase",
+                    "C": "Open a raw TCP connection with cosockets",
+                    "D": "Keep data in memory shared by the workers"
+                  },
+                  "answer": "C",
+                  "explanation": "Cosockets give Lua non-blocking TCP/UDP to databases and caches. njs has `ngx.fetch` (HTTP) and subrequests; both have crypto, headers and shared memory."
+                },
+                {
+                  "id": "s6d3g19",
+                  "type": "scenario",
+                  "category": "Benchmark Context",
+                  "question": "In your benchmark Lua handles about 20% more requests per second than njs for the VIP gate. The origin behind both answers a few thousand per second. What's the reasonable conclusion?",
+                  "options": {
+                    "A": "Move to OpenResty: a 20% gain is decisive at any scale",
+                    "B": "Speed isn't what decides here; weigh support and attack surface",
+                    "C": "The benchmark is invalid because the origin wasn't in the path",
+                    "D": "njs must be misconfigured, since it should be the faster one"
+                  },
+                  "answer": "B",
+                  "explanation": "Both handle tens of thousands per second, far above what the origin takes. The other factors (supported build, what the code can reach, configuration you know) decide."
+                },
+                {
+                  "id": "s6d3g20",
+                  "type": "scenario",
+                  "category": "Edition Trade-off",
+                  "question": "After the war room, a colleague asks what NGINX Plus changed tonight. Which summary fits?",
+                  "options": {
+                    "A": "Plus made every ticket possible; open source couldn't solve them",
+                    "B": "Plus turned runtime state into API-managed data that syncs across nodes",
+                    "C": "Plus shared the caches between the edges",
+                    "D": "Plus removed the need for njs entirely"
+                  },
+                  "answer": "B",
+                  "explanation": "Open source solved every ticket with reloads, per-node steps and code. Plus made the lists and counts data changed through the API, synced by zone_sync. Caches stayed per node, and the cookie check stayed njs."
+                }
+              ]
+            }
           ]
         }
       ]

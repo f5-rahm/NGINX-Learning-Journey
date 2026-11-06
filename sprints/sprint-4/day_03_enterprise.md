@@ -1,4 +1,7 @@
 # Sprint 4 &bull; Day 3 (Optional) Enterprise Side Quest: Purge on Demand, Cache Metrics
+
+**Also played as part of the [Black Friday War Room](../../gauntlet/black-friday/README.md)** (Stage 1), the Side Quest Gauntlet for Sprints 4–6, on two nodes and in an open source edition too.
+
 **Day:** Optional, after Day 3  
 **Estimated Time:** 40 Minutes (10 concepts, 5 setup, 25 hands-on)  
 **Theme:** Days 1 and 2 decided how long a copy lives. Sometimes it has to go **now**: a wrong price, a legal takedown, a broken deploy. Open source NGINX can't remove a cached object on request. NGINX Plus can, and its API reports what the cache is doing.

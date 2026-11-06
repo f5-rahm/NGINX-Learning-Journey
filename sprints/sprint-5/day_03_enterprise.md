@@ -1,4 +1,7 @@
 # Sprint 5 &bull; Day 3 (Optional) Enterprise Side Quest: A Live Denylist and Cluster-Wide Limits
+
+**Also played as part of the [Black Friday War Room](../../gauntlet/black-friday/README.md)** (Stage 2), the Side Quest Gauntlet for Sprints 4–6, on two nodes and in an open source edition too.
+
 **Day:** Optional, after Day 3  
 **Estimated Time:** 45 Minutes (10 concepts, 5 setup, 30 hands-on)  
 **Theme:** Everything this week lived in one NGINX instance's shared memory, and every change to who is blocked meant a config edit and a reload. Production gateways run as several nodes, and denylists change while attacks are underway. NGINX Plus adds two things: a key-value store you change through its API without a reload, and **zone_sync**, which shares rate-limit and key-value state between the nodes of a cluster.
