@@ -5950,6 +5950,1160 @@
           ]
         }
       ]
+    },
+    {
+      "sprint": 7,
+      "title": "Security Hardening & Zero Trust",
+      "days": [
+        {
+          "day": 1,
+          "title": "Mutual TLS, Both Ways",
+          "questions": [
+            {
+              "id": "s7d1q01",
+              "type": "scenario",
+              "category": "The Handshake",
+              "question": "With mutual TLS, what stops someone who copied a partner's certificate file (but not its key) from using it?",
+              "options": {
+                "A": "Nothing: the certificate is the credential, so a copy works until it expires",
+                "B": "The CertificateVerify message: the client signs the handshake with its private key",
+                "C": "The server compares the client's IP address with the one in the certificate",
+                "D": "The CA is contacted during each handshake to confirm the certificate's owner"
+              },
+              "answer": "B",
+              "explanation": "Proof of possession: a certificate without its key can't produce the CertificateVerify signature (1.1)."
+            },
+            {
+              "id": "s7d1q02",
+              "type": "scenario",
+              "category": "Verify Modes",
+              "question": "With `ssl_verify_client on;`, a client presents a certificate from an unknown CA. Where is it refused?",
+              "options": {
+                "A": "Inside the matching location, when `$ssl_client_verify` is first read",
+                "B": "During the TLS handshake: the connection is closed before HTTP starts",
+                "C": "Before any location runs: NGINX answers `400` using internal code 495",
+                "D": "At the upstream, which sees `X-SSL-Verify: FAILED` and refuses"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.2: `400 The SSL certificate error`, logged with the request line and `ssl_verify=FAILED:...`."
+            },
+            {
+              "id": "s7d1q03",
+              "type": "scenario",
+              "category": "optional_no_ca",
+              "question": "Why is `optional_no_ca` riskier than `optional`?",
+              "options": {
+                "A": "It lets certificates from unknown CAs through, and their subject still fills `$ssl_client_s_dn`",
+                "B": "It disables TLS 1.3, so client certificates are sent unencrypted on the wire",
+                "C": "It skips the expiry check, so expired partner certificates are accepted",
+                "D": "It stops sending the CA names, so clients send whichever certificate they have"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.5: `fake-acme` was served with `FAILED:...` and a naive CN map produced `acme`."
+            },
+            {
+              "id": "s7d1q04",
+              "type": "scenario",
+              "category": "Spoofing",
+              "question": "The edge doesn't set `X-Partner`. Globex sends `X-Partner: acme` with its own valid certificate. What does the API receive?",
+              "options": {
+                "A": "Nothing: NGINX drops X- headers from clients that present a certificate",
+                "B": "`X-Partner: globex`: NGINX fills it in from the client certificate's CN",
+                "C": "`X-Partner: acme`: a header the edge doesn't set passes through untouched",
+                "D": "A `400`, because the header doesn't match the certificate's subject"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.4: the API believed `acme`. Only headers the edge sets replace what the client sent."
+            },
+            {
+              "id": "s7d1q05",
+              "type": "scenario",
+              "category": "CRL Reload",
+              "question": "A new CRL revoking Globex is written to the file `ssl_crl` points to. When is Globex refused?",
+              "options": {
+                "A": "Immediately: NGINX reads the CRL file on every new connection",
+                "B": "After the next reload, which reads the CRL file again",
+                "C": "After the old CRL's Next Update date, when NGINX looks again",
+                "D": "Only when Globex's certificate itself expires: CRLs apply to new certificates"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.6: Globex kept getting `200` until `./lab.sh reload`."
+            },
+            {
+              "id": "s7d1q06",
+              "type": "scenario",
+              "category": "Expired CRL",
+              "question": "The partner CRL's Next Update passes and nobody renewed it. What happens to Acme, whose certificate is valid?",
+              "options": {
+                "A": "Nothing: an expired CRL is ignored, and verification uses the chain only",
+                "B": "It's refused, with `FAILED:CRL has expired`, like every certificate from that CA",
+                "C": "It's accepted with a warning header, and `$ssl_client_verify` says `EXPIRED`",
+                "D": "NGINX refuses to reload until the CRL is renewed, but traffic continues"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.6: after 16 s, Acme got `403` with `ssl_verify=FAILED:CRL has expired`."
+            },
+            {
+              "id": "s7d1q07",
+              "type": "scenario",
+              "category": "Upstream Verify",
+              "question": "The edge has `proxy_pass https://ledger;` and `proxy_ssl_certificate`, nothing else. Someone takes over the ledger's address with a self-signed certificate. What happens?",
+              "options": {
+                "A": "The edge refuses: an HTTPS upstream's certificate is always checked",
+                "B": "The edge refuses, because the impostor doesn't ask for its client certificate",
+                "C": "The edge sends the request to the impostor: `proxy_ssl_verify` is off by default",
+                "D": "The edge falls back to plain HTTP, which the impostor doesn't answer"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.7: `\"served_as\": \"impostor\"` with `200` until `proxy_ssl_verify on`."
+            },
+            {
+              "id": "s7d1q08",
+              "type": "scenario",
+              "category": "Keepalive",
+              "question": "You enable `proxy_ssl_verify on` for an upstream that already serves traffic. Why might the change not apply to every request right away on nginx 1.31?",
+              "options": {
+                "A": "Connections are kept alive by default, and a connection is only checked at its handshake",
+                "B": "`proxy_ssl_verify` needs a full restart, not a reload, to take effect",
+                "C": "Verification runs only every `proxy_ssl_session_timeout`, five minutes by default",
+                "D": "Workers check upstream certificates only after the first `502` on that upstream"
+              },
+              "answer": "A",
+              "explanation": "Since nginx 1.29.7, upstream keepalive is on by default; existing connections were verified (or not) when they were made (1.5)."
+            },
+            {
+              "id": "s7d1q09",
+              "type": "config",
+              "category": "Modes",
+              "question": "```nginx\nssl_client_certificate certs/partner-ca.crt;\nssl_verify_client      optional;\n```\nA client sends no certificate. What does `$ssl_client_verify` contain in the location?",
+              "options": {
+                "A": "`SUCCESS`, because nothing failed verification",
+                "B": "`NONE`, and the request is served",
+                "C": "`FAILED:no certificate`, and the request is served",
+                "D": "Nothing: the request is refused with code 496"
+              },
+              "answer": "B",
+              "explanation": "1.2: with `optional`, a missing certificate is allowed and reported as `NONE`."
+            },
+            {
+              "id": "s7d1q10",
+              "type": "config",
+              "category": "Refusal Pages",
+              "question": "```nginx\nssl_verify_client on;\nerror_page 496 = @cert_missing;\nlocation @cert_missing { return 401 '{\"error\": \"client certificate required\"}\\n'; }\n```\nWhat does a client without a certificate get?",
+              "options": {
+                "A": "`400` with NGINX's HTML page: `error_page` can't handle certificate errors",
+                "B": "`401` with the JSON body",
+                "C": "`496` with the JSON body",
+                "D": "A TLS handshake failure, before any HTTP response"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3: `error_page 496 = @named` lets the named location choose the status and body."
+            },
+            {
+              "id": "s7d1q11",
+              "type": "config",
+              "category": "CN Map",
+              "question": "```nginx\nmap $ssl_client_s_dn $cert_cn { \"~(^|,)CN=(?<cn>[^,]+)\" $cn; default \"\"; }\nmap $ssl_client_verify $partner { SUCCESS $cert_cn; default \"\"; }\n```\nWith `optional_no_ca`, `fake-acme` (CN `acme`, rogue CA) connects. What is `$partner`?",
+              "options": {
+                "A": "`acme`, because the CN is read from the certificate",
+                "B": "`Rogue CA`, the issuer's CN",
+                "C": "Empty, because `$ssl_client_verify` isn't `SUCCESS`",
+                "D": "`FAILED`, copied from `$ssl_client_verify`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.5: the second map only passes the CN on when verification succeeded."
+            },
+            {
+              "id": "s7d1q12",
+              "type": "config",
+              "category": "Upstream Name",
+              "question": "```nginx\nupstream ledger { server 10.57.0.20:9443; }\n...\nproxy_pass https://ledger;\nproxy_ssl_trusted_certificate certs/internal-ca.crt;\nproxy_ssl_verify on;\n```\nThe ledger's certificate is for `ledger.internal`, from the Internal CA. What happens?",
+              "options": {
+                "A": "`200`: the certificate chains to a trusted CA, and that's what's checked",
+                "B": "`502`: `upstream SSL certificate does not match \"ledger\"`",
+                "C": "`200`, because the IP address in `server` is what's matched",
+                "D": "`502`: the Internal CA must also be in `ssl_client_certificate`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.7: the name checked is the host in `proxy_pass`, the upstream's name; `proxy_ssl_name ledger.internal` fixes it."
+            },
+            {
+              "id": "s7d1q13",
+              "type": "config",
+              "category": "Depth",
+              "question": "`ssl_verify_depth 1;` is set and partner certificates are signed directly by the Partner CA. A partner gets a certificate from an intermediate CA under the Partner CA. What happens?",
+              "options": {
+                "A": "It's accepted: depth limits only apply to upstream certificates",
+                "B": "It's refused: the chain from the client certificate to the trusted CA is too long",
+                "C": "It's accepted if the intermediate is listed in `ssl_crl`",
+                "D": "It's refused unless the intermediate is in `proxy_ssl_trusted_certificate`"
+              },
+              "answer": "B",
+              "explanation": "1.1: depth 1 means the client certificate must be signed directly by a trusted CA."
+            },
+            {
+              "id": "s7d1q14",
+              "type": "config",
+              "category": "Header Set",
+              "question": "Which line passes the whole client certificate to the application in a form that's safe in a header?",
+              "options": {
+                "A": "`proxy_set_header X-Partner-Cert $ssl_client_raw_cert;`",
+                "B": "`proxy_set_header X-Partner-Cert $ssl_client_escaped_cert;`",
+                "C": "`proxy_set_header X-Partner-Cert $ssl_client_fingerprint;`",
+                "D": "`proxy_set_header X-Partner-Cert $ssl_client_s_dn;`"
+              },
+              "answer": "B",
+              "explanation": "1.3: the URL-escaped PEM is header-safe; the raw PEM has newlines, and the others aren't the certificate."
+            },
+            {
+              "id": "s7d1q15",
+              "type": "diagnose",
+              "category": "Logs",
+              "question": "The edge's error log shows `SSL_read() failed (... tlsv13 alert certificate required ...) while reading response header from upstream`. What's missing?",
+              "options": {
+                "A": "`proxy_ssl_certificate` and `_key`: the upstream asked the edge for a client certificate",
+                "B": "`ssl_client_certificate`: the client didn't send a certificate to the edge",
+                "C": "`proxy_ssl_server_name on`: the upstream needs SNI to pick a certificate",
+                "D": "`ssl_crl`: the upstream refuses edges that don't check revocation"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.7: the ledger requires a client certificate; in TLS 1.3 its refusal arrives after the handshake."
+            },
+            {
+              "id": "s7d1q16",
+              "type": "diagnose",
+              "category": "Access Log",
+              "question": "The access log shows `\"GET /shipments/7 HTTP/1.1\" 400 ssl_verify=FAILED:certificate revoked`. Which statement is true?",
+              "options": {
+                "A": "The TLS handshake failed, and NGINX invented a request line for the log",
+                "B": "The handshake completed; NGINX refused the request before any location ran",
+                "C": "The application refused the request and NGINX logged the verification result",
+                "D": "The CRL file couldn't be read, so every certificate is reported as revoked"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.2: the refusal is an HTTP response after a completed handshake, which is why there's a request line."
+            },
+            {
+              "id": "s7d1q17",
+              "type": "diagnose",
+              "category": "Ordering",
+              "question": "An application expects `CN=acme,O=Acme Freight,OU=Integrations` but receives `OU=Integrations,O=Acme Freight,CN=acme` in `X-Partner-DN`. Why?",
+              "options": {
+                "A": "The certificate was issued with its fields in the wrong order",
+                "B": "`$ssl_client_s_dn` uses RFC 2253 order, with the most specific part (CN) last",
+                "C": "NGINX sorts DN fields alphabetically before exposing them",
+                "D": "The partner is sending a forged certificate with its fields reversed"
+              },
+              "answer": "B",
+              "explanation": "1.3: RFC 2253 order; `$ssl_client_s_dn_legacy` gives the old `/O=.../CN=...` form."
+            },
+            {
+              "id": "s7d1q18",
+              "type": "recall",
+              "category": "Codes",
+              "question": "Which internal codes does NGINX use for \"no client certificate\" and \"client certificate error\"?",
+              "options": {
+                "A": "401 and 403",
+                "B": "496 and 495",
+                "C": "421 and 426",
+                "D": "499 and 494"
+              },
+              "answer": "B",
+              "explanation": "1.2: 496 for no certificate, 495 for a certificate error; both are answered as `400` unless `error_page` says otherwise."
+            },
+            {
+              "id": "s7d1q19",
+              "type": "recall",
+              "category": "SAN",
+              "question": "Which variable holds a client certificate's subject alternative names?",
+              "options": {
+                "A": "`$ssl_client_san`, a comma-separated list of the names",
+                "B": "`$ssl_client_s_dn`, which includes the SANs after the CN",
+                "C": "None: forward the certificate and let the application read them",
+                "D": "`$ssl_client_alt_names`, available since nginx 1.25"
+              },
+              "answer": "C",
+              "explanation": "1.3: neither open source nor Plus has a SAN variable."
+            },
+            {
+              "id": "s7d1q20",
+              "type": "recall",
+              "category": "Advertised CAs",
+              "question": "Which directive's CA names are sent to the client in the CertificateRequest?",
+              "options": {
+                "A": "`ssl_trusted_certificate`",
+                "B": "`ssl_client_certificate`",
+                "C": "`ssl_certificate`",
+                "D": "`proxy_ssl_trusted_certificate`"
+              },
+              "answer": "B",
+              "explanation": "1.1 and Activity 3.2: `openssl s_client` listed the Partner CA under \"Acceptable client certificate CA names\"."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "title": "Asking Someone Else: auth_request",
+          "questions": [
+            {
+              "id": "s7d2q01",
+              "type": "scenario",
+              "category": "Status Codes",
+              "question": "The authorization service answers `404` because of a typo in the auth location's path. What does the client get?",
+              "options": {
+                "A": "`404`, passed through from the service",
+                "B": "`401`, because anything but `2xx` means \"not authorized\"",
+                "C": "`500`, with `auth request unexpected status: 404` in the error log",
+                "D": "`200`: unexpected answers are ignored and the request continues"
+              },
+              "answer": "C",
+              "explanation": "1.1 and Activity 3.4: only `2xx`, `401` and `403` have a meaning; everything else is a `500`."
+            },
+            {
+              "id": "s7d2q02",
+              "type": "scenario",
+              "category": "Answer Headers",
+              "question": "The service answers `200` with `X-Ops-User: carol`. The location has `auth_request` and `proxy_pass` only. What does the ops tool receive?",
+              "options": {
+                "A": "`X-Ops-User: carol`: the service's headers are merged into the request",
+                "B": "No `X-Ops-User`: the subrequest's response is discarded unless copied with `auth_request_set`",
+                "C": "`X-Auth-Request-User: carol`: NGINX renames the service's headers",
+                "D": "The service's response body, instead of the client's request"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.1: `ops_user` was `null` until `auth_request_set` and `proxy_set_header`."
+            },
+            {
+              "id": "s7d2q03",
+              "type": "scenario",
+              "category": "Method",
+              "question": "A viewer's `POST` was allowed by a service that refuses non-`GET` methods for viewers. Why?",
+              "options": {
+                "A": "The service saw a `GET`: the subrequest didn't carry the client's method",
+                "B": "`auth_request` only runs for `GET` requests; others skip the check",
+                "C": "The `POST` body was too large, so NGINX skipped the subrequest",
+                "D": "Viewers' tokens are cached as admins after the first request"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.3: `method_seen: GET`, `x_original_method: null`. Pass `X-Original-Method $request_method`."
+            },
+            {
+              "id": "s7d2q04",
+              "type": "scenario",
+              "category": "Failing Closed",
+              "question": "The authorization service is down. What's the right expectation?",
+              "options": {
+                "A": "Requests are let through, so an outage doesn't stop the business",
+                "B": "Requests fail (`500`); its availability is now the application's availability",
+                "C": "NGINX switches to `satisfy any` automatically while it's down",
+                "D": "NGINX serves the last cached `200` to everyone until it's back"
+              },
+              "answer": "B",
+              "explanation": "1.3: `auth_request` fails closed; timeouts and caching decide how much it hurts."
+            },
+            {
+              "id": "s7d2q05",
+              "type": "scenario",
+              "category": "Cache Key",
+              "question": "Decisions are cached with `proxy_cache_key $http_authorization;`. What's the risk?",
+              "options": {
+                "A": "None: the token identifies the user, which is all the decision depends on",
+                "B": "A decision for one method answers another: a viewer's cached `GET` lets their `POST` through",
+                "C": "Tokens are written to disk in the cache, where other workers can't read them",
+                "D": "Two users with the same role share one cache entry"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.5: carol's `POST` got `200` from the cached `GET` decision until the key included the method."
+            },
+            {
+              "id": "s7d2q06",
+              "type": "scenario",
+              "category": "Revocation Delay",
+              "question": "Decisions are cached for 30 seconds. Dave's stolen token is removed from the service. What happens?",
+              "options": {
+                "A": "It stops working immediately: the service tells NGINX to purge it",
+                "B": "It keeps working for up to 30 seconds, from the cached `200`",
+                "C": "It keeps working until the edge reloads",
+                "D": "It stops working at once, because `401`s are never cached"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.5: the cache lifetime is a revocation delay; choose it as a security decision."
+            },
+            {
+              "id": "s7d2q07",
+              "type": "scenario",
+              "category": "Negative Caching",
+              "question": "Why cache `401` and `403` answers as well as `200`?",
+              "options": {
+                "A": "Otherwise every request with a bad token reaches the service, which a client can repeat endlessly",
+                "B": "Because `proxy_cache` refuses to store `2xx` answers for any auth subrequest",
+                "C": "So that a refused user stays refused for a while even after the service is fixed",
+                "D": "Because `auth_request` turns every uncached `401` into a `500` for the client"
+              },
+              "answer": "A",
+              "explanation": "1.4: refusals are the cheapest way for a misbehaving client to load the service."
+            },
+            {
+              "id": "s7d2q08",
+              "type": "scenario",
+              "category": "satisfy any",
+              "question": "`satisfy any; allow 10.57.0.5; deny all; auth_request /_authz;`. A request comes from 10.57.0.5 without a token. Is the authz service called?",
+              "options": {
+                "A": "Yes: every check runs, and then the results are combined",
+                "B": "No: `allow` already satisfied the access phase",
+                "C": "Yes, but its answer is ignored",
+                "D": "No, and the request is refused, because `deny all` comes last"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.6: the office's request showed `ops=\"-\"`: the service was never asked."
+            },
+            {
+              "id": "s7d2q09",
+              "type": "config",
+              "category": "Internal",
+              "question": "```nginx\nlocation = /_authz {\n    internal;\n    proxy_pass http://authz/check;\n}\n```\nA client requests `/_authz` directly. What does it get?",
+              "options": {
+                "A": "The service's answer, so a client can test whether its own token is valid",
+                "B": "`404`: an `internal` location only serves internal redirects and subrequests",
+                "C": "`403`: internal locations are protected by an implicit `deny all` rule",
+                "D": "`401`, because it has no token, with the service's `WWW-Authenticate`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.1: `r /_authz` returned `404`."
+            },
+            {
+              "id": "s7d2q10",
+              "type": "config",
+              "category": "Body",
+              "question": "Why `proxy_pass_request_body off;` and `proxy_set_header Content-Length \"\";` in the auth location?",
+              "options": {
+                "A": "The service only needs the headers; this avoids sending the body and a length that no longer matches",
+                "B": "They're required for `auth_request` to send any subrequest to the service at all",
+                "C": "They stop the request body from reaching the application after a successful check",
+                "D": "They make NGINX buffer the whole body until the service has answered the check"
+              },
+              "answer": "A",
+              "explanation": "1.2: the pair turns the subrequest into a header-only check."
+            },
+            {
+              "id": "s7d2q11",
+              "type": "config",
+              "category": "Passing Identity",
+              "question": "```nginx\nauth_request_set $ops_role $upstream_http_x_ops_role;\nproxy_set_header X-Ops-Role $ops_role;\n```\nA viewer sends `X-Ops-Role: admin`. What does the tool receive?",
+              "options": {
+                "A": "`admin`, because the client's header comes first",
+                "B": "`viewer, admin`: both values are joined",
+                "C": "`viewer`: the edge's header replaces the client's",
+                "D": "Nothing: conflicting headers are dropped"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.2: `\"ops_role\": \"viewer\"`."
+            },
+            {
+              "id": "s7d2q12",
+              "type": "config",
+              "category": "Cache Config",
+              "question": "Which `proxy_cache_key` fits a service that decides by token and method?",
+              "options": {
+                "A": "`proxy_cache_key \"$request_uri $remote_addr\";`",
+                "B": "`proxy_cache_key \"$http_authorization $uri\";`",
+                "C": "`proxy_cache_key \"$http_authorization $request_method\";`",
+                "D": "`proxy_cache_key \"$remote_addr $request_method\";`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.5: every input of the decision belongs in the key."
+            },
+            {
+              "id": "s7d2q13",
+              "type": "config",
+              "category": "Timeout",
+              "question": "With `proxy_read_timeout 1s;` in the auth location and a service that takes 3 seconds, what does the client get, and when?",
+              "options": {
+                "A": "`200` after 3 seconds: timeouts don't apply to subrequests",
+                "B": "`500` after about 1 second",
+                "C": "`504` after about 1 second",
+                "D": "`401` after about 1 second"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.4: `upstream timed out`, then `auth request unexpected status: 504`, and the client gets `500`."
+            },
+            {
+              "id": "s7d2q14",
+              "type": "config",
+              "category": "Token Forwarding",
+              "question": "Why `proxy_set_header Authorization \"\";` in `location /ops/`?",
+              "options": {
+                "A": "The ops tool gets a verified user and role, so it doesn't need a credential it could leak or replay",
+                "B": "Without it, the subrequest to the authorization service wouldn't include the client's token",
+                "C": "It makes NGINX cache each authorization decision under an empty key, which is faster",
+                "D": "Because the ops tool rejects requests that carry two `Authorization` headers at once"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: pass the identity, not the secret."
+            },
+            {
+              "id": "s7d2q15",
+              "type": "diagnose",
+              "category": "Cache Logging",
+              "question": "`log_format` includes `$upstream_cache_status`, and the auth location is cached, but the log always shows `-`. Why?",
+              "options": {
+                "A": "The cache isn't working: `-` means every lookup in the auth location's cache failed and the service was asked",
+                "B": "In the access log, `$upstream_*` describe the main request's upstream; copy the subrequest's with `auth_request_set`",
+                "C": "`$upstream_cache_status` only has a value when `proxy_cache_use_stale` is also set in the same location",
+                "D": "Subrequests are never cached, whatever `proxy_cache` says, so the variable has nothing to report"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.5: `auth_request_set $authz_cache $upstream_cache_status;` showed `MISS` then `HIT`."
+            },
+            {
+              "id": "s7d2q16",
+              "type": "diagnose",
+              "category": "WWW-Authenticate",
+              "question": "A client without a token gets `401` with `WWW-Authenticate: Bearer realm=\"tidewater-ops\"`. Where did that header come from?",
+              "options": {
+                "A": "NGINX adds it to every `401` it generates",
+                "B": "It was copied from the authorization service's `401` response",
+                "C": "The ops tool added it, because the request reached it",
+                "D": "From `auth_basic`, which is on by default with `auth_request`"
+              },
+              "answer": "B",
+              "explanation": "1.1 and Activity 3.1: NGINX copies `WWW-Authenticate` from the subrequest's `401`."
+            },
+            {
+              "id": "s7d2q17",
+              "type": "diagnose",
+              "category": "if and auth_request",
+              "question": "`if ($ops_role = \"\") { return 403; }` follows `auth_request` and `auth_request_set` in a location, and refuses everyone, valid tokens included. Why?",
+              "options": {
+                "A": "`if` runs in the rewrite phase, before the access phase has asked the service",
+                "B": "`auth_request_set` variables can only be used in `proxy_set_header`",
+                "C": "The service's header names are case-sensitive in `$upstream_http_*`",
+                "D": "`return` inside `if` always wins over `auth_request`"
+              },
+              "answer": "A",
+              "explanation": "1.1: rewrite (including `if`) runs before access; the variable is still empty there."
+            },
+            {
+              "id": "s7d2q18",
+              "type": "recall",
+              "category": "Directive",
+              "question": "Which directive copies a value from the authorization subrequest's response into a variable?",
+              "options": {
+                "A": "`auth_request_set`",
+                "B": "`proxy_set_header`",
+                "C": "`map`",
+                "D": "`set`"
+              },
+              "answer": "A",
+              "explanation": "1.1."
+            },
+            {
+              "id": "s7d2q19",
+              "type": "recall",
+              "category": "Phases",
+              "question": "In which phase does `auth_request` run?",
+              "options": {
+                "A": "Rewrite",
+                "B": "Access",
+                "C": "Content",
+                "D": "Log"
+              },
+              "answer": "B",
+              "explanation": "1.1: with `allow`/`deny` and `auth_basic`, which is why `satisfy` combines them."
+            },
+            {
+              "id": "s7d2q20",
+              "type": "recall",
+              "category": "satisfy",
+              "question": "What is the default of `satisfy`?",
+              "options": {
+                "A": "`any`",
+                "B": "`all`",
+                "C": "`first`",
+                "D": "`none`"
+              },
+              "answer": "B",
+              "explanation": "1.5: every access check must pass unless `satisfy any`."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "title": "Single Sign-On with OAuth2 Proxy & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s7d3q01",
+              "type": "scenario",
+              "category": "Code Flow",
+              "question": "In the authorization code flow, who sees the user's password?",
+              "options": {
+                "A": "The application, which forwards it to the IdP",
+                "B": "Only the identity provider",
+                "C": "OAuth2 Proxy, which checks it against the IdP",
+                "D": "NGINX, which hashes it before passing it on"
+              },
+              "answer": "B",
+              "explanation": "1.1: the user signs in at the IdP; the application only receives a code and then tokens."
+            },
+            {
+              "id": "s7d3q02",
+              "type": "scenario",
+              "category": "Back Channel",
+              "question": "Which step of the code flow goes server to server, not through the browser?",
+              "options": {
+                "A": "The redirect to the IdP's login page",
+                "B": "Exchanging the code for tokens at the token endpoint",
+                "C": "The redirect back to `/oauth2/callback`",
+                "D": "Showing the login form"
+              },
+              "answer": "B",
+              "explanation": "1.1: step 4, with the client secret and the PKCE verifier."
+            },
+            {
+              "id": "s7d3q03",
+              "type": "scenario",
+              "category": "sub",
+              "question": "The portal receives `X-User: 5d33c125-0e84-...`. What is it, and what should you pass instead?",
+              "options": {
+                "A": "A session ID; pass the cookie instead",
+                "B": "The token's `sub`, Keycloak's user ID; pass `X-Auth-Request-Preferred-Username`",
+                "C": "A CSRF token; pass `X-Auth-Request-User` from a second subrequest",
+                "D": "OAuth2 Proxy's instance ID; pass `X-Forwarded-User`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.2 and 3.3: `X-Auth-Request-User` is the `sub`."
+            },
+            {
+              "id": "s7d3q04",
+              "type": "scenario",
+              "category": "Cookie Leak",
+              "question": "Why remove the `Cookie` header before proxying to the portal?",
+              "options": {
+                "A": "The portal can't parse cookies that were set by another service on the same host",
+                "B": "It holds the user's SSO session; anyone who sees it at the application can replay it at the edge",
+                "C": "Keycloak refuses any later sign-in from a browser whose cookies were forwarded",
+                "D": "Cookies make `proxy_cache` skip the portal's responses, which slows the portal down"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.2: `cookies_received` included `_tidewater_sso`."
+            },
+            {
+              "id": "s7d3q05",
+              "type": "scenario",
+              "category": "Issuer",
+              "question": "Why must Keycloak's issuer be the same whether reached through the edge or directly?",
+              "options": {
+                "A": "Tokens carry the issuer, and relying parties check it against the one they were configured with",
+                "B": "Keycloak refuses to start when it's reachable under two different hostnames",
+                "C": "The JWKS is different for each address, so tokens would only verify on one of them",
+                "D": "Browsers block redirects between issuers, so the sign-in would never complete"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1: endpoints may differ per channel; the issuer can't."
+            },
+            {
+              "id": "s7d3q06",
+              "type": "scenario",
+              "category": "Sign-Out",
+              "question": "After `/oauth2/sign_out`, bob is sent to sign in, and comes straight back without typing a password. Why?",
+              "options": {
+                "A": "OAuth2 Proxy keeps a second cookie that `sign_out` doesn't clear",
+                "B": "Keycloak's own session is still active, so it signs him in silently",
+                "C": "The portal app cached his identity",
+                "D": "NGINX cached the `202` from `/oauth2/auth`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.5: a full sign-out also ends the IdP session at its `end_session_endpoint`."
+            },
+            {
+              "id": "s7d3q07",
+              "type": "scenario",
+              "category": "Groups",
+              "question": "Where does OAuth2 Proxy's `allowed_groups=admins` check get the user's groups from?",
+              "options": {
+                "A": "From an `X-Groups` header the browser sends along with the session cookie",
+                "B": "From the signed token's `groups` claim, stored in its session",
+                "C": "From an LDAP lookup that OAuth2 Proxy makes against Keycloak on each request",
+                "D": "From NGINX's `$sso_groups` variable, passed to it in a header by the edge"
+              },
+              "answer": "B",
+              "explanation": "1.2 and Activity 3.4: groups come from the token (via Keycloak's group mapper), never from the request."
+            },
+            {
+              "id": "s7d3q08",
+              "type": "scenario",
+              "category": "Front Door",
+              "question": "Why does the edge proxy Keycloak's `/realms/` and `/resources/`, but not `/admin/`?",
+              "options": {
+                "A": "The browser needs the login pages and their assets; the admin console stays off the public path",
+                "B": "Keycloak serves its admin console only over HTTP/2, which the edge doesn't proxy",
+                "C": "`/admin/` is already used by the portal application for its own admin pages",
+                "D": "OAuth2 Proxy handles `/admin/` itself and passes it to Keycloak's back channel"
+              },
+              "answer": "A",
+              "explanation": "1.3 and Activity 3.1: the admin console is on a separate local port."
+            },
+            {
+              "id": "s7d3q09",
+              "type": "config",
+              "category": "Login Redirect",
+              "question": "```nginx\nlocation /portal/ { auth_request /oauth2/auth; error_page 401 = @login; ... }\nlocation @login { return 302 /oauth2/start?rd=$request_uri; }\n```\nWhat does an anonymous request for `/portal/reports` get?",
+              "options": {
+                "A": "`401` with a login form",
+                "B": "`302` to `/oauth2/start?rd=/portal/reports`",
+                "C": "`302` straight to Keycloak's login page",
+                "D": "`200`, served by OAuth2 Proxy's sign-in page"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.2: the edge sends it to `/oauth2/start`, which sends it on to Keycloak."
+            },
+            {
+              "id": "s7d3q10",
+              "type": "config",
+              "category": "Headers",
+              "question": "Which line passes the signed-in user's username to the portal?",
+              "options": {
+                "A": "`auth_request_set $u $upstream_http_x_auth_request_user;`",
+                "B": "`auth_request_set $u $upstream_http_x_auth_request_preferred_username;`",
+                "C": "`auth_request_set $u $http_x_user;`",
+                "D": "`auth_request_set $u $cookie__tidewater_sso;`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3."
+            },
+            {
+              "id": "s7d3q11",
+              "type": "config",
+              "category": "Admins",
+              "question": "```nginx\nlocation = /_sso_admins { internal; proxy_pass http://sso/oauth2/auth?allowed_groups=admins; ... }\nlocation /portal/admin/ { auth_request /_sso_admins; error_page 401 = @login; ... }\n```\nBob is signed in but isn't in `admins`. What does he get?",
+              "options": {
+                "A": "`302` to sign in again",
+                "B": "`403`",
+                "C": "`200`, with `X-Groups: staff`",
+                "D": "`500`, because `403` isn't an expected status"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.4: OAuth2 Proxy answers `403`, which `auth_request` passes on."
+            },
+            {
+              "id": "s7d3q12",
+              "type": "config",
+              "category": "Forwarded Port",
+              "question": "Keycloak behind the edge on `https://localhost:8091` advertises `https://localhost/realms/...` for its token endpoint. Which header is missing?",
+              "options": {
+                "A": "`X-Forwarded-For`",
+                "B": "`X-Forwarded-Port`",
+                "C": "`X-Real-IP`",
+                "D": "`Forwarded-Host-Only`"
+              },
+              "answer": "B",
+              "explanation": "1.3: with HTTPS and no port, Keycloak assumes 443."
+            },
+            {
+              "id": "s7d3q13",
+              "type": "config",
+              "category": "Callback",
+              "question": "Which URI must reach OAuth2 Proxy for a sign-in to complete?",
+              "options": {
+                "A": "`/oauth2/callback`",
+                "B": "`/portal/callback`",
+                "C": "`/realms/tidewater/callback`",
+                "D": "`/oidc_callback`"
+              },
+              "answer": "A",
+              "explanation": "1.2: the IdP redirects there with the code; it's the `redirect-url` OAuth2 Proxy was given."
+            },
+            {
+              "id": "s7d3q14",
+              "type": "config",
+              "category": "PKCE",
+              "question": "What does PKCE (`code_challenge_method=S256`) protect against?",
+              "options": {
+                "A": "A stolen authorization code being redeemed by someone other than the client that asked for it",
+                "B": "A stolen session cookie being replayed at the edge from another browser",
+                "C": "Brute-force guessing of user passwords at the identity provider's login form",
+                "D": "Tokens being read by the application they're sent to, which shouldn't see them"
+              },
+              "answer": "A",
+              "explanation": "1.1: the code is useless without the verifier that matches the challenge."
+            },
+            {
+              "id": "s7d3q15",
+              "type": "diagnose",
+              "category": "Login Loop",
+              "question": "After signing in, the browser lands back at `/oauth2/start` again and again. The access log shows `/oauth2/callback` answered `302`. What's a likely cause?",
+              "options": {
+                "A": "The session cookie is `Secure` but the site is reached over plain HTTP, so the browser never sends it",
+                "B": "Keycloak's password check failed silently and it sent the browser back anyway",
+                "C": "The portal app is down, so NGINX restarts the sign-in each time it's asked",
+                "D": "`proxy_set_header Cookie \"\";` in `/oauth2/` strips the code from the callback"
+              },
+              "answer": "A",
+              "explanation": "OAuth2 Proxy sets `--cookie-secure=true` in the lab; the cookie only works over HTTPS."
+            },
+            {
+              "id": "s7d3q16",
+              "type": "diagnose",
+              "category": "Client ID",
+              "question": "Keycloak shows \"Invalid parameter: redirect_uri\" instead of the login form. What should you check?",
+              "options": {
+                "A": "That the client's redirect URIs in Keycloak include the exact callback URL OAuth2 Proxy sends",
+                "B": "That the user's password hasn't expired since the last successful sign-in",
+                "C": "That `X-Forwarded-For` is set on the front door's `/realms/` location",
+                "D": "That `allowed_groups` on `/oauth2/auth` includes the group of the signing-in user"
+              },
+              "answer": "A",
+              "explanation": "The IdP only redirects to registered URIs (`https://localhost:8091/oauth2/callback` for `portal`)."
+            },
+            {
+              "id": "s7d3q17",
+              "type": "diagnose",
+              "category": "CSRF Cookie",
+              "question": "A script checks \"is there a `_tidewater_sso` cookie\" with a substring match and reports success even when the password was wrong. Why?",
+              "options": {
+                "A": "OAuth2 Proxy sets `_tidewater_sso_csrf` at the start of every sign-in",
+                "B": "Keycloak copies the cookie name into its own session cookie",
+                "C": "Failed sign-ins set an empty `_tidewater_sso` cookie",
+                "D": "NGINX adds the cookie to every response from `/oauth2/`"
+              },
+              "answer": "A",
+              "explanation": "Recap notes: match the exact cookie name."
+            },
+            {
+              "id": "s7d3q18",
+              "type": "recall",
+              "category": "Endpoint",
+              "question": "Which OAuth2 Proxy endpoint does NGINX call with `auth_request`?",
+              "options": {
+                "A": "`/oauth2/start`",
+                "B": "`/oauth2/auth`",
+                "C": "`/oauth2/callback`",
+                "D": "`/oauth2/userinfo`"
+              },
+              "answer": "B",
+              "explanation": "1.2."
+            },
+            {
+              "id": "s7d3q19",
+              "type": "recall",
+              "category": "Session",
+              "question": "Where does OAuth2 Proxy keep a user's session by default?",
+              "options": {
+                "A": "In an encrypted cookie in the browser",
+                "B": "In NGINX's shared memory, keyed by a session ID in the cookie",
+                "C": "In Keycloak's database, which OAuth2 Proxy asks on each request",
+                "D": "In a local file per user inside the OAuth2 Proxy container"
+              },
+              "answer": "A",
+              "explanation": "1.2: only OAuth2 Proxy can decrypt it; Redis is an option."
+            },
+            {
+              "id": "s7d3q20",
+              "type": "recall",
+              "category": "Token",
+              "question": "Which token does OIDC add to OAuth 2.0 to say who the user is?",
+              "options": {
+                "A": "The refresh token",
+                "B": "The ID token",
+                "C": "The access token",
+                "D": "The session token"
+              },
+              "answer": "B",
+              "explanation": "1.1: a signed JWT about the user; the access token is for calling APIs."
+            }
+          ],
+          "extra_pools": [
+            {
+              "pool": "enterprise",
+              "title": "Enterprise (Optional): JWT Validation and Native OpenID Connect",
+              "track": "enterprise",
+              "optional": true,
+              "questions": [
+                {
+                  "id": "s7d3e01",
+                  "type": "scenario",
+                  "category": "Local Check",
+                  "question": "How does `auth_jwt` differ from Day 2's `auth_request` for each request?",
+                  "options": {
+                    "A": "It checks the token locally with cached keys: no call to another service per request",
+                    "B": "It sends every token to Keycloak's introspection endpoint and caches the answer",
+                    "C": "It needs OAuth2 Proxy to decrypt each token first, then checks the claims itself",
+                    "D": "It only checks the token's expiry and issuer, not the signature, to stay fast"
+                  },
+                  "answer": "A",
+                  "explanation": "1.1: `auth_jwt_key_request` + `auth_jwt_key_cache` fetch the keys once."
+                },
+                {
+                  "id": "s7d3e02",
+                  "type": "scenario",
+                  "category": "Audience",
+                  "question": "Why check `aud` when the signature is valid?",
+                  "options": {
+                    "A": "A valid signature only proves the IdP issued it; `aud` says which API it was issued for",
+                    "B": "Because `auth_jwt` skips the signature check unless an `aud` check is configured",
+                    "C": "Because Keycloak signs each audience with a different key from the same JWKS",
+                    "D": "Because tokens without a matching `aud` claim have already expired anyway"
+                  },
+                  "answer": "A",
+                  "explanation": "3.3: changing the map to `billing-api` refused bob's correctly signed token."
+                },
+                {
+                  "id": "s7d3e03",
+                  "type": "scenario",
+                  "category": "Rotation",
+                  "question": "Keycloak starts signing with a new key while NGINX has the old JWKS cached. What happens?",
+                  "options": {
+                    "A": "New tokens fail until the cache expires and the keys are fetched again",
+                    "B": "NGINX notices the new `kid` and fetches the keys at once",
+                    "C": "Old tokens fail and new ones pass",
+                    "D": "Nothing: the old key validates new tokens too"
+                  },
+                  "answer": "A",
+                  "explanation": "3.4: IdPs publish new keys before using them, for longer than relying parties cache."
+                },
+                {
+                  "id": "s7d3e04",
+                  "type": "scenario",
+                  "category": "Session",
+                  "question": "Where does NGINX Plus's OIDC module keep the user's session?",
+                  "options": {
+                    "A": "On the NGINX side, with a cookie (`NGX_OIDC_SESSION`) that holds only an ID",
+                    "B": "In an encrypted cookie holding the tokens, which only NGINX Plus can decrypt",
+                    "C": "In Keycloak, which NGINX Plus asks on every request through the back channel",
+                    "D": "In OAuth2 Proxy, which NGINX Plus starts and manages as a child process"
+                  },
+                  "answer": "A",
+                  "explanation": "1.2."
+                },
+                {
+                  "id": "s7d3e05",
+                  "type": "scenario",
+                  "category": "Issuer Scheme",
+                  "question": "Why does the lab's Keycloak front door have to be HTTPS for the side quest?",
+                  "options": {
+                    "A": "The Plus OIDC module refuses to load with an `http` issuer",
+                    "B": "`auth_jwt` can't read tokens issued over HTTP",
+                    "C": "Keycloak won't sign tokens unless it's behind HTTPS",
+                    "D": "Browsers refuse redirects to HTTP from HTTPS"
+                  },
+                  "answer": "A",
+                  "explanation": "1.2: `[emerg] issuer URL requires \"https\" scheme`."
+                },
+                {
+                  "id": "s7d3e06",
+                  "type": "scenario",
+                  "category": "Moving Parts",
+                  "question": "Compared with Day 3, what does `auth_oidc` remove?",
+                  "options": {
+                    "A": "The OAuth2 Proxy service, the `/oauth2/` locations, `error_page 401` and the `auth_request_set` lines",
+                    "B": "Keycloak: NGINX Plus acts as its own identity provider and signs the tokens",
+                    "C": "TLS: native OIDC in NGINX Plus works over plain HTTP between browser and edge",
+                    "D": "The need to register a client in Keycloak, because Plus registers itself"
+                  },
+                  "answer": "A",
+                  "explanation": "3.5's last question."
+                },
+                {
+                  "id": "s7d3e07",
+                  "type": "scenario",
+                  "category": "njs",
+                  "question": "What would an open source njs JWT check have to do that `auth_jwt` does for you?",
+                  "options": {
+                    "A": "Fetch and cache the JWKS, pick the key by `kid`, verify RS256, and check `exp`, `iss` and `aud`",
+                    "B": "Nothing: njs ships an `auth_jwt` function that does all of it in one call",
+                    "C": "Only decode the token: RS256 signatures can't be checked from njs at all",
+                    "D": "Call Keycloak for every request, because njs has no way to cache anything"
+                  },
+                  "answer": "A",
+                  "explanation": "Debrief question: it works with `crypto.subtle`, but it's code you own."
+                },
+                {
+                  "id": "s7d3e08",
+                  "type": "scenario",
+                  "category": "error=403",
+                  "question": "Why `auth_jwt_require $jwt_is_admin error=403;` rather than plain `auth_jwt_require $jwt_is_admin;`?",
+                  "options": {
+                    "A": "A valid token without the group is a permission problem (`403`), not missing authentication (`401`)",
+                    "B": "Without `error=403`, the requirement is only logged and the request continues",
+                    "C": "A `401` would make the client discard its token and ask the user to sign in",
+                    "D": "NGINX Plus can't return `401` from `auth_jwt_require`, only `403` or `500`"
+                  },
+                  "answer": "A",
+                  "explanation": "1.1 and 3.4: bob got `403` on `/api/admin/`."
+                },
+                {
+                  "id": "s7d3e09",
+                  "type": "config",
+                  "category": "Array Claim",
+                  "question": "`proxy_set_header X-Groups $jwt_claim_groups;` sends nothing, though the token has `\"groups\": [\"staff\"]`. What fixes it?",
+                  "options": {
+                    "A": "`auth_jwt_claim_set $jwt_groups groups;` and `X-Groups $jwt_groups`",
+                    "B": "`auth_jwt_type nested;`",
+                    "C": "`map $jwt_claim_groups $g { default $jwt_claim_groups; }`",
+                    "D": "Nothing: Plus can't read array claims"
+                  },
+                  "answer": "A",
+                  "explanation": "3.2/3.4: the array came out as `admins,staff`."
+                },
+                {
+                  "id": "s7d3e10",
+                  "type": "config",
+                  "category": "Keys",
+                  "question": "```nginx\nauth_jwt_key_request /_jwks;\nlocation = /_jwks { internal; proxy_pass http://10.57.0.30:8080/realms/tidewater/protocol/openid-connect/certs; }\n```\nWhat is `/_jwks` for?",
+                  "options": {
+                    "A": "Fetching Keycloak's public signing keys for `auth_jwt`",
+                    "B": "Sending tokens to Keycloak for validation",
+                    "C": "Serving NGINX's own keys to clients",
+                    "D": "Refreshing users' tokens"
+                  },
+                  "answer": "A",
+                  "explanation": "1.1."
+                },
+                {
+                  "id": "s7d3e11",
+                  "type": "config",
+                  "category": "Require",
+                  "question": "```nginx\nauth_jwt_require $jwt_issuer_ok $jwt_audience_ok;\n```\nWhen is the token accepted?",
+                  "options": {
+                    "A": "When both variables are non-empty and not `0`",
+                    "B": "When either variable is `1`",
+                    "C": "When both are empty, meaning nothing failed",
+                    "D": "Always: `auth_jwt_require` only adds log entries"
+                  },
+                  "answer": "A",
+                  "explanation": "1.1."
+                },
+                {
+                  "id": "s7d3e12",
+                  "type": "config",
+                  "category": "Callback",
+                  "question": "`auth_oidc tidewater;` is only in `location /portal/`. The sign-in ends with `404` at `/oidc_callback`. What fixes it?",
+                  "options": {
+                    "A": "`location = /oidc_callback { auth_oidc tidewater; }`",
+                    "B": "`redirect_uri /portal/;` in Keycloak only",
+                    "C": "`error_page 404 = /portal/;`",
+                    "D": "`proxy_pass` `/oidc_callback` to Keycloak"
+                  },
+                  "answer": "A",
+                  "explanation": "3.5: the callback must reach a location where `auth_oidc` is on."
+                },
+                {
+                  "id": "s7d3e13",
+                  "type": "config",
+                  "category": "config_url",
+                  "question": "Why set `config_url` in `oidc_provider` in the lab?",
+                  "options": {
+                    "A": "So NGINX Plus fetches the metadata over the internal back channel, while the issuer stays public",
+                    "B": "Because `issuer` is optional when `config_url` is set, and Keycloak omits it",
+                    "C": "So that the browser fetches the metadata and passes it to NGINX Plus",
+                    "D": "Because NGINX Plus can't use the standard `.well-known` path of an issuer"
+                  },
+                  "answer": "A",
+                  "explanation": "1.2."
+                },
+                {
+                  "id": "s7d3e14",
+                  "type": "config",
+                  "category": "Claims",
+                  "question": "Which variable gives the portal the signed-in user's username in the Plus portal?",
+                  "options": {
+                    "A": "`$oidc_claim_preferred_username`",
+                    "B": "`$jwt_claim_preferred_username`",
+                    "C": "`$upstream_http_x_auth_request_preferred_username`",
+                    "D": "`$remote_user`"
+                  },
+                  "answer": "A",
+                  "explanation": "3.5."
+                },
+                {
+                  "id": "s7d3e15",
+                  "type": "diagnose",
+                  "category": "Load Error",
+                  "question": "`[emerg] issuer URL requires \"https\" scheme`. What's wrong?",
+                  "options": {
+                    "A": "The `issuer` in `oidc_provider` is an `http://` URL",
+                    "B": "The `ssl_certificate` for the server is missing",
+                    "C": "Keycloak is down",
+                    "D": "The license doesn't include OIDC"
+                  },
+                  "answer": "A",
+                  "explanation": "Recap notes: the module refuses to load."
+                },
+                {
+                  "id": "s7d3e16",
+                  "type": "diagnose",
+                  "category": "Tampered",
+                  "question": "A token with a changed signature gets `401` from `auth_jwt`. Which part of the check failed?",
+                  "options": {
+                    "A": "The signature verification against the JWKS key named by `kid`",
+                    "B": "The `aud` check, because a tampered token loses its audience claim",
+                    "C": "The `exp` check, because changing the signature resets the expiry",
+                    "D": "The `auth_jwt_require` on groups, which runs before the signature check"
+                  },
+                  "answer": "A",
+                  "explanation": "3.2."
+                },
+                {
+                  "id": "s7d3e17",
+                  "type": "diagnose",
+                  "category": "Every Token 401",
+                  "question": "After a reload, every token gets `401`, though they're valid at Keycloak. The `aud` map was just changed. What's the likely cause?",
+                  "options": {
+                    "A": "The map no longer matches the audience in the tokens",
+                    "B": "The JWKS cache expired and NGINX can't fetch the keys again until restart",
+                    "C": "Keycloak rotated its keys at the same moment as the reload",
+                    "D": "`auth_jwt_type signed` was removed by the reload, so tokens are read as encrypted"
+                  },
+                  "answer": "A",
+                  "explanation": "3.3: the `billing-api` experiment."
+                },
+                {
+                  "id": "s7d3e18",
+                  "type": "recall",
+                  "category": "Directive",
+                  "question": "Which directive enables JWT validation in a location?",
+                  "options": {
+                    "A": "`auth_jwt`",
+                    "B": "`auth_oidc`",
+                    "C": "`auth_request`",
+                    "D": "`jwt_verify`"
+                  },
+                  "answer": "A",
+                  "explanation": "1.1."
+                },
+                {
+                  "id": "s7d3e19",
+                  "type": "recall",
+                  "category": "Cache",
+                  "question": "Which directive keeps fetched keys for a time?",
+                  "options": {
+                    "A": "`auth_jwt_key_cache`",
+                    "B": "`proxy_cache_valid`",
+                    "C": "`auth_jwt_leeway`",
+                    "D": "`keyval_zone`"
+                  },
+                  "answer": "A",
+                  "explanation": "1.1."
+                },
+                {
+                  "id": "s7d3e20",
+                  "type": "recall",
+                  "category": "OIDC",
+                  "question": "Which directive defines the identity provider for native OIDC?",
+                  "options": {
+                    "A": "`oidc_provider`",
+                    "B": "`auth_oidc`",
+                    "C": "`oidc_client`",
+                    "D": "`openid_connect`"
+                  },
+                  "answer": "A",
+                  "explanation": "1.2."
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

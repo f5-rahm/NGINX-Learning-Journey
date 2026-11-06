@@ -235,9 +235,13 @@ S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 * **Quiz:** [Gauntlet Quiz](quiz.html?sprint=6&day=3&pool=gauntlet), 20 questions across both editions.
 
 ### Sprint 7: Security Hardening & Zero Trust (Nov 9–13, 3 Days)
-* **Focus:** Identity verification, client authentication, and access control.
-* **Key Topics:** Mutual TLS (mTLS) with `ssl_client_certificate` and `ssl_verify_client on`, extracting client certificate CN/SAN attributes into headers, subrequest authentication with `auth_request`, and integrating OAuth2 Proxy.
-* **Enterprise Side Quest:** NGINX Plus native JWT validation (`auth_jwt`) and OpenID Connect (OIDC) integration against Keycloak / Okta.
+* **Focus:** Identity at the edge: who a partner, a tool user and a staff member is, and who decides what they may do.
+* **Daily Structure:**
+  * **Day 1:** Mutual TLS, both ways. `ssl_client_certificate` and `ssl_verify_client` (`on`, `optional`, `optional_no_ca`, and the 495/496 refusals), certificate variables into headers (and the missing SAN variable), identity only from a verified certificate, CRLs that need a reload and expire, and the edge as a TLS client (`proxy_ssl_certificate`, `proxy_ssl_verify`, `proxy_ssl_name`) against an impostor upstream. Quiz: [Day 1 Quiz](quiz.html?sprint=7&day=1).
+  * **Day 2:** Subrequest authorization with `auth_request`. Status handling, `auth_request_set`, what the authorization service actually sees (pass the method), failing closed, caching decisions with a key that holds every input, and `satisfy any`. Quiz: [Day 2 Quiz](quiz.html?sprint=7&day=2).
+  * **Day 3:** Single sign-on with OAuth2 Proxy and Keycloak. The OIDC code flow with PKCE, one issuer reached through two channels, OAuth2 Proxy behind `auth_request`, username vs `sub`, the session cookie kept from the application, group checks, and a sign-out that isn't one; then the sprint lab. Quiz: [Day 3 Quiz](quiz.html?sprint=7&day=3).
+* **Enterprise Side Quest:** NGINX Plus native JWT validation (`auth_jwt` with Keycloak's JWKS, audience and group checks) and native OpenID Connect (`oidc_provider`, `auth_oidc`) replacing OAuth2 Proxy: [guide](sprints/sprint-7/day_03_enterprise.md), [Enterprise Quiz](quiz.html?sprint=7&day=3&pool=enterprise).
+* **Lab:** The Tidewater Edge, in containers with Keycloak 26 and OAuth2 Proxy 7, validated by `test_sprint07.sh` (10 assertions). Details: [`sprints/sprint-7/README.md`](sprints/sprint-7/README.md).
 
 ### Sprint 8: Modern Kubernetes Ingress (Nov 16–20, 3 Days)
 * **Focus:** Bridging NGINX into Kubernetes container networking.
@@ -322,6 +326,6 @@ The entire 14-week journey is engineered to run seamlessly on a **single 4 vCPU 
 
 * **Memory Budget:**
   * Host OS & Docker Daemon: ~1.2 GB
-  * Sprint lab containers (Sprints 4–7): well under 0.5 GB
+  * Sprint lab containers (Sprints 4–6): well under 0.5 GB; Sprint 7 adds Keycloak, about 0.7 GB in all
   * Ephemeral `kind` Node (Sprints 8–10): ~2.5 GB
   * **Free Headroom:** ~4.0 GB (plus recommended 4 GB swapfile for buffer safety).
