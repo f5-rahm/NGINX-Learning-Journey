@@ -99,3 +99,17 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 * Recap written: `day02_recap.md`.
 
 ## Day 3
+* **Q (3.3): how are inbound requests assigned to workers?** Per connection, not per request, and not round-robin. The master opens the listening socket and every worker inherits it; each worker waits in its event loop, and whichever is free calls `accept()` first gets the connection (`accept_mutex` is off by default since 1.11.3; on Linux NGINX uses `EPOLLEXCLUSIVE` so only one worker is woken). Every request on that keep-alive connection stays on that worker. A worker stuck in a script isn't in its event loop, so it can't accept; that's why one `spin` cost nothing (the other worker took everything) and two stalled every ping (new connections queued in the kernel backlog until a worker came back). With `listen ... reuseport` each worker gets its own socket and the kernel hashes connections to them, so a ping could land on the spinning worker while the other sits idle. BIG-IP mapping: CMP/DAG hashes connections to TMMs, which is the `reuseport` model; the NGINX default is "first free worker takes it".
+
+### Day 3: Sprint lab (user's run)
+* **Missing export, second time this sprint** (first was `lang` on Day 1): `info` was written but not in `export default`. `nginx -t` and the reload passed; every `/edge/info` got 500 with `js function "lumina.info" not found`. It also failed Requirement 3, because the test checks malformed cookies through `/edge/info`; the parser itself was fine (`/api/` gave 200 for all five junk cookies).
+* **Requirement 8:** the validator was right (8/8 invalid bodies → 400, none reached the origin), but `orders()` redirected a valid order to `@app`, which the config doesn't define (there's `@files`), so valid orders got 500 with `could not find named location "@app"`. Cause: the `@app` block was written in the editor but never saved into `nginx.conf`.
+* **Result: 10/10** after exporting `info` and adding `@app` to `nginx.conf`.
+* **User's take on the model:** less intuitive than BIG-IP; "too much crossing of streams between code and config". Still valued the exercises as a foundation for how to approach problems (native first, one decision per `js_set`, fail closed, keep work off the request path, read the error log after every reload).
+
+### Day 3: Infographic
+* `code-and-config.svg` / `.png`: the lab's jobs row by row (key, identity, pool, check-then-pass, edge answer, X-User, response filters, revocation feed, TCP gate), each split into what `nginx.conf` owns and what `lumina.js` decides, plus the four seams that passed `nginx -t` (missing export, missing named location, a proxying location without `$pool`/`X-User`, no `env` line). Same style as Days 1–2 (rsvg-convert in alpine:3.22, Lato, DejaVu Sans Mono, 1.5×; generator in the session scratchpad).
+
+### Day 3: Quiz
+* **7/10** on attempt 1, **9/10** on attempt 2. Every miss in both was about `js_preread` (stream njs): review topic.
+* Recap written: `day03_recap.md` (Day 3, sprint lab, sprint wrap-up and the user's take).

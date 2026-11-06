@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="936" viewBox="0 0 1200 936" font-family="Lato" xml:space="preserve">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#78716C"/></marker></defs>
+<rect x="0" y="0" width="1200" height="936" fill="#FFFFFF"/>
+<text x="24" y="46" font-size="28" fill="#1F1F1F" text-anchor="start" font-weight="bold">Config and code: who does what</text>
+<text x="24" y="78" font-size="15.5" fill="#555555" text-anchor="start">Sprint 6&#x27;s Lumina edge, job by job. The configuration owns every hook, every proxy and every header;</text>
+<text x="24" y="99" font-size="15.5" fill="#555555" text-anchor="start">the script only decides and hands the answer back. Each arrow is a seam between the two files.</text>
+<rect x="222" y="124" width="420" height="70" rx="8" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.5"/>
+<text x="236" y="146" font-size="11.5" fill="#1D4ED8" text-anchor="start" font-weight="bold">NGINX.CONF: WHERE AND WHEN</text>
+<text x="236" y="168" font-size="13" fill="#1F1F1F" text-anchor="start">Directives: which hook runs, which location</text>
+<text x="236" y="186" font-size="13" fill="#1F1F1F" text-anchor="start">proxies, which header the app receives.</text>
+<rect x="760" y="124" width="416" height="70" rx="8" fill="#FFF7ED" stroke="#B45309" stroke-width="1.5"/>
+<text x="774" y="146" font-size="11.5" fill="#B45309" text-anchor="start" font-weight="bold">LUMINA.JS: WHAT TO DECIDE</text>
+<text x="774" y="168" font-size="13" fill="#1F1F1F" text-anchor="start">Functions in export default: verify, compute,</text>
+<text x="774" y="186" font-size="13" fill="#1F1F1F" text-anchor="start">answer or allow; then hand back to the config.</text>
+<text x="24" y="154" font-size="11.5" fill="#555555" text-anchor="start" font-weight="bold">THE JOB</text>
+<rect x="12" y="211" width="1176" height="58" fill="#FAFAF9"/>
+<text x="24" y="236" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">The key</text>
+<text x="24" y="254" font-size="12" fill="#555555" text-anchor="start">kept out of every file</text>
+<rect x="222" y="216" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="236" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">env LUMINA_KEY;</tspan></text>
+<text x="234" y="255" font-size="13" fill="#1F1F1F" text-anchor="start">Workers start with an empty environment.</text>
+<line x1="648" y1="240.0" x2="756" y2="240.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="233.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">lets in</text>
+<rect x="760" y="216" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="236" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">process.env.LUMINA_KEY</tspan></text>
+<text x="772" y="255" font-size="13" fill="#1F1F1F" text-anchor="start">No key? Fail closed, don&#x27;t throw.</text>
+<text x="24" y="294" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Who is it?</text>
+<text x="24" y="312" font-size="12" fill="#555555" text-anchor="start">verified, not claimed</text>
+<rect x="222" y="274" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="294" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">js_set $session_user lumina.user;</tspan></text>
+<text x="234" y="313" font-size="13" fill="#1F1F1F" text-anchor="start">Lazy: runs only when a directive reads it.</text>
+<line x1="648" y1="298.0" x2="756" y2="298.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="291.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">asks</text>
+<rect x="760" y="274" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="294" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">session()</tspan>: HMAC, expiry, revocation</text>
+<text x="772" y="313" font-size="13" fill="#1F1F1F" text-anchor="start">Junk cookie? No session, never a 500.</text>
+<rect x="12" y="327" width="1176" height="58" fill="#FAFAF9"/>
+<text x="24" y="352" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Which pool?</text>
+<text x="24" y="370" font-size="12" fill="#555555" text-anchor="start">on a verified claim</text>
+<rect x="222" y="332" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="352" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">proxy_pass http://$pool;</tspan></text>
+<text x="234" y="371" font-size="13" fill="#1F1F1F" text-anchor="start">In every location that proxies.</text>
+<line x1="648" y1="356.0" x2="756" y2="356.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="349.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">asks</text>
+<rect x="760" y="332" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="352" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">pool()</tspan>: <tspan font-family="DejaVu Sans Mono" font-size="12.0">&#x27;beta&#x27;</tspan> or <tspan font-family="DejaVu Sans Mono" font-size="12.0">&#x27;stable&#x27;</tspan></text>
+<text x="772" y="371" font-size="13" fill="#1F1F1F" text-anchor="start">Forged, expired, revoked: stable.</text>
+<text x="24" y="410" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Check, then pass</text>
+<text x="24" y="428" font-size="12" fill="#555555" text-anchor="start">links, orders</text>
+<rect x="222" y="390" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="410" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">js_content</tspan> in the location;</text>
+<text x="234" y="429" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">@files</tspan> and <tspan font-family="DejaVu Sans Mono" font-size="12.0">@app</tspan> do the proxying.</text>
+<line x1="648" y1="414.0" x2="756" y2="414.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="701.0" y="407.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">hands back</text>
+<rect x="760" y="390" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="410" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">403</tspan> / <tspan font-family="DejaVu Sans Mono" font-size="12.0">410</tspan> / <tspan font-family="DejaVu Sans Mono" font-size="12.0">400</tspan>, or</text>
+<text x="772" y="429" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">r.internalRedirect(&#x27;@app&#x27;)</tspan></text>
+<rect x="12" y="443" width="1176" height="58" fill="#FAFAF9"/>
+<text x="24" y="468" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Answer at the edge</text>
+<text x="24" y="486" font-size="12" fill="#555555" text-anchor="start">the origin never sees it</text>
+<rect x="222" y="448" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="468" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">location = /edge/info</tspan></text>
+<text x="234" y="487" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">js_content lumina.info;</tspan></text>
+<line x1="648" y1="472.0" x2="756" y2="472.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="465.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">asks</text>
+<rect x="760" y="448" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="468" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">r.return(200, json)</tspan></text>
+<text x="772" y="487" font-size="13" fill="#1F1F1F" text-anchor="start">Client address and user.</text>
+<text x="24" y="526" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Tell the app who</text>
+<text x="24" y="544" font-size="12" fill="#555555" text-anchor="start">config only</text>
+<rect x="222" y="506" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="526" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">proxy_set_header X-User $session_user;</tspan></text>
+<text x="234" y="545" font-size="13" fill="#1F1F1F" text-anchor="start">Again in every location that proxies.</text>
+<rect x="760" y="506" width="416" height="48" rx="6" fill="#F5F5F4" stroke="#D6D3D1" stroke-width="1" stroke-dasharray="5,4"/>
+<text x="772" y="535" font-size="12.5" fill="#555555" text-anchor="start">No script: the proxied request&#x27;s headers are set in config.</text>
+<rect x="12" y="559" width="1176" height="58" fill="#FAFAF9"/>
+<text x="24" y="584" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Change the response</text>
+<text x="24" y="602" font-size="12" fill="#555555" text-anchor="start">after the origin answers</text>
+<rect x="222" y="564" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="584" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">js_header_filter</tspan> + <tspan font-family="DejaVu Sans Mono" font-size="12.0">js_body_filter</tspan></text>
+<text x="234" y="603" font-size="13" fill="#1F1F1F" text-anchor="start">Synchronous; the headers leave first.</text>
+<line x1="648" y1="588.0" x2="756" y2="588.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="581.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">asks</text>
+<rect x="760" y="564" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="584" font-size="13" fill="#1F1F1F" text-anchor="start">Delete <tspan font-family="DejaVu Sans Mono" font-size="12.0">Content-Length</tspan>, then</text>
+<text x="772" y="603" font-size="13" fill="#1F1F1F" text-anchor="start">mask card numbers piece by piece.</text>
+<text x="24" y="642" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Keep state fresh</text>
+<text x="24" y="660" font-size="12" fill="#555555" text-anchor="start">no request involved</text>
+<rect x="222" y="622" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="642" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">js_periodic</tspan> (worker 0), <tspan font-family="DejaVu Sans Mono" font-size="12.0">resolver</tspan>,</text>
+<text x="234" y="661" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">js_shared_dict_zone zone=revoked</tspan></text>
+<line x1="648" y1="646.0" x2="756" y2="646.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="639.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">runs</text>
+<rect x="760" y="622" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="642" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">ngx.fetch</tspan> the list, then</text>
+<text x="772" y="661" font-size="13" fill="#1F1F1F" text-anchor="start">write <tspan font-family="DejaVu Sans Mono" font-size="12.0">ngx.shared.revoked</tspan>.</text>
+<rect x="12" y="675" width="1176" height="58" fill="#FAFAF9"/>
+<text x="24" y="700" font-size="14.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Gate TCP</text>
+<text x="24" y="718" font-size="12" fill="#555555" text-anchor="start">port 8097, bytes only</text>
+<rect x="222" y="680" width="420" height="48" rx="6" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="234" y="700" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">stream</tspan>: own <tspan font-family="DejaVu Sans Mono" font-size="12.0">js_import</tspan>, <tspan font-family="DejaVu Sans Mono" font-size="12.0">js_preread</tspan>,</text>
+<text x="234" y="719" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">preread_timeout 5s</tspan></text>
+<line x1="648" y1="704.0" x2="756" y2="704.0" stroke="#78716C" stroke-width="1.8" marker-end="url(#arrow)"/>
+<text x="701.0" y="697.0" font-size="11.5" fill="#555555" text-anchor="middle" font-weight="bold">asks</text>
+<rect x="760" y="680" width="416" height="48" rx="6" fill="#FFF7ED" stroke="#B45309" stroke-width="1.2"/>
+<text x="772" y="700" font-size="13" fill="#1F1F1F" text-anchor="start"><tspan font-family="DejaVu Sans Mono" font-size="12.0">s.on(&#x27;upload&#x27;)</tspan>: read the HELLO,</text>
+<text x="772" y="719" font-size="13" fill="#1F1F1F" text-anchor="start">then <tspan font-family="DejaVu Sans Mono" font-size="12.0">s.allow()</tspan> or <tspan font-family="DejaVu Sans Mono" font-size="12.0">s.deny()</tspan>.</text>
+<text x="24" y="782" font-size="20" fill="#1F1F1F" text-anchor="start" font-weight="bold">Where the seams showed: each one passes <tspan font-family="DejaVu Sans Mono" font-size="18.4">nginx -t</tspan></text>
+<rect x="24.0" y="799" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="50.0" y="812" font-size="13.5" fill="#1F1F1F" text-anchor="start">A function missing from <tspan font-family="DejaVu Sans Mono" font-size="12.4">export default</tspan></text>
+<text x="576.0" y="812" font-size="13" fill="#B91C1C" text-anchor="end">500, or an empty variable</text>
+<rect x="600.0" y="799" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="626.0" y="812" font-size="13.5" fill="#1F1F1F" text-anchor="start">A named location that isn&#x27;t in <tspan font-family="DejaVu Sans Mono" font-size="12.4">nginx.conf</tspan></text>
+<text x="1152.0" y="812" font-size="13" fill="#B91C1C" text-anchor="end">500 on that path only</text>
+<rect x="24.0" y="829" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="50.0" y="842" font-size="13.5" fill="#1F1F1F" text-anchor="start">A proxying location without <tspan font-family="DejaVu Sans Mono" font-size="12.4">$pool</tspan> / <tspan font-family="DejaVu Sans Mono" font-size="12.4">X-User</tspan></text>
+<text x="576.0" y="842" font-size="13" fill="#B91C1C" text-anchor="end">wrong pool; a client&#x27;s X-User leaks</text>
+<rect x="600.0" y="829" width="16" height="16" rx="3" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="626.0" y="842" font-size="13.5" fill="#1F1F1F" text-anchor="start">No <tspan font-family="DejaVu Sans Mono" font-size="12.4">env</tspan> line for the key</text>
+<text x="1152.0" y="842" font-size="13" fill="#B91C1C" text-anchor="end">every signature refused</text>
+<rect x="24" y="870" width="1152" height="34" rx="6" fill="#F0FDF4" stroke="#15803D" stroke-width="1.2"/>
+<text x="38" y="892" font-size="13.5" fill="#1F1F1F" text-anchor="start">What helped: one decision per <tspan font-family="DejaVu Sans Mono" font-size="12.4">js_set</tspan>, reused everywhere; <tspan font-family="DejaVu Sans Mono" font-size="12.4">grep js_</tspan> to see every hook; the error log after every reload.</text>
+</svg>
