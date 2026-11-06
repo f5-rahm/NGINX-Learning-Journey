@@ -22,7 +22,7 @@ From Sprint 4 on, the labs run in **containers** for current packages (`nginx:ma
 
 | Port | Service |
 | :--- | :--- |
-| 8080–8083 | Earlier sprints (reserved) |
+| 8081–8083 | Earlier sprints (reserved) |
 | **8084** | **Sprint 4 lab: the Lumina edge** (container `s4-edge`) |
 | **127.0.0.1:8014** | **The origin** (container `s4-origin`; the edge reaches it as `s4-origin:8014` on the `s4-net` network) |
 | 8086 / 127.0.0.1:8085 | Side quest: NGINX Plus container `lumina-cache-plus`, traffic / API and dashboard |

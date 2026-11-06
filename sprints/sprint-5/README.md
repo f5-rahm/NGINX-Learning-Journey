@@ -22,7 +22,7 @@ Like Sprint 4, the lab runs in **containers** (`nginx:mainline`: nginx 1.31.6). 
 
 | Address / port | Service |
 | :--- | :--- |
-| 8080–8084 | Earlier sprints (reserved) |
+| 8081–8084 | Earlier sprints (reserved) |
 | **10.55.0.10:8095** (host **:8095**) | **Sprint 5 lab: the Lumina gateway** (container `s5-edge`) |
 | 10.55.0.20:8015 (host 127.0.0.1:8015) | **The API** (container `s5-origin`) |
 | 10.55.0.2 | **The client** (container `s5-client`): sends from any 10.55.x.y address you name |

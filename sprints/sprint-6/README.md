@@ -21,7 +21,7 @@ Like Sprints 4 and 5, the lab runs in **containers**: `nginx:mainline` (nginx 1.
 
 | Address / port | Service |
 | :--- | :--- |
-| 8080–8095 | Earlier sprints (reserved) |
+| 8081–8095 | Earlier sprints (reserved) |
 | **:8096** (container `s6-edge`, 10.56.0.10) | **Sprint 6 lab: the Lumina edge**, HTTP |
 | **:8097** | The edge's telemetry port, TCP |
 | 127.0.0.1:8016 (container `s6-origin`, 10.56.0.20) | **The application**: the stable pool :8016, the beta pool :8026, the telemetry intake :8036 |

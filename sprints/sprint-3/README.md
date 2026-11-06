@@ -22,7 +22,7 @@ All Sprint 3 labs run from `/srv/nginx-journey/sprints/sprint-3/lab` with the `n
 
 | Port | Service |
 | :--- | :--- |
-| 8080 / 8081 / 8082 | Dashboard (reserved) / Sprint 1 lab / Sprint 2 lab |
+| 8081 / 8082 | Sprint 1 lab / Sprint 2 lab |
 | **8083** | **Sprint 3 lab: plain HTTP, redirects to HTTPS** |
 | **8443 TCP + UDP** | **Sprint 3 lab: HTTPS (TLS, HTTP/2) and HTTP/3 (QUIC)** |
 | 8001 / 8002 / 8003 | Sprint 2 mock backends (`../../sprint-2/lab/mocks.sh start`) |

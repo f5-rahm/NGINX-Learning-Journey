@@ -6,6 +6,58 @@
 
 ---
 
+## Getting Started
+
+Do this once per lab box, then start with [Sprint 1, Day 1](sprints/sprint-1/day_01.md).
+
+### System Requirements
+
+| Need | Details |
+| :--- | :--- |
+| **Host** | One Ubuntu machine (a VM or cloud instance is fine) with 4 vCPU, 8 GB RAM and 20 GB of free disk. |
+| **Access** | Root (`sudo -i`). The labs signal NGINX processes, read container network namespaces and bind low-numbered ports. |
+| **Network** | Outbound internet for packages and container images. Reach the lab ports (8081–8098, 8443 TCP+UDP, 8090) from your browser if you want to use the quiz page from a workstation. |
+| **NGINX** | Mainline from the nginx.org repository, not Ubuntu's package. It's current, and it includes the `nginx-debug` binary used in Sprint 1. Sprints 1–3 run it on the host. |
+| **Docker Engine** | Required from Sprint 3 (the HTTP/3 checks) and for every lab from Sprint 4 on, which run NGINX and their backends in containers. Also used by every NGINX Plus side quest. |
+| **Host tools** | `git`, `curl`, `openssl`, `python3` (standard library only, nothing to `pip install`), `jq`, `iproute2` (`ss`, `nstat`) and `procps` (`ps`, `sysctl`), and the trace tools `strace`, `sysstat`, `tcpdump`, `lsof`. Most Ubuntu installs already have `iproute2` and `procps`; minimal images don't. |
+| **Repo path** | Clone to **`/srv/nginx-journey`**. Guides, helper scripts and a few lab configs use that absolute path, and the `nginx` worker user can't read files under a home directory (mode 750 on Ubuntu). |
+| **Optional** | An NGINX Plus license (`license.jwt` from MyF5, a trial is fine) for the enterprise side quests; see [`docs/nginx-plus-lab.md`](docs/nginx-plus-lab.md). Kubernetes tools (`kind`, `kubectl`, `helm`) are introduced in Sprint 8. |
+
+### One-Time Setup
+
+Run as root:
+
+```bash
+# 1. Host tools
+apt update
+apt install -y git curl ca-certificates gnupg openssl python3 jq iproute2 procps strace sysstat tcpdump lsof
+
+# 2. NGINX mainline from nginx.org (https://nginx.org/en/linux_packages.html#Ubuntu)
+curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/mainline/ubuntu $(. /etc/os-release; echo $VERSION_CODENAME) nginx" \
+  > /etc/apt/sources.list.d/nginx.list
+printf 'Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n' > /etc/apt/preferences.d/99nginx
+apt update && apt install -y nginx
+systemctl disable --now nginx          # the labs start their own instances; keep port 80 free
+nginx -v && ls /usr/sbin/nginx-debug
+
+# 3. Docker Engine (https://docs.docker.com/engine/install/ubuntu/; the convenience script suits a lab box)
+curl -fsSL https://get.docker.com | sh
+docker run --rm hello-world
+
+# 4. The repo
+git clone https://github.com/f5-rahm/NGINX-Learning-Journey.git /srv/nginx-journey
+```
+
+Then:
+* **Each sprint's README** has that sprint's port map and its lab setup (`mocks.sh`, `make_certs.sh`, or `lab.sh up`). Logs, temp files, caches, certificates and keys are created by those steps, never committed.
+* **The quizzes** run from the repo: `cd /srv/nginx-journey && python3 -m http.server 8090`, then open `http://<lab-host>:8090/quiz.html?sprint=1&day=1`.
+* **The NGINX Plus side quests** need the one-time license setup in [`docs/nginx-plus-lab.md`](docs/nginx-plus-lab.md).
+* **Each sprint's test** (`test_sprintNN.sh`) fails its checks against the starter config. That's expected, because the lab is to make them pass. From Sprint 4 on, the test also prints a "ready to go" banner when the lab is up and the starter loads.
+* **To check a new lab box or a change to these steps**, [`docs/fresh-clone-test/`](docs/fresh-clone-test/README.md) runs this setup and every sprint lab in a clean Ubuntu container.
+
+---
+
 ## 1. Executive Summary & Educational Vision
 
 ### 1.1 The Objective
@@ -69,7 +121,7 @@ Each sprint day is engineered as a focused, high-impact **45 to 60-minute hands-
 ### Daily Components Defined
 1. **Dedicated Daily Guide (`DAY_XX.md`):** Standalone markdown document containing concise architectural diagrams, exact terminal commands, code snippets, and observation prompts.
 2. **Curated 20-Question Pools ([`data/quizzes.json`](data/quizzes.json)):** One file holding every pool, organized by sprint, then by day. Each question is tagged with a `type`. From Sprint 2 on, each pool targets 8 `scenario`, 6 `config` (read a config, predict the result), 3 `diagnose` (symptom or log line to cause), and 3 `recall` questions.
-3. **Quiz Engine ([`quiz.html`](quiz.html)):** One page for every quiz (`quiz.html?sprint=2&day=1`). It draws 10 of 20 at random and shows explanations immediately. It reads `data/quizzes.json`, so serve the repo over HTTP (`python3 -m http.server 8090`). The learning dashboard will take this over.
+3. **Quiz Engine ([`quiz.html`](quiz.html)):** One page for every quiz (`quiz.html?sprint=2&day=1`). It draws 10 of 20 at random and shows explanations immediately. It reads `data/quizzes.json`, so serve the repo over HTTP (`python3 -m http.server 8090`).
 4. **Objective Test Suite (`test_sprintXX.sh`):** Zero-ambiguity assertion script checking HTTP status codes, headers, response payloads, and security boundaries.
 
 ---
@@ -252,17 +304,19 @@ The entire 14-week journey is engineered to run seamlessly on a **single 4 vCPU 
 ```
 [ Engineer Workstation / Browser ]
        │
-       ├────► Port 8080 ──► Host Docker Stack: Learning Dashboard & Test Runner
-       │                    - Always-online curriculum, quiz engine, and notes
-       │                    - Zero impact when Kubernetes clusters are recreated
+       ├────► Ports 8081–8098 ─► Sprint labs
+       │                        - Sprints 1–3: host NGINX, run from each sprint's lab/
+       │                        - Sprint 4 on: NGINX and backends in containers (lab.sh)
        │
-       └────► Port 80/443 ─► Ephemeral `kind` Cluster (Kubernetes Lab Sandboxes)
-                            - NGINX Ingress Controller / Gateway Fabric
-                            - Can be torn down and rebuilt (`kind delete cluster`)
+       ├────► Port 8090 ──────► Quiz page (python3 -m http.server)
+       │
+       └────► Port 80/443 ────► Ephemeral `kind` Cluster (Kubernetes Lab Sandboxes)
+                                - NGINX Ingress Controller / Gateway Fabric
+                                - Can be torn down and rebuilt (`kind delete cluster`)
 ```
 
 * **Memory Budget:**
   * Host OS & Docker Daemon: ~1.2 GB
-  * Learning Platform Stack: ~0.3 GB
+  * Sprint lab containers (Sprints 4–7): well under 0.5 GB
   * Ephemeral `kind` Node (Sprints 8–10): ~2.5 GB
   * **Free Headroom:** ~4.0 GB (plus recommended 4 GB swapfile for buffer safety).

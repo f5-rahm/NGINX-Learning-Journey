@@ -24,7 +24,6 @@ All Sprint 2 labs run from `/srv/nginx-journey/sprints/sprint-2/lab` with the `n
 
 | Port | Service |
 | :--- | :--- |
-| 8080 | Learning dashboard (reserved) |
 | 8081 | Sprint 1 lab |
 | **8082** | **Sprint 2 lab NGINX** |
 | 8001 / 8002 | `api-node-1` / `api-node-2` HTTP echo backends |
@@ -181,7 +180,7 @@ The suite starts any mock backends that aren't running (and stops them afterward
 
 ## 6. Daily Quizzes
 
-Every question pool lives in one file, **[`data/quizzes.json`](../../data/quizzes.json)**, organized by sprint and then by day. It will feed the learning dashboard. Each day has 20 questions; the quiz draws 10, and 8/10 passes.
+Every question pool lives in one file, **[`data/quizzes.json`](../../data/quizzes.json)**, organized by sprint and then by day. Each day has 20 questions; the quiz draws 10, and 8/10 passes.
 
 **Mix per 20-question pool:**
 

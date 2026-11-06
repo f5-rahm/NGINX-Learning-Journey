@@ -91,7 +91,7 @@ The first `up` creates a random signing key in `lab/secrets/lumina.key` (owner-o
 
 | Address / port | Service |
 | :--- | :--- |
-| 8080–8095 | Earlier sprints (reserved) |
+| 8081–8095 | Earlier sprints (reserved) |
 | **:8096** (container `s6-edge`, 10.56.0.10) | **Sprint 6 lab: the Lumina edge**, HTTP |
 | :8097 | The edge's telemetry port, TCP (Day 3) |
 | 127.0.0.1:8016 (container `s6-origin`, 10.56.0.20) | **The application**: stable pool :8016, beta pool :8026, telemetry intake :8036 |

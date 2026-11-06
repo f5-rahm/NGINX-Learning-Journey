@@ -59,7 +59,9 @@ In production, you never "restart" NGINX—you signal it. Signals always go to a
 
 ## 2. Lab Prerequisites (One-Time Setup)
 
-The lab runs natively on the Ubuntu lab box, using NGINX mainline from the nginx.org repository (which includes the `nginx-debug` binary used in Activity 1.4). Port plan: 8080 is reserved for the learning dashboard, so Sprint 1 labs listen on **8081**.
+The lab runs natively on the Ubuntu lab box, using NGINX mainline from the nginx.org repository (which includes the `nginx-debug` binary used in Activity 1.4). Port plan: each sprint's lab has its own ports, so earlier labs can keep running; Sprint 1 listens on **8081**.
+
+If you followed [Getting Started](../../README.md#getting-started) in the README, steps 1 and 2 and the clone in step 3 are already done.
 
 1. Install NGINX from the nginx.org mainline repo (see [nginx.org Linux packages](https://nginx.org/en/linux_packages.html)), then disable the packaged service so it never claims port 80:
    ```bash
