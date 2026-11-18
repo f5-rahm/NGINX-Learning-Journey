@@ -66,7 +66,7 @@ openssl ca -config partner-ca.db/ca.cnf -revoke initech.crt -crl_reason cessatio
 openssl ca -config partner-ca.db/ca.cnf -gencrl -out partner-ca.crl 2>/dev/null
 
 # A forgery: same subject as Acme's, signed by the rogue CA
-issue rogue-ca fake-acme "/O=Acme Freight/OU=Integrations/CN=acme" "DNS:api.acme.example" clientAuth
+issue rogue-ca fake-acme "/O=Acme Freight/OU=Integrations/CN=acme" "DNS:api.acme.example,URI:spiffe://partners.tidewater/acme" clientAuth
 
 # The ledger's impostor: a server certificate for the same name, signed by the rogue CA
 issue rogue-ca impostor "/O=Tidewater Logistics/CN=ledger.internal" "DNS:ledger.internal" serverAuth

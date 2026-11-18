@@ -49,4 +49,38 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 
 ## Q&A During the Sprint
 
-(Added as the sprint is played.)
+### Day 1, Concepts 1.2: why the handshake always succeeds
+* **Q:** Does the handshake succeed even when the certificate is refused because OpenSSL handles TLS and NGINX doesn't?
+* **A:** No. OpenSSL is a library inside the NGINX worker, and NGINX tells it what to do. With `ssl_verify_client` set, NGINX asks for a certificate (`SSL_VERIFY_PEER`) but installs a verify callback that **always accepts**: OpenSSL checks the chain, dates and CRL, stores the result, and lets the handshake finish. NGINX then reads that result **when the HTTP request is processed** (`SSL_get_verify_result` / is there a peer certificate) and ends the request with its internal 495/496, sent as a `400` page. That deferral is deliberate: it's what lets `error_page 495/496` answer with JSON, lets `optional_no_ca` pass a `FAILED:` result through to you, and fills in `$ssl_client_verify`.
+* **Measured** (throwaway `nginx:mainline` 1.31.6 on :8088, `ssl_verify_client on`, no client certificate): TLS 1.2 and TLS 1.3 both completed the handshake and returned `HTTP/1.1 400 Bad Request`.
+* **BIG-IP delta:** a Client SSL profile with **Client Certificate: require** refuses *inside* the handshake: TMM sends a fatal TLS alert (`handshake_failure`, `bad_certificate`, `unknown_ca`, ...) and the client never gets an HTTP response. NGINX's `on` behaves more like the profile set to **request**, with an iRule on `HTTP_REQUEST` checking `SSL::verify_result` and answering with an HTTP error. NGINX has no setting that makes the HTTP module reject the certificate inside the handshake.
+* **TLS 1.3 nuance:** in TLS 1.3 the client sends its certificate after it has already seen the server's Finished, so from the client's side the handshake is done before the server judges the certificate. Even a BIG-IP alert arrives "after the handshake" as the client sees it (the same effect seen with the ledger's `tlsv13 alert certificate required`).
+
+* **User's takeaway (after Activity 3.2):** because NGINX refuses at the HTTP layer, a failed client certificate becomes a normal, configurable HTTP response natively (`400` by default, JSON with `error_page 495/496` in 3.3). On BIG-IP the same result means Client SSL **request** mode plus an iRule that pulls the certificate apart (`SSL::cert`, `SSL::verify_result`) and builds the response (`HTTP::respond`). Gains: readable errors for partners, refusals in the access log with `$ssl_client_verify`, one decision point. Costs: no in-handshake refusal (an unauthenticated client completes TLS and sends a request before the 400; `stream` with `ssl_verify_client on` just closes the connection instead: measured on 1.31.6, handshake completed, connection closed with no data, `[info] client sent no required SSL certificate while SSL handshaking`), and the same deferral is what makes the `optional_no_ca` trap possible.
+
+### Day 1, Concepts 1.3: what is a SPIFFE ID?
+* **Q:** What's a SPIFFE ID (in the Acme certificate's SAN)?
+* **A:** SPIFFE (CNCF) is a standard for workload identity independent of hostnames/IPs: `spiffe://<trust-domain>/<path>`, carried as the **only URI SAN** in an X.509-SVID (the CN carries no meaning) or in a JWT-SVID. SPIRE, the reference implementation, attests workloads and issues short-lived certificates (about an hour) that rotate automatically; Istio, Linkerd and Consul use the same ID format. It's one more reason NGINX's missing SAN variable matters: the identity lives in the SAN, so you forward `$ssl_client_escaped_cert` and parse the certificate in the application (or in njs).
+* **BIG-IP delta:** no native equivalent; the nearest is an iRule/APM policy parsing the SAN from `SSL::cert` / `X509::extensions`. SPIFFE standardizes the format and automates issuance and rotation.
+* The guide uses the term in 1.3/1.4 without defining it (user had not met it before).
+
+### Day 1, Concepts 1.4: does a CRL update need a reload on NGINX Plus?
+* **Q:** Do CRL updates require a reload on NGINX Plus?
+* **A: Yes, same as open source.** Measured on Plus R37.1.1 (throwaway container): client certificate `200`; revoke + rewrite `crl.pem`: still `200` immediately and 5 s later; after `nginx -s reload`: `400`. `ssl_crl` takes no variables (`ssl_crl $host` → `[emerg] cannot load CRL "/w/$host"`), and the Plus API has no CRL endpoint. A reload is graceful (new workers, old ones drain), so the usual pattern is: fetch CRL → `nginx -t` → reload, on a timer well inside the CRL's `nextUpdate` (remember the expired-CRL lockout above).
+* **No-reload alternative, in OSS and Plus: `ssl_ocsp on | leaf`** (since 1.19.0) asks the certificate's OCSP responder (from its AIA, or `ssl_ocsp_responder`) during the handshake. Measured: revoking in the responder (`openssl ocsp -index`) turned `200` into `400` with no reload; error log at `info`: `client SSL certificate verify error: certificate revoked while reading client request headers`. Needs a `resolver` if the responder is a hostname.
+* **Trade-offs:** a live dependency on the responder for every new client connection (latency, and a responder outage = refusals), unless `ssl_ocsp_cache shared:NAME:SIZE` is set, which holds each answer until the response's `nextUpdate` (measured: a cached status persisted 30 s and changed after ~65 s with a 1-minute `nextUpdate`). So the cache trades freshness for availability, like the CRL's lifetime does.
+* **BIG-IP delta:** on BIG-IP the CRL is a file object in the Client SSL profile, also not live (you update the file object; a CRL DP or OCSP responder object + authentication profile gives live checks). NGINX's `ssl_ocsp` is the equivalent of the OCSP authentication profile, built into the SSL config.
+* Test artifact: `openssl ocsp` noticed index.txt edits one request late; not an NGINX behaviour.
+
+### Day 1, Activity 3.3: an HTML error page instead of JSON?
+* **Q:** Could the refusal be a custom HTML/JS/CSS page?
+* **A:** Yes: `error_page 495 496 =403 /errors/cert.html;` + `location /errors/ { internal; alias ...; }` (or `return` HTML from the `@named` location with `default_type text/html`). Measured on nginx 1.31.6 (throwaway, :8088/:8089): without `=CODE` the client gets **400** (495/496 are converted); with `=403`, 403.
+* **Trap:** the page's sub-resources are new requests on the same mTLS server, refused before any location runs: `/errors/style.css` without a certificate came back as the error page HTML (`403 text/html`). A location can't exempt them. Fix: a self-contained page (inline CSS/JS, `data:`/inline SVG images), or assets from another origin without mTLS; `optional` + a `map` on `$ssl_client_verify` also works but re-implements `on` (the 3.5 trap territory).
+* **BIG-IP delta:** same constraint as an iRule `HTTP::respond` page; on BIG-IP you design for it in the iRule, in NGINX you find out when the page arrives unstyled.
+
+## Day 1
+
+### Day 1: Quiz
+* **8/10.** Missed:
+  * `s7d1q01` (copied certificate file, no key): **CertificateVerify**, the client's signature over the handshake with its private key, is the proof of possession. A certificate is public; the key is the credential (that's why 3.6's story is a *leaked key*).
+  * `s7d1q11` (two-map chain under `optional_no_ca`, `fake-acme`): `$partner` is **empty**. `$cert_cn` is `acme` (the forged subject still fills `$ssl_client_s_dn`), but `$ssl_client_verify` is `FAILED:...`, so the `SUCCESS`-gated map falls to `default ""`. The tempting answer, `acme`, was the behaviour *before* the 3.5 fix.

@@ -47,7 +47,7 @@ NGINX exposes the client certificate as variables:
 | `$ssl_client_v_start`, `$ssl_client_v_end`, `$ssl_client_v_remain` | Validity dates, and days left |
 | `$ssl_client_escaped_cert` | The whole certificate as URL-escaped PEM, ready for a header |
 
-* **There's no variable for the subject alternative names** (SAN: DNS names, URIs, email addresses), neither in open source nor in Plus. Many PKIs put the real identity there (a SPIFFE ID such as `spiffe://partners.tidewater/acme` is a URI SAN). The usual answer is to forward the certificate (`$ssl_client_escaped_cert`) and let the application parse it.
+* **There's no variable for the subject alternative names** (SAN: DNS names, URIs, email addresses), neither in open source nor in Plus. Many PKIs put the real identity there (a SPIFFE ID, the standard URI format for workload identity such as `spiffe://partners.tidewater/acme`, is a URI SAN). The usual answer is to forward the certificate (`$ssl_client_escaped_cert`) and let the application parse it.
 * **Pull the CN out with a `map`** and a regex on `$ssl_client_s_dn`.
 * **An identity is only an identity if it was verified.** The DN variables describe whatever certificate was presented, verified or not.
 * **Headers the edge sets must replace what the client sent.** `proxy_set_header X-Partner ...` overwrites a client's `X-Partner`. A header the edge doesn't set passes through untouched.
@@ -147,7 +147,7 @@ The partner API answers without any certificate: `:8092` is HTTPS, but nobody is
 <details>
 <summary>What's the difference between <code>acme</code> and <code>fake-acme</code>?</summary>
 
-Only the issuer. The subject is the same (`OU=Integrations,O=Acme Freight,CN=acme`), and so is the DNS name. `acme` was signed by the Tidewater Partner CA, `fake-acme` by a "Rogue CA" anyone could create in a minute. A subject is just text: what makes a certificate trustworthy is who signed it.
+The issuer is what matters. The subject is the same (`OU=Integrations,O=Acme Freight,CN=acme`), and so are the names (`DNS:api.acme.example` and the SPIFFE ID `URI:spiffe://partners.tidewater/acme`); only the key, serial and dates differ, as they would between any two certificates. `acme` was signed by the Tidewater Partner CA, `fake-acme` by a "Rogue CA" anyone could create in a minute. A subject is just text: what makes a certificate trustworthy is who signed it.
 </details>
 
 ### Activity 3.2: Require a Certificate (6 min)
@@ -270,7 +270,15 @@ map $ssl_client_verify $partner {
 ./lab.sh reload
 partner fake-acme /shipments/7 | grep -E '"partner"|verify'
 ```
-`"partner": null`. Now set `ssl_verify_client on;` again and reload: Tidewater's partners all have certificates.
+`"partner": null`. Tidewater's partners all have certificates, so `optional_no_ca` isn't needed: set `ssl_verify_client on;` again, then check that every partner is back to the 3.3 behavior, with the safer `map`s in place:
+```bash
+./lab.sh reload
+for p in none acme globex fake-acme initech; do echo "== $p"; partner $p /shipments/7 | grep -E '^<-|"partner"|"error"'; done
+```
+* `none`: `401 {"error": "client certificate required"}`
+* `acme` and `globex`: `200`, `"partner"` is their own name
+* `fake-acme`: `403 {"error": "client certificate rejected"}`
+* `initech`: still `200` as `initech`, until Activity 3.6
 
 <details>
 <summary>With <code>optional</code> instead of <code>optional_no_ca</code>, what would <code>fake-acme</code> get?</summary>
@@ -310,20 +318,22 @@ The CRL file changed, but NGINX read the old one when the configuration loaded. 
 Globex gets a new key; take the revocation back for the rest of the sprint:
 ```bash
 unrevoke globex && ./lab.sh reload
+partner globex /shipments/7 | head -1
 ```
+`<- 200`: Globex is back in.
 
 The CRL has its own expiry. Make one that expires in 15 seconds:
 ```bash
 crl-short 15 && ./lab.sh reload
 partner acme /shipments/7 | head -1
 sleep 16
-partner acme /shipments/7
-alog 1
+for p in none acme globex fake-acme initech; do echo "== $p"; partner $p /shipments/7 | grep -E '^<-|"error"'; done
+alog 5
 ```
 <details>
-<summary>What happened to Acme, which did nothing wrong?</summary>
+<summary>What happened to Acme and Globex, which did nothing wrong?</summary>
 
-`403`, with `ssl_verify=FAILED:CRL has expired`. Once the CRL is past its *Next Update*, OpenSSL fails every certificate from that CA. The CRL renewal job is now part of the partner API's availability.
+Both got `403 {"error": "client certificate rejected"}`, with `ssl_verify=FAILED:CRL has expired`, and so did Initech: its log line no longer says `certificate revoked`, because the expired CRL can't be trusted to say anything. Once the CRL is past its *Next Update*, OpenSSL fails every certificate from that CA: one expired file took every partner offline at once. `none` still got `401` (no certificate, nothing to check) and `fake-acme` still failed at the chain (`unable to verify the first certificate`). The CRL renewal job is now part of the partner API's availability.
 </details>
 
 ```bash
