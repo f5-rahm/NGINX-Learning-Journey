@@ -1,50 +1,56 @@
 # NGINX Learning Journey, Sprint 7 Day 1: Mutual TLS, Both Ways
 
-Sprint 7 is about identity: who is calling, and how the edge knows. Day 1 was mutual TLS. Partners prove who they are with a client certificate, and the edge proves who it is to a backend. On BIG-IP that's a Client SSL profile set to *require* with a trusted CA bundle, plus a certificate and key in the Server SSL profile. In NGINX it's a handful of directives. The surprise of the day wasn't how to configure it. It was **where NGINX says no**.
+Sprint 7 is about identity at the edge, and Day 1 was mutual TLS in both directions: partners presenting client certificates to the edge, and the edge presenting one to a backend. The PKI is the same as anywhere else. What I wanted to learn was how NGINX handles it, and the answer kept coming back to timing: **when** NGINX reads a file, **when** it checks a certificate, and **when** it acts on the result. Most of the nuance is in those three moments, and in a few defaults that don't do what a BIG-IP person expects.
 
-## NGINX checks the certificate at the desk, not the door
+![When NGINX reads, checks and decides](mtls-timing.png)
 
-![NGINX checks the certificate at the desk, not the door](desk-not-door.png)
+## The verdict comes after the handshake
 
-When BIG-IP's Client SSL profile requires a certificate and the client has none (or a bad one), TMM ends the handshake with a fatal TLS alert. The client gets no HTTP response, and there's no HTTP request to log.
+On BIG-IP, a Client SSL profile set to *require* refuses a missing or bad certificate inside the handshake, with a TLS alert. NGINX runs the same checks during the handshake, stores the result, **lets the handshake finish**, and decides when the HTTP request arrives, before any location runs.
 
-NGINX does the same checks (chain, dates, revocation) at the same moment, through OpenSSL, but it **lets the handshake finish**. It holds on to the result, and when the HTTP request arrives, it refuses it before any location runs. By default that's a `400`. With `error_page 495` / `496`, it's whatever you want: in the lab, a `401` or `403` with a JSON body a partner's code can parse. And the refusal lands in the access log with the reason, such as `FAILED:certificate revoked`.
+That makes the refusal an HTTP response:
+- Internally it's `496` (no certificate) or `495` (failed verification). On the wire it's sent as `400` unless you remap it.
+- `error_page 495` / `496` turn it into whatever you need: a `401` or `403` with JSON a partner's code can parse, in my case.
+- It's in the access log, with `$ssl_client_verify` saying why (`FAILED:certificate revoked`).
 
-To get that on BIG-IP, I'd set the profile to *request* and write an iRule: pull the certificate apart, check `SSL::verify_result`, build the response with `HTTP::respond`. In NGINX it's the default behaviour, with no code.
+To get that on BIG-IP, I'd set the profile to *request* and write an iRule around `SSL::verify_result` and `HTTP::respond`. In NGINX it's the default, with no code.
 
-It isn't free, though:
-- **No refusal inside the handshake.** An unauthenticated client always completes TLS and gets to send a request before it's turned away (no location or upstream runs). The `stream` module is the stricter option: the handshake still completes, but a missing or failed certificate just closes the connection, with no response at all.
-- **A styled error page is harder than it looks.** The browser's request for the page's CSS also arrives without a certificate, so it gets refused too. A location can't exempt it, because the check runs before locations are chosen. Inline everything.
+Where the nuance bites:
+- **Every client completes the handshake** and sends a request before it's turned away. If you want a connection closed without an answer, the `stream` module does that: same checks, but no HTTP response.
+- **An HTML error page's CSS and JS get refused too.** The browser fetches them without a certificate, and no location can exempt them, because the verdict comes before location matching. The page must be self-contained.
 
-## The certificate is public. The key is the secret.
+## `optional_no_ca`: deferring the verdict cuts both ways
 
-What stops someone who copied a partner's certificate file? A message I'd never paid attention to: **CertificateVerify**. The client signs the handshake with its private key, and a certificate without its key can't produce that signature. So what leaks, and what gets revoked, is a **key**. (That was one of my two quiz misses.)
+Because the decision happens after the handshake, NGINX can hand it to you. `optional` accepts a client without a certificate but still refuses a bad one. `optional_no_ca` goes further: a certificate from an **unknown CA** gets through, marked `FAILED:...`. (A revoked or expired one is still refused.)
 
-## Deciding later means deciding right
+The trap: the variables still describe that certificate. A forged "Acme" certificate from a rogue CA filled `$ssl_client_s_dn` with Acme's subject and passed its SPIFFE ID to the application, and a straightforward CN `map` named the caller `acme`. The fix is to chain two `map`s, so the name only exists when `$ssl_client_verify` is `SUCCESS`. Rule of thumb: any mode other than `on` means every consumer of identity must check the verdict.
 
-`ssl_verify_client` has four modes, and `optional_no_ca` is the interesting one. It lets a certificate from an unknown CA through and hands you the verdict in `$ssl_client_verify`. In the lab, a forged "Acme" certificate signed by a rogue CA came through with `FAILED:...`. Its subject still filled `$ssl_client_s_dn`, and its SPIFFE ID still reached the application. A simple CN `map` happily named the caller `acme`.
+## Identity is what you put in the headers
 
-The fix is two chained `map`s: read the CN from the certificate, but only use it as the partner's name when `$ssl_client_verify` is `SUCCESS`. Then the forgery's name is empty. The same rule applies to every header the application trusts: the edge must **set** it, never pass the client's version through.
+- `$ssl_client_s_dn` is in **RFC 2253 order, CN last**: `OU=Integrations,O=Acme Freight,CN=acme`. A regex built for the old `/O=.../CN=` format fails silently (that's the `_legacy` variable).
+- **There's no variable for subject alternative names**, in open source or Plus. Modern identities (DNS names, SPIFFE URIs) live there. Forward `$ssl_client_escaped_cert` and let the application parse it.
+- **The edge has to set every identity header, always.** A partner sending its own `X-Partner` header passes straight through unless the edge overwrites it.
 
-Two smaller identity lessons:
-- `$ssl_client_s_dn` is in RFC 2253 order, with the CN **last**.
-- NGINX has no variable for the subject alternative names, which is where modern identities live (a SPIFFE ID such as `spiffe://partners.tidewater/acme` is a URI SAN). The way round it is to forward the whole certificate and let the application parse it.
+## Revocation happens when the config loads
 
-## Revocation has an uptime cost
+- **`ssl_crl` is read at load time.** A revoked partner kept getting in until I reloaded. It takes no variables, NGINX Plus behaves the same, and the Plus API has no CRL endpoint. Revoking means publishing the CRL **and** reloading every NGINX that uses it. Reloads are graceful, so a timer (fetch, `nginx -t`, reload) is the normal pattern.
+- **An expired CRL fails every certificate from that CA.** I loaded a CRL valid for 15 seconds, and once it ran out, every partner got `403`, all logged as `CRL has expired`. That included the revoked one, whose log line no longer said "revoked". Replacing the file doesn't help until the next reload. The renewal job is part of the partner API's uptime.
+- **`ssl_ocsp` is the no-reload alternative.** NGINX asks the responder during the handshake, so a revocation takes effect on the next connection. The catch: the responder is in the path of every new connection. `ssl_ocsp_cache` takes it out of that path, and then a revocation waits for the cached answer to expire.
+- **CA names are advertised selectively:** the CAs in `ssl_client_certificate` are sent to the client in the CertificateRequest, and the ones in `ssl_trusted_certificate` aren't.
 
-- **The CRL is read when the configuration loads.** I revoked Globex, and Globex kept getting in until the reload. NGINX Plus behaves the same way: `ssl_crl` takes no variables and the API has no CRL endpoint. Reloads are graceful, so a timer that fetches the CRL, runs `nginx -t` and reloads is the normal pattern. The alternative is `ssl_ocsp`, which asks the CA's responder during the handshake, with no reload. The cost: a responder in the path of every new connection, unless you cache the answers.
-- **An expired CRL locks out everyone.** I published a CRL valid for 15 seconds and waited. Acme, Globex and Initech, all from the same CA, all got `403 "CRL has expired"`. Initech's log line no longer even said "revoked". One stale file took every partner offline at once, so the CRL renewal job is now part of the partner API's uptime.
+## Upstream TLS: encrypted isn't verified
 
-## The edge as a client
+When the edge talks HTTPS to a backend, it's a TLS client, and the defaults are permissive:
+- **`proxy_ssl_verify` is off.** When I pointed the ledger's address at an impostor, the edge sent it the partner's request and the edge's own client certificate. The connection was encrypted, but nobody checked who was at the other end.
+- **The name checked is the `upstream` block's name** (`ledger`), not the service name in the backend's certificate, unless `proxy_ssl_name` says otherwise. SNI isn't sent unless `proxy_ssl_server_name on`.
+- **Upstream keepalive is on by default since nginx 1.29.7.** A certificate is checked once, at the handshake, so connections already verified with the real backend kept being reused after the address moved. Keep that in mind whenever you test a certificate change on a busy upstream.
 
-The last activity flipped the roles: the finance ledger only accepts clients with a certificate from the internal CA. `proxy_ssl_certificate` gets the edge in. Then someone moved the ledger's address to an impostor, and the edge happily sent it the partner's request. `proxy_ssl_verify` is **off** by default: the connection was encrypted, but nobody checked who was at the other end. With verification on, the next lesson was naming: the name checked is the `upstream` block's name unless `proxy_ssl_name` says otherwise. It's the same discipline as a Server SSL profile with a trusted CA and server name checks, just not on by default.
+On BIG-IP, a Server SSL profile with a trusted CA and server-name checks behaves this way out of the box. In NGINX, you have to set each of these yourself.
 
-And one finding from building the lab that's worth knowing: since nginx 1.29.7, upstream keepalive is on by default. A certificate is checked once, at the handshake, so already-verified connections to the real ledger kept being reused after the address moved.
-
-Quiz: 8 out of 10. The misses: what CertificateVerify protects against, and what the two-map chain gives a forged certificate under `optional_no_ca` (an empty name, which is the point of the fix).
+Quiz: 8 out of 10. The miss that matters for this post was the `optional_no_ca` mapping question: with the two-map fix, a forged certificate gets an **empty** name, not `acme`.
 
 ## What's next
 
-Day 2: `auth_request`. Instead of deciding from a certificate, the edge asks an authorization service before serving the request, much like an APM policy or an iRule doing an `HTTP::callout`. Its surprises: what the service actually sees, what happens when it fails, and how caching its decisions can hand out the wrong one.
+Day 2: `auth_request`. Instead of deciding from a certificate, the edge asks an authorization service before serving each request, much like an APM policy or an iRule doing an `HTTP::callout`. The surprises: what the service actually sees, what happens when it fails, and how caching its decisions can hand out the wrong one.
 
-#NGINX #F5 #mTLS #TLS #PKI #ZeroTrust #BIGIP #LearningInPublic #DevOps
+#NGINX #F5 #mTLS #TLS #BIGIP #ZeroTrust #LearningInPublic #DevOps
