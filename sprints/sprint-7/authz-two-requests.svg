@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="756" viewBox="0 0 1200 756" font-family="Lato" xml:space="preserve">
+<rect x="0" y="0" width="1200" height="756" fill="#FFFFFF"/>
+<text x="24" y="46" font-size="28" fill="#1F1F1F" text-anchor="start" font-weight="bold">Two requests, two upstreams</text>
+<text x="24" y="78" font-size="15.5" fill="#555555" text-anchor="start">Sprint 7 Day 2, auth_request. Why auth_request_set copies a header into a variable instead of</text>
+<text x="24" y="99" font-size="15.5" fill="#555555" text-anchor="start">the config reading $upstream_http_* directly. Measured on nginx 1.31.6.</text>
+<rect x="24" y="116" width="72" height="22" rx="5" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="60" y="132" font-size="11.5" fill="#1D4ED8" text-anchor="middle" font-weight="bold">DEFAULT</text>
+<rect x="108" y="116" width="72" height="22" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.2"/>
+<text x="144" y="132" font-size="11.5" fill="#B91C1C" text-anchor="middle" font-weight="bold">TRAP</text>
+<rect x="192" y="116" width="72" height="22" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.2"/>
+<text x="228" y="132" font-size="11.5" fill="#15803D" text-anchor="middle" font-weight="bold">SET IT</text>
+<text x="280" y="132" font-size="13" fill="#555555" text-anchor="start">what NGINX does  ·  where it bites  ·  what to configure</text>
+<rect x="24" y="160" width="276" height="58" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="38" y="186" font-size="17" fill="#FFFFFF" text-anchor="start" font-weight="bold">1  Access phase</text>
+<text x="38" y="206" font-size="12.5" fill="#D1D5DB" text-anchor="start">auth_request /_authz</text>
+<path d="M302,180 L314,189 L302,198 z" fill="#9CA3AF"/>
+<rect x="24" y="228" width="276" height="44" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1"/>
+<text x="36" y="246" font-size="12" fill="#6B7280" text-anchor="start" font-weight="bold">context: main → starts a subrequest</text>
+<text x="36" y="263" font-size="12" fill="#374151" text-anchor="start">upstream: none yet</text>
+<rect x="316" y="160" width="276" height="58" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="330" y="186" font-size="17" fill="#FFFFFF" text-anchor="start" font-weight="bold">2  Subrequest ends</text>
+<text x="330" y="206" font-size="12.5" fill="#D1D5DB" text-anchor="start">authz :9100 answers 200</text>
+<path d="M594,180 L606,189 L594,198 z" fill="#9CA3AF"/>
+<rect x="316" y="228" width="276" height="44" rx="6" fill="#FFF7ED" stroke="#C2410C" stroke-width="1"/>
+<text x="328" y="246" font-size="12" fill="#C2410C" text-anchor="start" font-weight="bold">context: subrequest /_authz</text>
+<text x="328" y="263" font-size="12" fill="#374151" text-anchor="start">upstream: authz :9100</text>
+<rect x="608" y="160" width="276" height="58" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="622" y="186" font-size="17" fill="#FFFFFF" text-anchor="start" font-weight="bold">3  Content phase</text>
+<text x="622" y="206" font-size="12.5" fill="#D1D5DB" text-anchor="start">proxy_pass to ops :9002</text>
+<path d="M886,180 L898,189 L886,198 z" fill="#9CA3AF"/>
+<rect x="608" y="228" width="276" height="44" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1"/>
+<text x="620" y="246" font-size="12" fill="#6B7280" text-anchor="start" font-weight="bold">context: main request /ops/fleet</text>
+<text x="620" y="263" font-size="12" fill="#374151" text-anchor="start">upstream: ops (no answer yet)</text>
+<rect x="900" y="160" width="276" height="58" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="914" y="186" font-size="17" fill="#FFFFFF" text-anchor="start" font-weight="bold">4  Log phase</text>
+<text x="914" y="206" font-size="12.5" fill="#D1D5DB" text-anchor="start">access_log</text>
+<rect x="900" y="228" width="276" height="44" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1"/>
+<text x="912" y="246" font-size="12" fill="#6B7280" text-anchor="start" font-weight="bold">context: main request /ops/fleet</text>
+<text x="912" y="263" font-size="12" fill="#374151" text-anchor="start">upstream: ops :9002 (answered)</text>
+<rect x="24" y="284" width="276" height="148" rx="7" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.3"/>
+<rect x="36" y="295" width="61.199999999999996" height="18" rx="4" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1"/>
+<text x="42" y="308" font-size="10.5" fill="#1D4ED8" text-anchor="start" font-weight="bold">DEFAULT</text>
+<text x="36" y="330" font-size="14.2" fill="#1D4ED8" text-anchor="start" font-weight="bold">A new request, not a copy</text>
+<text x="36" y="350" font-size="12.8" fill="#1F1F1F" text-anchor="start">The subrequest is its own request</text>
+<text x="36" y="368" font-size="12.8" fill="#1F1F1F" text-anchor="start">object, with its own URI, variables</text>
+<text x="36" y="386" font-size="12.8" fill="#1F1F1F" text-anchor="start">and upstream. It inherits the</text>
+<text x="36" y="404" font-size="12.8" fill="#1F1F1F" text-anchor="start">client&#x27;s headers (Authorization,</text>
+<text x="36" y="422" font-size="12.8" fill="#1F1F1F" text-anchor="start">Cookie...), never the body.</text>
+<rect x="24" y="442" width="276" height="130" rx="7" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.3"/>
+<rect x="36" y="453" width="61.199999999999996" height="18" rx="4" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1"/>
+<text x="42" y="466" font-size="10.5" fill="#1D4ED8" text-anchor="start" font-weight="bold">DEFAULT</text>
+<text x="36" y="488" font-size="14.2" fill="#1D4ED8" text-anchor="start" font-weight="bold">Only the status decides</text>
+<text x="36" y="508" font-size="12.8" fill="#1F1F1F" text-anchor="start">2xx goes on; 401 and 403 pass</text>
+<text x="36" y="526" font-size="12.8" fill="#1F1F1F" text-anchor="start">through; anything else is 500. The</text>
+<text x="36" y="544" font-size="12.8" fill="#1F1F1F" text-anchor="start">body is thrown away. Anything else</text>
+<text x="36" y="562" font-size="12.8" fill="#1F1F1F" text-anchor="start">must come back in a header.</text>
+<rect x="316" y="284" width="276" height="154" rx="7" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.3"/>
+<rect x="328" y="295" width="61.199999999999996" height="18" rx="4" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="1"/>
+<text x="334" y="308" font-size="10.5" fill="#1D4ED8" text-anchor="start" font-weight="bold">DEFAULT</text>
+<text x="328" y="330" font-size="14.2" fill="#1D4ED8" text-anchor="start" font-weight="bold">The header lives here only</text>
+<text x="328" y="350" font-size="12.8" fill="#1F1F1F" text-anchor="start">Inside the subrequest,</text>
+<text x="328" y="368" font-size="12.8" fill="#1F1F1F" text-anchor="start">$upstream_http_x_ops_user is &quot;carol&quot;:</text>
+<text x="328" y="386" font-size="12.8" fill="#1F1F1F" text-anchor="start">the lookup runs against the</text>
+<text x="328" y="404" font-size="12.8" fill="#1F1F1F" text-anchor="start">subrequest and its upstream, authz.</text>
+<rect x="328" y="412" width="252" height="20" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1"/>
+<text x="334" y="426" font-size="11.2" fill="#111827" text-anchor="start" font-family="DejaVu Sans Mono">X-Ops-User: carol</text>
+<rect x="316" y="448" width="276" height="172" rx="7" fill="#F0FDF4" stroke="#15803D" stroke-width="1.3"/>
+<rect x="328" y="459" width="53.599999999999994" height="18" rx="4" fill="#FFFFFF" stroke="#15803D" stroke-width="1"/>
+<text x="334" y="472" font-size="10.5" fill="#15803D" text-anchor="start" font-weight="bold">SET IT</text>
+<text x="328" y="494" font-size="14.2" fill="#15803D" text-anchor="start" font-weight="bold">auth_request_set: the bridge</text>
+<text x="328" y="514" font-size="12.8" fill="#1F1F1F" text-anchor="start">When the subrequest finishes, the</text>
+<text x="328" y="532" font-size="12.8" fill="#1F1F1F" text-anchor="start">module evaluates the value in the</text>
+<text x="328" y="550" font-size="12.8" fill="#1F1F1F" text-anchor="start">subrequest&#x27;s context and stores it on</text>
+<text x="328" y="568" font-size="12.8" fill="#1F1F1F" text-anchor="start">the main request. That copy is the</text>
+<text x="328" y="586" font-size="12.8" fill="#1F1F1F" text-anchor="start">only way the answer survives.</text>
+<rect x="328" y="594" width="252" height="20" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1"/>
+<text x="334" y="608" font-size="11.2" fill="#111827" text-anchor="start" font-family="DejaVu Sans Mono">auth_request_set $ops_user</text>
+<rect x="608" y="284" width="276" height="154" rx="7" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.3"/>
+<rect x="620" y="295" width="38.4" height="18" rx="4" fill="#FFFFFF" stroke="#B91C1C" stroke-width="1"/>
+<text x="626" y="308" font-size="10.5" fill="#B91C1C" text-anchor="start" font-weight="bold">TRAP</text>
+<text x="620" y="330" font-size="14.2" fill="#B91C1C" text-anchor="start" font-weight="bold">The direct reference is empty</text>
+<text x="620" y="350" font-size="12.8" fill="#1F1F1F" text-anchor="start">proxy_set_header runs now, for the</text>
+<text x="620" y="368" font-size="12.8" fill="#1F1F1F" text-anchor="start">main request, whose upstream is the</text>
+<text x="620" y="386" font-size="12.8" fill="#1F1F1F" text-anchor="start">ops tool, and it hasn&#x27;t answered.</text>
+<text x="620" y="404" font-size="12.8" fill="#1F1F1F" text-anchor="start">Empty value: no header sent at all.</text>
+<rect x="620" y="412" width="252" height="20" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1"/>
+<text x="626" y="426" font-size="11.2" fill="#111827" text-anchor="start" font-family="DejaVu Sans Mono">X-Direct  (not sent)</text>
+<rect x="608" y="448" width="276" height="154" rx="7" fill="#F0FDF4" stroke="#15803D" stroke-width="1.3"/>
+<rect x="620" y="459" width="53.599999999999994" height="18" rx="4" fill="#FFFFFF" stroke="#15803D" stroke-width="1"/>
+<text x="626" y="472" font-size="10.5" fill="#15803D" text-anchor="start" font-weight="bold">SET IT</text>
+<text x="620" y="494" font-size="14.2" fill="#15803D" text-anchor="start" font-weight="bold">The copy arrives</text>
+<text x="620" y="514" font-size="12.8" fill="#1F1F1F" text-anchor="start">$ops_user was filled at step 2, so</text>
+<text x="620" y="532" font-size="12.8" fill="#1F1F1F" text-anchor="start">the ops tool gets the verified user.</text>
+<text x="620" y="550" font-size="12.8" fill="#1F1F1F" text-anchor="start">A client-sent X-Ops-User is replaced</text>
+<text x="620" y="568" font-size="12.8" fill="#1F1F1F" text-anchor="start">either way.</text>
+<rect x="620" y="576" width="252" height="20" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1"/>
+<text x="626" y="590" font-size="11.2" fill="#111827" text-anchor="start" font-family="DejaVu Sans Mono">X-Copied: carol</text>
+<rect x="900" y="284" width="276" height="172" rx="7" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.3"/>
+<rect x="912" y="295" width="38.4" height="18" rx="4" fill="#FFFFFF" stroke="#B91C1C" stroke-width="1"/>
+<text x="918" y="308" font-size="10.5" fill="#B91C1C" text-anchor="start" font-weight="bold">TRAP</text>
+<text x="912" y="330" font-size="14.2" fill="#B91C1C" text-anchor="start" font-weight="bold">$upstream_* is the app&#x27;s now</text>
+<text x="912" y="350" font-size="12.8" fill="#1F1F1F" text-anchor="start">In the main request&#x27;s log,</text>
+<text x="912" y="368" font-size="12.8" fill="#1F1F1F" text-anchor="start">$upstream_status and</text>
+<text x="912" y="386" font-size="12.8" fill="#1F1F1F" text-anchor="start">$upstream_http_x_ops_user describe</text>
+<text x="912" y="404" font-size="12.8" fill="#1F1F1F" text-anchor="start">the ops tool&#x27;s response, not the</text>
+<text x="912" y="422" font-size="12.8" fill="#1F1F1F" text-anchor="start">authz check.</text>
+<rect x="912" y="430" width="252" height="20" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1"/>
+<text x="918" y="444" font-size="11.2" fill="#111827" text-anchor="start" font-family="DejaVu Sans Mono">202  &quot;app-says-hi&quot;</text>
+<rect x="900" y="466" width="276" height="154" rx="7" fill="#F0FDF4" stroke="#15803D" stroke-width="1.3"/>
+<rect x="912" y="477" width="53.599999999999994" height="18" rx="4" fill="#FFFFFF" stroke="#15803D" stroke-width="1"/>
+<text x="918" y="490" font-size="10.5" fill="#15803D" text-anchor="start" font-weight="bold">SET IT</text>
+<text x="912" y="512" font-size="14.2" fill="#15803D" text-anchor="start" font-weight="bold">Log the check on purpose</text>
+<text x="912" y="532" font-size="12.8" fill="#1F1F1F" text-anchor="start">Copy what you want to log with</text>
+<text x="912" y="550" font-size="12.8" fill="#1F1F1F" text-anchor="start">auth_request_set too: the check&#x27;s</text>
+<text x="912" y="568" font-size="12.8" fill="#1F1F1F" text-anchor="start">status, cache status or timing, into</text>
+<text x="912" y="586" font-size="12.8" fill="#1F1F1F" text-anchor="start">variables of your own.</text>
+<rect x="912" y="594" width="252" height="20" rx="4" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="1"/>
+<text x="918" y="608" font-size="11.2" fill="#111827" text-anchor="start" font-family="DejaVu Sans Mono">$authz_status</text>
+<rect x="24" y="636" width="1152" height="96" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="44" y="666" font-size="16" fill="#FFFFFF" text-anchor="start" font-weight="bold">The rule: a variable is a lookup, run against the request using it, at the moment it&#x27;s used.</text>
+<text x="44" y="690" font-size="13.2" fill="#D1D5DB" text-anchor="start">$upstream_* always means &quot;my own upstream&quot;. The subrequest and the main request each have one, so the answer</text>
+<text x="44" y="710" font-size="13.2" fill="#D1D5DB" text-anchor="start">has to be carried across. BIG-IP: like a sideband recv; store what you need before HTTP::header replace.</text>
+</svg>

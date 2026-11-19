@@ -176,7 +176,7 @@ Its certificate is still valid: it chains to the Partner CA and hasn't expired. 
 </details>
 
 <details>
-<summary>The access log shows <code>ssl_verify=FAILED:unable to verify the first certificate</code> for <code>fake-acme</code>, with status 400. Did the TLS handshake fail?</summary>
+<summary>The access log shows <code>ssl_verify="FAILED:unable to verify the first certificate"</code> for <code>fake-acme</code>, with status 400. Did the TLS handshake fail?</summary>
 
 No. The handshake completed and the request was read. Then NGINX, before any location, answered `400` because verification failed. That's why it's in the access log with the request line, and why `$ssl_client_verify` has a value to log.
 </details>
@@ -300,7 +300,7 @@ ssl_crl                certs/partner-ca.crl;
 ./lab.sh reload
 partner initech /shipments/7
 ```
-`403 {"error": "client certificate rejected"}`, and the access log says `ssl_verify=FAILED:certificate revoked`.
+`403 {"error": "client certificate rejected"}`, and the access log says `ssl_verify="FAILED:certificate revoked"`.
 
 Now Globex's key leaks:
 ```bash
@@ -333,7 +333,7 @@ alog 5
 <details>
 <summary>What happened to Acme and Globex, which did nothing wrong?</summary>
 
-Both got `403 {"error": "client certificate rejected"}`, with `ssl_verify=FAILED:CRL has expired`, and so did Initech: its log line no longer says `certificate revoked`, because the expired CRL can't be trusted to say anything. Once the CRL is past its *Next Update*, OpenSSL fails every certificate from that CA: one expired file took every partner offline at once. `none` still got `401` (no certificate, nothing to check) and `fake-acme` still failed at the chain (`unable to verify the first certificate`). The CRL renewal job is now part of the partner API's availability.
+Both got `403 {"error": "client certificate rejected"}`, with `ssl_verify="FAILED:CRL has expired"`, and so did Initech: its log line no longer says `certificate revoked`, because the expired CRL can't be trusted to say anything. Once the CRL is past its *Next Update*, OpenSSL fails every certificate from that CA: one expired file took every partner offline at once. `none` still got `401` (no certificate, nothing to check) and `fake-acme` still failed at the chain (`unable to verify the first certificate`). The CRL renewal job is now part of the partner API's availability.
 </details>
 
 ```bash

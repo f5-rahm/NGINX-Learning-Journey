@@ -5985,7 +5985,7 @@
                 "D": "At the upstream, which sees `X-SSL-Verify: FAILED` and refuses"
               },
               "answer": "C",
-              "explanation": "Activity 3.2: `400 The SSL certificate error`, logged with the request line and `ssl_verify=FAILED:...`."
+              "explanation": "Activity 3.2: `400 The SSL certificate error`, logged with the request line and `ssl_verify=\"FAILED:...\"`."
             },
             {
               "id": "s7d1q03",
@@ -6041,7 +6041,7 @@
                 "D": "NGINX refuses to reload until the CRL is renewed, but traffic continues"
               },
               "answer": "B",
-              "explanation": "Activity 3.6: after 16 s, Acme got `403` with `ssl_verify=FAILED:CRL has expired`."
+              "explanation": "Activity 3.6: after 16 s, Acme got `403` with `ssl_verify=\"FAILED:CRL has expired\"`."
             },
             {
               "id": "s7d1q07",
@@ -6173,7 +6173,7 @@
               "id": "s7d1q16",
               "type": "diagnose",
               "category": "Access Log",
-              "question": "The access log shows `\"GET /shipments/7 HTTP/1.1\" 400 ssl_verify=FAILED:certificate revoked`. Which statement is true?",
+              "question": "The access log shows `\"GET /shipments/7 HTTP/1.1\" 400 ssl_verify=\"FAILED:certificate revoked\"`. Which statement is true?",
               "options": {
                 "A": "The TLS handshake failed, and NGINX invented a request line for the log",
                 "B": "The handshake completed; NGINX refused the request before any location ran",

@@ -78,9 +78,49 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 * **Trap:** the page's sub-resources are new requests on the same mTLS server, refused before any location runs: `/errors/style.css` without a certificate came back as the error page HTML (`403 text/html`). A location can't exempt them. Fix: a self-contained page (inline CSS/JS, `data:`/inline SVG images), or assets from another origin without mTLS; `optional` + a `map` on `$ssl_client_verify` also works but re-implements `on` (the 3.5 trap territory).
 * **BIG-IP delta:** same constraint as an iRule `HTTP::respond` page; on BIG-IP you design for it in the iRule, in NGINX you find out when the page arrives unstyled.
 
+### Day 2, Concepts 1.1: why a `return` wins without asking
+* **Q:** What does "a `return` in the same location wins without asking" mean, and what was Sprint 5's lesson?
+* **A:** Phases run in a fixed order: SERVER_REWRITE / REWRITE (`rewrite`, `set`, `if`, `return`) → PREACCESS (`limit_req`, `limit_conn`) → ACCESS (`allow`/`deny`, `auth_basic`, `auth_request`, `auth_jwt`) → CONTENT (`proxy_pass`). A `return` ends the request in REWRITE, so nothing after it runs: no subrequest, no service call, no 401. `location /ops/ { auth_request /_authz; return 200 "ok"; }` answers everyone. Sprint 5 Day 1 1.5: a location that answers with `return` is never rate limited; Sprint 5 Day 3 used the same order deliberately (`geo` + `if (...) { return 403; }` refuses before the limits count the client).
+* **BIG-IP delta:** like an `HTTP_REQUEST` iRule doing `HTTP::respond` before the access policy has run: the policy never sees the request. In NGINX the order is fixed by phase, not by the order the directives appear in the file.
+
+### Day 2, Concepts 1.2: what the service sees by default, and how much you control
+* **Q:** Is 1.2 what the service *can* see or what it sees by default? How much control is there?
+* **A:** By default. Measured on nginx 1.31.6 (throwaway, :8088, mock on :9001), client `POST /x/fleet?x=1` with `Authorization`, `Cookie` and a 7-byte body:
+  * Default auth location: `GET /check`, every client header (Authorization, Cookie, **Content-Length: 7**), **no body**. The mock sat waiting for 7 bytes that never came (a real service hangs until a timeout → 504 → client 500). The subrequest never carries the body (auth_request gives it an empty fake body); the inherited `Content-Length` is the danger, which is why the `proxy_pass_request_body off` + `Content-Length ""` pair exists.
+  * With the pair: `GET /check`, no Content-Length, returned at once.
+  * `proxy_pass_request_headers off` + explicit `proxy_set_header`s: the service saw only what was listed (Authorization, X-Original-Method POST, X-Original-URI `/c/fleet?x=1`, X-Client-IP); the Cookie was gone. `$request_method`, `$request_uri`, `$remote_addr`, `$ssl_client_*` all reflect the client's request inside the auth location.
+  * `proxy_method POST` changed the check's method; `proxy_pass http://.../check?u=$request_uri` put the original URI in the check's URL (variables in proxy_pass work; needs a `resolver` for hostnames).
+* **Control summary:** method (`proxy_method`), URL (`proxy_pass` with variables), headers (add/override/remove with `proxy_set_header`, or allow-list with `proxy_pass_request_headers off`), timeouts, TLS to the service (`proxy_ssl_*`), caching. Not the body: auth_request never forwards it. Judging the body needs njs (read it, then `r.subrequest` to the service) or a check inside the application.
+* **Guide note:** day_02.md 1.2 says "a subrequest would pass it [the body]": it doesn't. Wording fix offered.
+* **BIG-IP delta:** An iRule sideband call (`connect`/`send`/`recv`) builds the request from scratch, so you list what to send; NGINX starts from a copy of the client's headers and you remove things. Allow-listing (`proxy_pass_request_headers off`) is the BIG-IP-like default-deny posture, and keeps cookies and other secrets away from the auth service.
+
+### Day 2, Concepts 1.4: the cache lifetime is a revocation delay
+* **Q:** Expand on "the lifetime is a revocation delay".
+* **A:** With `proxy_cache_valid 200 30s`, a `200` for token T is stored under T's key. Revoking T at the service changes nothing at the edge until the entry expires: every request in up to 30 s (per edge, per cache) is served from the cached `200` and never reaches the service. Worst case = the full `proxy_cache_valid`, since revocation can land just after a fill. Same in reverse for cached `401`/`403`: a newly issued or re-enabled token is refused until its negative entry expires. Pick the time as "how long may a revoked credential keep working", not just as load reduction. Things that make it longer: `proxy_cache_use_stale` (an outage keeps serving the old `200`), `Cache-Control`/`X-Accel-Expires` from the service (they override `proxy_cache_valid` unless `proxy_ignore_headers` is set), several edges each with their own cache. Ways to shorten: short valid times, a cache key that includes something the IdP rotates, purge (Plus `proxy_cache_purge`), or make revocation rare by using short-lived tokens. Activity 3.5 shows it live.
+* **BIG-IP delta:** same trade as an iRule `table set ... $token $verdict 30` (the timeout is the delay; `table delete` is the instant revoke, NGINX OSS has no purge equivalent) or APM session lifetime vs. per-request checks.
+
+### Day 2, Activity 3.2: why the copy into `$ops_user`?
+* **Q:** Why set a variable instead of referencing `$upstream_http_x_ops_user` directly?
+* **A:** A variable is a lookup run against the request using it, at the moment it's used; `$upstream_*` means "this request's own upstream". The auth subrequest and the main request are separate request objects, each with its own upstream. `proxy_set_header` runs in the main request while building the request to the ops tool, which hasn't answered, so the direct reference is empty. `auth_request_set` evaluates in the subrequest's context when it finishes and stores the value on the main request. Measured on 1.31.6 (throwaway :8088): `X-Direct $upstream_http_x_ops_user` not sent, `X-Copied $ops_user` = carol; the main access log showed the ops tool's `$upstream_status` (202) and its own `X-Ops-User`. Plus `auth_jwt` doesn't need the bridge: it validates in the main request.
+* **User's choice:** this is the Day 2 recap image (`authz-two-requests.svg/.png`), even though it's tangential to the day's focus.
+
+### Day 2, Activity 3.2: cons of identity headers instead of the token
+* **Q:** Replacing `Authorization` with user/role headers is standard; what are the cons?
+* **A:** The trusted-identity-header pattern moves trust to the network: anyone who reaches the backend directly (another service, SSRF, the lab's `s7-net`, where :9002 is reachable) can forge `X-Ops-Role: admin`. Every route to the backend must overwrite the header (one forgotten `location` passes the client's through; underscore/duplicate header parsing differs between components). The backend loses the credential (no delegation to further services, no scopes/expiry/jti), each hop no longer verifies (not zero-trust), the edge's cache lifetime becomes the system's revocation delay, and plain headers carry structured claims badly. Mitigations: network policy, mTLS edge→backend (Day 1's ledger), or a short-lived edge-signed JWT the backend verifies.
+* **BIG-IP delta:** same trade-off as APM + `HTTP::header insert`; same mitigations (lock down BIG-IP→pool path, or APM-issued signed tokens).
+
 ## Day 1
 
 ### Day 1: Quiz
 * **8/10.** Missed:
   * `s7d1q01` (copied certificate file, no key): **CertificateVerify**, the client's signature over the handshake with its private key, is the proof of possession. A certificate is public; the key is the credential (that's why 3.6's story is a *leaked key*).
   * `s7d1q11` (two-map chain under `optional_no_ca`, `fake-acme`): `$partner` is **empty**. `$cert_cn` is `acme` (the forged subject still fills `$ssl_client_s_dn`), but `$ssl_client_verify` is `FAILED:...`, so the `SUCCESS`-gated map falls to `default ""`. The tempting answer, `acme`, was the behaviour *before* the 3.5 fix.
+
+## Day 2
+
+### Day 2: For the recap (user's notes)
+* **Zero trust, a con of how the lab is built.** The edge verifies the token once, removes it, and the ops tool trusts `X-Ops-User`/`X-Ops-Role` from anyone who can reach it. Fine for the lab, and it shows off what `auth_request` + `auth_request_set` can do, but in production **each leg should verify**: mTLS edge→backend (Day 1's ledger leg), or an edge-signed short-lived token the backend checks, not a bare header on a trusted network. (Detail in Q&A, "cons of identity headers".)
+* **Activity 3.3 slip: right headers, wrong location.** First attempt put `X-Original-Method`/`X-Original-URI` in `location /ops/` instead of `location = /_authz`, so they went to the ops tool and the authz service still judged a `GET`; viewer's `POST` stayed `200`. Caught because the result didn't change, then moved to `/_authz`. The NGINX nuance behind it: `auth_request` and the main request are two requests through two different locations, and each location's `proxy_set_header` only shapes its own upstream request (same root as the image: each request has its own upstream). Also: they couldn't go at `server` level either, because `/_authz` already sets `proxy_set_header Content-Length ""`, and a location with any `proxy_set_header` inherits none from above.
+
+### Day 2: Quiz
+* **9/10.** Missed `s7d2q15` (`$upstream_cache_status` in the main `log_format` always shows `-`): answer **B**, in the access log `$upstream_*` describe the main request's upstream (the ops tool); copy the subrequest's value with `auth_request_set $authz_cache $upstream_cache_status;`. Same root as the Day 2 image (two requests, two upstreams).

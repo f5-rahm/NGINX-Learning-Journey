@@ -1,7 +1,7 @@
 # Sprint 7 &bull; Day 2: Asking Someone Else: `auth_request`
 **Day:** 2 of 3  
 **Estimated Time:** 70 Minutes (15 concepts, 5 setup, 40 activities, 10 quiz)  
-**Theme:** Yesterday the edge decided by itself, from a certificate. Most access decisions need information the edge doesn't have: who owns this token, what role they have, whether they may do this. On BIG-IP that's an APM access policy, or an iRule doing an `HTTP::callout` (or sideband) to an authorization service. NGINX's tool is **`auth_request`**: before serving a request, ask another HTTP service, and let its status code decide. Today you put Tidewater's ops tool behind its authorization service, and meet the module's surprises: what the service actually sees, what happens when it fails, and how caching decisions can quietly hand out the wrong one.
+**Theme:** Yesterday the edge decided by itself, from a certificate. Most access decisions need information the edge doesn't have: who owns this token, what role they have, whether they may do this. On BIG-IP that's an APM access policy, or an iRule opening a sideband connection (`connect`, `send`, `recv`) to an authorization service. NGINX's tool is **`auth_request`**: before serving a request, ask another HTTP service, and let its status code decide. Today you put Tidewater's ops tool behind its authorization service, and meet the module's surprises: what the service actually sees, what happens when it fails, and how caching decisions can quietly hand out the wrong one.
 
 ---
 
@@ -26,7 +26,7 @@ The subrequest isn't a copy of the client's request:
 * **It inherits the request headers** (`Authorization`, `Cookie` and the rest), which is how the service sees the credential.
 * **The URI is the auth location's**, not the client's. Pass the original as a header: `proxy_set_header X-Original-URI $request_uri;`.
 * **The method:** in the lab, a client's `POST` arrived at the service as a `GET` (Activity 3.3). Whatever your service bases a decision on, check that it actually receives it, and pass the original method explicitly (`X-Original-Method $request_method`).
-* **The body:** a subrequest would pass it, but the service doesn't need it. `proxy_pass_request_body off;` and `proxy_set_header Content-Length "";` are the standard pair.
+* **The body is never sent,** but the client's `Content-Length` header is inherited with the rest. A service that trusts it waits for a body that never comes, and the request ends in a timeout (a `500` for the client). `proxy_pass_request_body off;` and `proxy_set_header Content-Length "";` are the standard pair: a clean check with no body and no promise of one.
 
 ### 1.3 Failing Closed
 Every request now depends on the authorization service:
@@ -49,8 +49,8 @@ One extra round trip per request is the price. With a busy API, the authorizatio
 
 | Need | BIG-IP | NGINX |
 | :--- | :--- | :--- |
-| Ask an external service per request | APM per-request policy (HTTP connector), or an iRule with `HTTP::callout` / sideband | `auth_request` + an `internal` location |
-| Read the service's answer | Session variables, the callout response | `auth_request_set $v $upstream_http_<name>` |
+| Ask an external service per request | APM per-request policy (HTTP connector), or an iRule with a sideband connection (`connect`/`send`/`recv`) | `auth_request` + an `internal` location |
+| Read the service's answer | Session variables, or the response `recv` returns | `auth_request_set $v $upstream_http_<name>` |
 | Pass identity to the server | `HTTP::header replace` | `proxy_set_header` |
 | Cache the decision | `table set -subtable authz $token $verdict 30` | `proxy_cache` in the auth location |
 | Office network or token | Policy branch on IP, then a token check | `satisfy any` + `allow` + `auth_request` |
@@ -210,7 +210,7 @@ And to see the cache at work, in `location /ops/` and in the `log_format`:
 auth_request_set $authz_cache $upstream_cache_status;
 ```
 ```nginx
-log_format edge '$remote_addr "$request" $status ssl_verify=$ssl_client_verify partner="$partner" '
+log_format edge '$remote_addr "$request" $status ssl_verify="$ssl_client_verify" partner="$partner" '
                 'ops="$ops_user" authz_cache=$authz_cache';
 ```
 ```bash

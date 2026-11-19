@@ -51,6 +51,6 @@ Quiz: 8 out of 10. The miss that matters for this post was the `optional_no_ca` 
 
 ## What's next
 
-Day 2: `auth_request`. Instead of deciding from a certificate, the edge asks an authorization service before serving each request, much like an APM policy or an iRule doing an `HTTP::callout`. The surprises: what the service actually sees, what happens when it fails, and how caching its decisions can hand out the wrong one.
+Day 2: `auth_request`. Instead of deciding from a certificate, the edge asks an authorization service before serving each request, much like an APM policy or an iRule making a sideband call. The surprises: what the service actually sees, what happens when it fails, and how caching its decisions can hand out the wrong one.
 
 #NGINX #F5 #mTLS #TLS #BIGIP #ZeroTrust #LearningInPublic #DevOps
