@@ -25,7 +25,7 @@
 The subrequest isn't a copy of the client's request:
 * **It inherits the request headers** (`Authorization`, `Cookie` and the rest), which is how the service sees the credential.
 * **The URI is the auth location's**, not the client's. Pass the original as a header: `proxy_set_header X-Original-URI $request_uri;`.
-* **The method:** in the lab, a client's `POST` arrived at the service as a `GET` (Activity 3.4). Whatever your service bases a decision on, check that it actually receives it, and pass the original method explicitly (`X-Original-Method $request_method`).
+* **The method:** in the lab, a client's `POST` arrived at the service as a `GET` (Activity 3.3). Whatever your service bases a decision on, check that it actually receives it, and pass the original method explicitly (`X-Original-Method $request_method`).
 * **The body:** a subrequest would pass it, but the service doesn't need it. `proxy_pass_request_body off;` and `proxy_set_header Content-Length "";` are the standard pair.
 
 ### 1.3 Failing Closed
