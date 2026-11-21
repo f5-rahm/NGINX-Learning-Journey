@@ -249,3 +249,6 @@ gauntlet/*/lab/lb/
 gauntlet/*/lab/state/
 gauntlet/*/lab/logs/
 gauntlet/*/lab/secrets/
+
+# Side quests: throwaway runtime state (cookie secret, cookie jar)
+sprints/*/zta-side-quest/state/

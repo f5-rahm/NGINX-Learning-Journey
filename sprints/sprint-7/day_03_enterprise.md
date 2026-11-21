@@ -81,7 +81,7 @@ pr /api/loads | head -1
 `iss` is `https://localhost:8091/realms/tidewater`, `aud` is `dispatch-api`, `azp` is `dispatch-cli`, and `groups` is an array. The JWKS lists the realm's keys by `kid`. `/api/loads` without any token: `200`. The API is open.
 
 ### 3.2 Check the Signature (7 min)
-In `lab/plus/nginx.conf`, replace `location /api/ { ... }` with:
+In `lab/plus/nginx.conf`, in the `:8094` server, replace `location /api/ { ... }` with the block below. (The `:8085` server has a `location /api/` too: that one is the Plus API, leave it alone.)
 ```nginx
 location /api/ {
     auth_jwt             "dispatch";
@@ -125,7 +125,7 @@ map $jwt_claim_aud $jwt_audience_ok {           # aud can be a string or an arra
     default                   0;
 }
 ```
-In `location /api/`:
+In the `:8094` server's `location /api/`, next to `auth_jwt`:
 ```nginx
 auth_jwt_require $jwt_issuer_ok $jwt_audience_ok;
 ```
@@ -150,7 +150,7 @@ map $jwt_groups $jwt_is_admin {
     default             0;
 }
 ```
-In `location /api/`, change `X-Groups $jwt_claim_groups` to `X-Groups $jwt_groups`. Then add a location for the admin part of the API:
+In the `:8094` server's `location /api/`, change `X-Groups $jwt_claim_groups` to `X-Groups $jwt_groups`. Then add a location for the admin part of the API:
 ```nginx
 location /api/admin/ {
     auth_jwt             "dispatch";

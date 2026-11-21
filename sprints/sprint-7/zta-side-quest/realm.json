@@ -1,0 +1,91 @@
+{
+ "realm": "tidewater",
+ "displayName": "Tidewater Logistics",
+ "enabled": true,
+ "sslRequired": "external",
+ "accessTokenLifespan": 60,
+ "ssoSessionIdleTimeout": 1800,
+ "groups": [
+  {
+   "name": "staff"
+  },
+  {
+   "name": "admins"
+  }
+ ],
+ "users": [
+  {
+   "username": "alice",
+   "enabled": true,
+   "email": "alice@tidewater.example",
+   "emailVerified": true,
+   "firstName": "Alice",
+   "lastName": "Admin",
+   "credentials": [
+    {
+     "type": "password",
+     "value": "alice-pass",
+     "temporary": false
+    }
+   ],
+   "groups": [
+    "/staff",
+    "/admins"
+   ]
+  },
+  {
+   "username": "bob",
+   "enabled": true,
+   "email": "bob@tidewater.example",
+   "emailVerified": true,
+   "firstName": "Bob",
+   "lastName": "Dispatcher",
+   "credentials": [
+    {
+     "type": "password",
+     "value": "bob-pass",
+     "temporary": false
+    }
+   ],
+   "groups": [
+    "/staff"
+   ]
+  }
+ ],
+ "clients": [
+  {
+   "clientId": "portal",
+   "name": "Staff portal (OAuth2 Proxy)",
+   "enabled": true,
+   "protocol": "openid-connect",
+   "publicClient": false,
+   "secret": "portal-lab-secret",
+   "standardFlowEnabled": true,
+   "directAccessGrantsEnabled": false,
+   "redirectUris": [
+    "http://localhost:8088/oauth2/callback"
+   ],
+   "webOrigins": [
+    "+"
+   ],
+   "attributes": {
+    "pkce.code.challenge.method": "S256",
+    "post.logout.redirect.uris": "http://localhost:8088/*"
+   },
+   "protocolMappers": [
+    {
+     "name": "groups",
+     "protocol": "openid-connect",
+     "protocolMapper": "oidc-group-membership-mapper",
+     "config": {
+      "claim.name": "groups",
+      "full.path": "false",
+      "id.token.claim": "true",
+      "access.token.claim": "true",
+      "userinfo.token.claim": "true"
+     }
+    }
+   ]
+  }
+ ]
+}
