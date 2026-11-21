@@ -91,3 +91,22 @@ Use `--mount`, not `-v`. If a `-v` source path doesn't exist (for example, `$HOM
 | `port already in use` | The OSS instance or another container holds the port. `ss -ltnp \| grep <port>`. |
 | API answers, but writes fail with `UpstreamStatic` | The upstream has no `zone`. |
 | You edited `lab/plus/nginx.conf`, reloaded inside the container, and nothing changed | The config is bind-mounted as a single file. Editors and `sed -i` replace the file (a new inode), and the container keeps the old one: `docker exec <lab>-plus cat /etc/nginx/nginx.conf` shows the old content. Run `docker restart <lab>-plus` after editing. |
+
+---
+
+## 5. In Kubernetes (Sprint 8 On)
+
+From Sprint 8, NGINX Plus runs **inside the lab's kind cluster** as F5 NGINX Ingress Controller with NGINX Plus, next to the open source controller. The license is the same file, `~/plus/license.jwt`; only how it gets to NGINX Plus changes. The sprint's `./lab.sh plus up` does all of this:
+
+| | Docker side quests (Sprints 2–7) | Kubernetes side quests (Sprint 8 on) |
+| :--- | :--- | :--- |
+| **Runs as** | Container `<lab>-plus`, `--network host` | Deployment in namespace `nginx-plus`, installed with Helm (values in `lab/plus/`) |
+| **License** | Bind-mounted at `/etc/nginx/license.jwt` | Secret `nplus-license` (generic, key `license.jwt`) → Helm `controller.mgmt.licenseTokenSecretName` |
+| **Image pull** | `docker login` with the JWT as username | Secret `regcred` (type `docker-registry`, the JWT as username, password `none`) → Helm `controller.serviceAccount.imagePullSecretName` |
+| **Image** | `$PLUS_IMAGE` from `~/plus/plus.env` | `private-registry.nginx.com/nginx-ic/nginx-plus-ingress:<NIC version>`, pinned in the sprint's values file |
+| **Config** | `lab/plus/nginx.conf` | Kubernetes resources with `ingressClassName: nginx-plus`; the controller writes `nginx.conf` |
+| **API / dashboard** | `127.0.0.1:8085` directly | `./lab.sh plus api`: a `kubectl port-forward` from `127.0.0.1:8085` to the pod's port 8080 (the API only allows `127.0.0.1`) |
+| **Logs** | `docker logs <lab>-plus` | `./lab.sh plus logs` (`kubectl logs` of the controller pod) |
+| **Stop** | `docker rm -f <lab>-plus` | `./lab.sh plus down` (uninstalls the release, deletes the namespace and its Secrets) |
+
+The license JWT then also exists as a Secret in the cluster: anyone who can read Secrets in `nginx-plus` can read it, and it's in etcd as given. That's fine for a lab cluster on your own box; in a shared cluster, restrict who can read that namespace's Secrets (see Sprint 8 Day 2, "Follow the private key").

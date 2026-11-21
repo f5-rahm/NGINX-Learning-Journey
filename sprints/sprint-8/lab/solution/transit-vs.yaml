@@ -1,0 +1,67 @@
+# Reference solution: Copperline Transit's edge (requirements 1, 2, 5, 6, 7, 9).
+# Apply with solution/apply.sh, which also creates the Secrets and the controller setting.
+apiVersion: k8s.nginx.org/v1
+kind: Policy
+metadata:
+  name: dispatchers
+  namespace: transit
+spec:
+  basicAuth:
+    realm: Copperline Dispatch
+    secret: dispatch-users             # type nginx.org/htpasswd, key htpasswd (from lab/secrets/htpasswd)
+---
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: transit
+  namespace: transit
+spec:
+  ingressClassName: nginx              # 2: only the open source controller serves this host
+  host: transit.copperline.test
+  tls:
+    secret: transit-tls                # 1
+    redirect: {enable: true, code: 301}
+  upstreams:
+  - name: web
+    service: web
+    port: 80
+  - name: arrivals-v1
+    service: arrivals
+    port: 80
+    read-timeout: 5s                   # 7
+    next-upstream: "error timeout http_500"   # 9: a 500 is retried on another pod...
+    next-upstream-tries: 2             # 7: ...but a timeout isn't retried on every pod (5 s each)
+    next-upstream-timeout: 5s          # 7
+    max-fails: 1                       # 9: ...and the pod that failed is left alone
+    fail-timeout: 30s                  #    for 30 s
+  - name: arrivals-v2
+    service: arrivals-v2
+    port: 80
+    read-timeout: 5s                   # 7
+    next-upstream-tries: 1
+  - name: dispatch
+    service: dispatch
+    port: 80
+  routes:
+  - path: /
+    action: {pass: web}
+  - path: /arrivals                    # 5: header first, then cookie, then the split
+    matches:
+    - conditions: [{header: X-Canary, value: always}]
+      action: {pass: arrivals-v2}
+    - conditions: [{cookie: canary, value: always}]
+      action: {pass: arrivals-v2}
+    splits:
+    - {weight: 90, action: {pass: arrivals-v1}}
+    - {weight: 10, action: {pass: arrivals-v2}}
+  - path: /dispatch                    # 6
+    policies:
+    - name: dispatchers
+    action:
+      proxy:
+        upstream: dispatch
+        requestHeaders:
+          set:
+          - {name: Authorization, value: ""}
+  - path: /fares                       # 3: delegated to the fares team
+    route: fares/fares

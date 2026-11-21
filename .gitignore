@@ -252,3 +252,6 @@ gauntlet/*/lab/secrets/
 
 # Side quests: throwaway runtime state (cookie secret, cookie jar)
 sprints/*/zta-side-quest/state/
+
+# Sprint 8+: the learner's own manifests (lab/work/) and port-forward pidfiles
+sprints/*/lab/work/

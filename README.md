@@ -16,12 +16,12 @@ Do this once per lab box, then start with [Sprint 1, Day 1](sprints/sprint-1/day
 | :--- | :--- |
 | **Host** | One Ubuntu machine (a VM or cloud instance is fine) with 4 vCPU, 8 GB RAM and 20 GB of free disk. |
 | **Access** | Root (`sudo -i`). The labs signal NGINX processes, read container network namespaces and bind low-numbered ports. |
-| **Network** | Outbound internet for packages and container images. Reach the lab ports (8081–8098, 8443 TCP+UDP, 8090) from your browser if you want to use the quiz page from a workstation. |
+| **Network** | Outbound internet for packages and container images. Reach the lab ports (8081–8099, 8443 TCP+UDP, 8090) from your browser if you want to use the quiz page from a workstation. |
 | **NGINX** | Mainline from the nginx.org repository, not Ubuntu's package. It's current, and it includes the `nginx-debug` binary used in Sprint 1. Sprints 1–3 run it on the host. |
 | **Docker Engine** | Required from Sprint 3 (the HTTP/3 checks) and for every lab from Sprint 4 on, which run NGINX and their backends in containers. Also used by every NGINX Plus side quest. |
 | **Host tools** | `git`, `curl`, `openssl`, `python3` (standard library only, nothing to `pip install`), `jq`, `iproute2` (`ss`, `nstat`) and `procps` (`ps`, `sysctl`), and the trace tools `strace`, `sysstat`, `tcpdump`, `lsof`. Most Ubuntu installs already have `iproute2` and `procps`; minimal images don't. |
 | **Repo path** | Clone to **`/srv/nginx-journey`**. Guides, helper scripts and a few lab configs use that absolute path, and the `nginx` worker user can't read files under a home directory (mode 750 on Ubuntu). |
-| **Optional** | An NGINX Plus license (`license.jwt` from MyF5, a trial is fine) for the enterprise side quests; see [`docs/nginx-plus-lab.md`](docs/nginx-plus-lab.md). Kubernetes tools (`kind`, `kubectl`, `helm`) are introduced in Sprint 8. |
+| **Optional** | An NGINX Plus license (`license.jwt` from MyF5, a trial is fine) for the enterprise side quests; see [`docs/nginx-plus-lab.md`](docs/nginx-plus-lab.md). Kubernetes tools (`kind`, `kubectl`, `helm`) from Sprint 8: setup step 5. |
 
 ### One-Time Setup
 
@@ -47,6 +47,13 @@ docker run --rm hello-world
 
 # 4. The repo
 git clone https://github.com/f5-rahm/NGINX-Learning-Journey.git /srv/nginx-journey
+
+# 5. Kubernetes tools for Sprint 8 on (pinned single binaries; on arm64, replace amd64 in the URLs)
+curl -fsSLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+curl -fsSLo /usr/local/bin/kubectl https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl
+curl -fsSL https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz | tar -xz -C /usr/local/bin --strip-components=1 linux-amd64/helm
+chmod +x /usr/local/bin/kind /usr/local/bin/kubectl
+kind version && kubectl version --client && helm version --short
 ```
 
 Then:
@@ -158,7 +165,7 @@ S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 | **05** | Oct 26–30 | 3 | **Traffic Shaping & Rate Limiting:** Leaky bucket rate limiting (`limit_req`), burst handling, two-stage delay, concurrency limits (`limit_conn`), bandwidth (`limit_rate`), slow-client timeouts, IP allowlists/denylists and tiers, real client addresses behind a load balancer. | Lumina API Gateway (`test_sprint05.sh`) | **A Live Denylist and Cluster-Wide Limits:** NGINX Plus key-value denylist changed through the API with no reload, and `zone_sync` sharing limits across a two-node cluster. |
 | **06** | Nov 2–6 | 3 | **Programmability & Extensibility:** JavaScript scripting via NGINX JavaScript (`njs`), custom header enrichment, dynamic URI rewriting, conditional upstream routing. | Smart Routing Proxy with njs Validation | **Native Lua / OpenResty vs. njs:** Memory model, safety boundaries, and C-module extensions. |
 | **07** | Nov 9–13 | 3 | **Security Hardening & Modern Auth:** Mutual TLS (mTLS), client certificate verification, subrequest authentication (`auth_request`), OAuth2 proxy integration. | Zero-Trust Perimeter Gateway with mTLS | **NGINX Plus Native JWT & OIDC:** In-engine cryptographic JWT signature validation & Keycloak OIDC (NIC Lab 3). |
-| **08** | Nov 16–20 | 3 | **Kubernetes Ingress Architecture:** Ingress controllers vs NodePorts, F5 NGINX Ingress Controller (NIC), `VirtualServer` / `VirtualServerRoute` CRDs, traffic splitting. | Multi-Tenant Microservices Ingress | **Enterprise VirtualServer Policies:** Rate limiting, circuit breaking, and blue/green splits (NIC Labs 1, 2, 4). |
+| **08** | Nov 16–20 | 3 | **Kubernetes Ingress Architecture:** Pods, Services, EndpointSlices and kube-proxy, F5 NGINX Ingress Controller (NIC) 5.8, migrating from the retired community Ingress-NGINX, `VirtualServer` / `VirtualServerRoute` / `Policy` CRDs, TLS Secrets and key storage, canaries, zero-downtime endpoint updates. | Copperline Transit's Edge (`test_sprint08.sh`) | **NIC with NGINX Plus:** Endpoint and weight changes without reloads, active health checks as a circuit breaker, slow start, queues, JWT rate-limit tiers, and 5.8's JWT claim authorization. |
 | **09** | Nov 23–25 | 3 | **Next-Gen K8s Gateway API:** Gateway API evolution, `GatewayClass`, `Gateway`, `HTTPRoute`, `GRPCRoute`, header-based routing, cross-namespace routing. | Gateway Fabric Multi-Route Service | **GenAI LLM Inference Extensions:** Prompt routing and model endpoint load balancing (NGF Lab 10). |
 | **10** | Nov 30–Dec 4 | 3 | **Hybrid & Advanced Enterprise Ingress:** Multi-cluster routing, gRPC microservice streaming, header transformations, ExternalDNS automation. | End-to-End gRPC & HTTP/2 Microservices Fabric | **BIG-IP CIS + GatewayLink:** External BIG-IP hardware driving traffic to internal Gateway Fabric (NGF Lab 13). |
 | **11** | Dec 7–11 | 3 | **Production Observability & Telemetry:** Custom structured JSON logging, distributed tracing (OpenTelemetry / W3C `traceparent`), Prometheus metrics exporter, plus `node_exporter` so host/kernel counters share the dashboard. | Full-Stack Observability Pipeline | **NGINX Plus Live Monitoring Dashboard & NGINX One Console:** Real-time HTTP/TCP stats console and JSON telemetry API for one instance, then fleet-level visibility and config management through NGINX One. |
@@ -244,9 +251,13 @@ S05: Oct 26-30 (3d - Rate Limiting)   [Nov 26-27: Thanksgiving Break]        [De
 * **Lab:** The Tidewater Edge, in containers with Keycloak 26 and OAuth2 Proxy 7, validated by `test_sprint07.sh` (10 assertions). Details: [`sprints/sprint-7/README.md`](sprints/sprint-7/README.md).
 
 ### Sprint 8: Modern Kubernetes Ingress (Nov 16–20, 3 Days)
-* **Focus:** Bridging NGINX into Kubernetes container networking.
-* **Key Topics:** Kubernetes networking fundamentals (Services, Endpoints, CNI), Ingress Controller architecture, standard community Ingress vs. F5 NGINX Ingress Controller (NIC), F5 CRDs (`VirtualServer`, `VirtualServerRoute`), traffic splitting, and zero-downtime pod endpoint updates.
-* **Enterprise Side Quest:** F5 NIC Enterprise policies: rate limiting CRDs, active circuit breaking, and canary deployments.
+* **Focus:** Bridging NGINX into Kubernetes container networking, on **F5 NGINX Ingress Controller** (`nginx/kubernetes-ingress`, 5.8). The community Ingress-NGINX (`kubernetes/ingress-nginx`) is a different project, retired in March 2026; it appears only as the manifests teams are migrating from.
+* **Daily Structure:**
+  * **Day 1:** Kubernetes networking for a BIG-IP engineer: pods and their changing IPs, Services as DNAT rules on every node, EndpointSlices and readiness probes, NodePort and `externalTrafficPolicy`, the two "NGINX ingress" projects, installing NIC with Helm, a first Ingress and the configuration it generates. Quiz: [Day 1 Quiz](quiz.html?sprint=8&day=1).
+  * **Day 2:** Annotations and the migration drill (an Ingress-NGINX manifest that applies cleanly and does nothing it meant), `VirtualServer` / `VirtualServerRoute` / `Policy`, two layers of validation, delegation to another team's namespace, and following a TLS private key from Secret to etcd to the node's disk. Quiz: [Day 2 Quiz](quiz.html?sprint=8&day=2).
+  * **Day 3:** Canaries with `splits` and `matches`, a rolling restart broken and fixed (readiness probe, `preStop`, POSTs vs GETs), the half-broken pod, and retries that multiply timeouts; then the sprint lab. Quiz: [Day 3 Quiz](quiz.html?sprint=8&day=3).
+* **Enterprise Side Quest:** NIC with NGINX Plus next to the open source controller: no reloads for endpoints or weights, active health checks with `mandatory`/`persistent`, `slow-start`, `max-conns` with a queue, JWT rate-limit tiers and 5.8's claim authorization: [guide](sprints/sprint-8/day_03_enterprise.md), [Enterprise Quiz](quiz.html?sprint=8&day=3&pool=enterprise).
+* **Lab:** Copperline Transit's Edge, on a 3-node kind cluster, validated by `test_sprint08.sh` (10 assertions). Details: [`sprints/sprint-8/README.md`](sprints/sprint-8/README.md).
 
 ### Sprint 9: Next-Gen Kubernetes Gateway API (Nov 23–25, 3 Days - Thanksgiving Week)
 * **Focus:** The successor to Kubernetes Ingress: the official Kubernetes Gateway API.
@@ -313,19 +324,19 @@ The entire 14-week journey is engineered to run seamlessly on a **single 4 vCPU 
 ```
 [ Engineer Workstation / Browser ]
        │
-       ├────► Ports 8081–8098 ─► Sprint labs
+       ├────► Ports 8081–8099 ─► Sprint labs
        │                        - Sprints 1–3: host NGINX, run from each sprint's lab/
        │                        - Sprint 4 on: NGINX and backends in containers (lab.sh)
        │
        ├────► Port 8090 ──────► Quiz page (python3 -m http.server)
        │
-       └────► Port 80/443 ────► Ephemeral `kind` Cluster (Kubernetes Lab Sandboxes)
-                                - NGINX Ingress Controller / Gateway Fabric
-                                - Can be torn down and rebuilt (`kind delete cluster`)
+       └────► Ports 8098/8099 ─► Ephemeral `kind` Cluster (Kubernetes Lab Sandboxes, Sprint 8 on)
+              (8086/8087 Plus)   - F5 NGINX Ingress Controller / Gateway Fabric
+                                 - Torn down and rebuilt with each sprint's ./lab.sh down / up
 ```
 
 * **Memory Budget:**
   * Host OS & Docker Daemon: ~1.2 GB
   * Sprint lab containers (Sprints 4–6): well under 0.5 GB; Sprint 7 adds Keycloak, about 0.7 GB in all
-  * Ephemeral `kind` Node (Sprints 8–10): ~2.5 GB
+  * Ephemeral `kind` cluster (Sprints 8–10): three nodes, about 1.5 GB in Sprint 8 (measured), a little more with the Plus controller
   * **Free Headroom:** ~4.0 GB (plus recommended 4 GB swapfile for buffer safety).

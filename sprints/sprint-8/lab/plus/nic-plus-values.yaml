@@ -1,0 +1,26 @@
+# Helm values for F5 NGINX Ingress Controller with NGINX Plus (side quest), chart 2.9.0 = NIC 5.8.0.
+# It runs NEXT TO the open source controller: its own namespace (nginx-plus), its own
+# IngressClass (nginx-plus) and its own NodePorts (host 8086/8087).
+controller:
+  nginxplus: true
+  image:
+    repository: private-registry.nginx.com/nginx-ic/nginx-plus-ingress
+    tag: "5.8.0"
+  serviceAccount:
+    imagePullSecretName: regcred         # docker-registry Secret: the license JWT is the registry username
+  mgmt:
+    licenseTokenSecretName: nplus-license  # generic Secret with key license.jwt
+  ingressClass:
+    name: nginx-plus
+  service:
+    type: NodePort
+    externalTrafficPolicy: Cluster
+    httpPort: {nodePort: 30086}
+    httpsPort: {nodePort: 30087}
+  nodeSelector:
+    kubernetes.io/hostname: s8-control-plane
+  tolerations:
+  - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
+  telemetryReporting:
+    enable: false
+  enableWeightChangesDynamicReload: true # split weights change through the Plus API, without a reload

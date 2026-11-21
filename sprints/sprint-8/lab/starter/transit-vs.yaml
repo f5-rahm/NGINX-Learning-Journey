@@ -1,0 +1,22 @@
+# Copperline Transit's edge on F5 NGINX Ingress Controller: the sprint lab starter.
+# Copy this folder:  cp -r starter work/sprint   then edit work/sprint/ and apply it with
+#   kubectl apply -f work/sprint/
+# The requirements are in sprints/sprint-8/README.md, section 4. Add files to work/sprint/ as you need them.
+#
+# TODO  1  HTTPS with Copperline's certificate; plain HTTP is redirected to HTTPS
+# TODO  2  One VirtualServer named "transit" that names its ingress class; routes for /, /arrivals and /dispatch
+# TODO  3  /fares belongs to the fares team, in their namespace
+# TODO  4  The fares rate limit
+# TODO  5  The arrivals canary
+# TODO  6  Dispatchers sign in; the dispatch app never sees the credentials
+# TODO  7  At most 5 seconds for an arrivals answer
+# TODO  8  Zero-downtime restarts of arrivals v1 (see arrivals-v1.yaml)
+# TODO  9  A half-broken arrivals pod doesn't reach clients
+# TODO 10  The Server header doesn't give away the version
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: transit
+  namespace: transit
+spec:
+  host: transit.copperline.test

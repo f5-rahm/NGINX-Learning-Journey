@@ -1,0 +1,6 @@
+# Reference solution, requirement 10: a controller-wide setting, in the controller's ConfigMap,
+# managed through Helm (a second values file on top of lab/nic-values.yaml).
+controller:
+  config:
+    entries:
+      server-tokens: "False"

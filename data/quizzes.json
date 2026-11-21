@@ -7104,6 +7104,1160 @@
           ]
         }
       ]
+    },
+    {
+      "sprint": 8,
+      "title": "Modern Kubernetes Ingress",
+      "days": [
+        {
+          "day": 1,
+          "title": "Kubernetes Networking for a BIG-IP Engineer, and Your First Ingress",
+          "questions": [
+            {
+              "id": "s8d1q01",
+              "type": "scenario",
+              "category": "Pod IPs",
+              "question": "Why must nothing in Kubernetes be configured with a pod's IP address by hand?",
+              "options": {
+                "A": "Pods are replaced with new names and new IPs, often on another node, whenever they die or roll out",
+                "B": "Pod IPs are encrypted by the CNI, so they can't be typed into a configuration",
+                "C": "Pod IPs are only valid inside the node that runs the pod, never across nodes",
+                "D": "Kubernetes forbids static addresses in manifests and rejects them on apply"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: a deleted pod came back with a new name and IP; EndpointSlices track the change."
+            },
+            {
+              "id": "s8d1q02",
+              "type": "scenario",
+              "category": "ClusterIP",
+              "question": "A curl from the lab host to a Service's ClusterIP times out, while the same curl from a pod works. Why?",
+              "options": {
+                "A": "The ClusterIP listens only on IPv6 inside the cluster, and the host uses IPv4",
+                "B": "kube-proxy blocks any source address outside 10.244.0.0/16 with an explicit drop rule",
+                "C": "The Service is of type ClusterIP, which needs the client to send its Host header",
+                "D": "The ClusterIP only exists as DNAT rules on the nodes; the host isn't a node and has no route to it"
+              },
+              "answer": "D",
+              "explanation": "Concept 1.3 and Activity 3.3: no listener, no ARP, just rules in each node's kernel."
+            },
+            {
+              "id": "s8d1q03",
+              "type": "scenario",
+              "category": "Readiness",
+              "question": "The arrivals pods have no readiness probe and the app needs 3 s to start listening. When does the EndpointSlice mark a new pod ready?",
+              "options": {
+                "A": "Only after the app has answered its first real request",
+                "B": "After the default 10-second readiness delay Kubernetes applies",
+                "C": "As soon as its container starts, before the app listens",
+                "D": "When kube-proxy has checked the port with a TCP connect"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.3: without a probe, a pod counts as ready when its container starts."
+            },
+            {
+              "id": "s8d1q04",
+              "type": "scenario",
+              "category": "Controller Upstreams",
+              "question": "Where does F5 NGINX Ingress Controller send a request for an Ingress path backed by the `arrivals` Service?",
+              "options": {
+                "A": "To the Service's ClusterIP, letting kube-proxy choose the pod",
+                "B": "Straight to one of the pod IPs it read from the EndpointSlice",
+                "C": "To the NodePort of the node that runs the chosen pod",
+                "D": "To the Service's DNS name, resolved again for every request"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.6: the generated upstream lists pod IPs on port 8080; the ClusterIP appears nowhere."
+            },
+            {
+              "id": "s8d1q05",
+              "type": "scenario",
+              "category": "externalTrafficPolicy",
+              "question": "With `externalTrafficPolicy: Local` on the controller's NodePort Service, what happens to traffic sent to a worker node that runs no controller pod?",
+              "options": {
+                "A": "It's dropped: only nodes with a local controller pod answer",
+                "B": "It's forwarded to the control-plane node with the client address SNATed",
+                "C": "It's answered with a 503 by kube-proxy on that worker node",
+                "D": "It's redirected with an ICMP message to the node that has the pod"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.8: the workers timed out; `Cluster` answers everywhere but SNATs the client."
+            },
+            {
+              "id": "s8d1q06",
+              "type": "scenario",
+              "category": "Two Projects",
+              "question": "A colleague says Kubernetes retired \"NGINX ingress\" in 2026. What's accurate?",
+              "options": {
+                "A": "Both NGINX ingress controllers were retired, and only Gateway API remains supported",
+                "B": "The Ingress API itself was removed from Kubernetes, so every ingress controller stopped working",
+                "C": "F5's controller was retired, and the community project continues under the CNCF",
+                "D": "The community Ingress-NGINX was retired; F5 NGINX Ingress Controller is a separate, maintained product"
+              },
+              "answer": "D",
+              "explanation": "Concept 1.6: Ingress-NGINX was archived on 24 March 2026; F5's 5.8.0 shipped in November 2026."
+            },
+            {
+              "id": "s8d1q07",
+              "type": "scenario",
+              "category": "Reloads",
+              "question": "Why does the open source controller reload NGINX when arrivals scales from 3 to 5 pods?",
+              "options": {
+                "A": "Because Helm reinstalls the controller release whenever a Deployment changes size",
+                "B": "Because kube-proxy restarts every pod on the control-plane node after a scale",
+                "C": "Open source NGINX reads upstream servers only from its configuration, so new pod IPs mean a new file",
+                "D": "Because NGINX checks the Kubernetes API from each worker only when it starts"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.7: `reason=\"endpoints\"` went up; NGINX Plus would use its API instead."
+            },
+            {
+              "id": "s8d1q08",
+              "type": "scenario",
+              "category": "Declarative",
+              "question": "You delete a pod that a Deployment owns. What happens?",
+              "options": {
+                "A": "The Deployment is marked failed until you re-apply its manifest",
+                "B": "The Deployment's ReplicaSet notices fewer pods than desired and starts a replacement",
+                "C": "Nothing until the node's kubelet restarts the same pod with the same IP",
+                "D": "The Service stops sending traffic until an operator scales it back up"
+              },
+              "answer": "B",
+              "explanation": "Concept 1.1 and Activity 3.2: reconciliation."
+            },
+            {
+              "id": "s8d1q09",
+              "type": "config",
+              "category": "IngressClass",
+              "question": "`kubectl get ingressclass` shows `NAME nginx  CONTROLLER k8s.io/ingress-nginx`. Which controller handles `ingressClassName: nginx`?",
+              "options": {
+                "A": "The community Ingress-NGINX, which is retired",
+                "B": "F5 NGINX Ingress Controller, because the class is named nginx",
+                "C": "Both of them, one per namespace, chosen by the annotations",
+                "D": "Neither: the class name must match the controller field exactly"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.5: read the CONTROLLER column; F5's is `nginx.org/ingress-controller`."
+            },
+            {
+              "id": "s8d1q10",
+              "type": "config",
+              "category": "Prefix",
+              "question": "An Ingress path `/arrivals` with `pathType: Prefix` on F5's controller. Which request reaches arrivals?",
+              "options": {
+                "A": "`/Arrivals`",
+                "B": "`/arrival`",
+                "C": "`/web/arrivals`",
+                "D": "`/arrivalsboard`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.8: the controller wrote `location \"/arrivals\"`, a character prefix, so `/arrivalsboard` matched."
+            },
+            {
+              "id": "s8d1q11",
+              "type": "config",
+              "category": "Defaults",
+              "question": "Which load-balancing method does the controller write into an upstream when nothing is set?",
+              "options": {
+                "A": "Round robin (no directive)",
+                "B": "`least_conn`",
+                "C": "`random two least_conn`",
+                "D": "`ip_hash`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.6: the controller's default, while NGINX on its own would round-robin."
+            },
+            {
+              "id": "s8d1q12",
+              "type": "config",
+              "category": "Defaults",
+              "question": "Each `server` line in the generated upstream ends with `max_fails=1 fail_timeout=10s`. What does that mean?",
+              "options": {
+                "A": "The pod is removed from the EndpointSlice after one failed probe",
+                "B": "One failed attempt takes the pod out of rotation for 10 seconds",
+                "C": "NGINX retries each request once, waiting 10 seconds between tries",
+                "D": "The controller restarts the pod after one failure within 10 seconds"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.6: NGINX's passive health defaults, written out."
+            },
+            {
+              "id": "s8d1q13",
+              "type": "config",
+              "category": "Helm",
+              "question": "`helm install nic oci://ghcr.io/nginx/charts/nginx-ingress --version 2.9.0 -f nic-values.yaml`. What does `--version 2.9.0` pin?",
+              "options": {
+                "A": "The chart version, which for this chart corresponds to NIC 5.8.0",
+                "B": "The NGINX version inside the controller image",
+                "C": "The Kubernetes API version the chart is allowed to use",
+                "D": "The Helm client version required to install the chart"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.5."
+            },
+            {
+              "id": "s8d1q14",
+              "type": "config",
+              "category": "Values",
+              "question": "In the lab's `nic-values.yaml`, why does the controller have a `nodeSelector` for `s8-control-plane`?",
+              "options": {
+                "A": "Because worker nodes can't run pods that bind privileged ports 80 and 443",
+                "B": "Because the chart refuses to install on nodes without the control-plane role",
+                "C": "Because the Prometheus metrics port only works on the control-plane node",
+                "D": "kind maps the host's 8098/8099 to NodePorts on that node, so the controller runs where traffic lands"
+              },
+              "answer": "D",
+              "explanation": "Concept 1.4 and `nic-values.yaml`; it also makes the `Local` experiment visible."
+            },
+            {
+              "id": "s8d1q15",
+              "type": "diagnose",
+              "category": "Client IP",
+              "question": "The app sees `X-Real-IP: 10.244.0.1` for requests from your laptop. Why?",
+              "options": {
+                "A": "NGINX overwrote the header with the pod network's gateway on purpose",
+                "B": "Your laptop's address was hidden by the TLS handshake on port 8099",
+                "C": "The NodePort Service with `externalTrafficPolicy: Cluster` SNATed the client to a node address",
+                "D": "kube-proxy rewrote the header while forwarding the HTTP request"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.8: with `Local` it became `172.19.0.1`, the host as kind sees it."
+            },
+            {
+              "id": "s8d1q16",
+              "type": "diagnose",
+              "category": "Unknown Host",
+              "question": "`curl -H 'Host: www.copperline.test' http://127.0.0.1:8098/arrivals/next` returns `404` with `Server: nginx/1.31.9`. Why?",
+              "options": {
+                "A": "The arrivals pods are not ready, so the controller returns 404 instead of 502",
+                "B": "No Ingress claims that host, so the controller's default server answers",
+                "C": "The path needs a trailing slash because the Ingress uses pathType Prefix",
+                "D": "The IngressClass is missing, so the controller ignores every request"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.8."
+            },
+            {
+              "id": "s8d1q17",
+              "type": "diagnose",
+              "category": "Not Ready",
+              "question": "A web pod shows `0/1 Running`, and its EndpointSlice entry `ready=false`. What's going on?",
+              "options": {
+                "A": "Its readiness probe is failing: it's alive but out of rotation",
+                "B": "Its container crashed and Kubernetes is waiting to restart it",
+                "C": "Its node lost contact with the control plane and was cordoned",
+                "D": "Its Service selector no longer matches the pod's labels"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.4."
+            },
+            {
+              "id": "s8d1q18",
+              "type": "recall",
+              "category": "Command",
+              "question": "Which command shows the pod IPs behind the `arrivals` Service?",
+              "options": {
+                "A": "`kubectl -n transit get service arrivals -o ips`",
+                "B": "`kubectl -n transit describe deployment arrivals --endpoints`",
+                "C": "`kubectl get nodes -o wide --service arrivals`",
+                "D": "`kubectl -n transit get endpointslices -l kubernetes.io/service-name=arrivals`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.3."
+            },
+            {
+              "id": "s8d1q19",
+              "type": "recall",
+              "category": "Components",
+              "question": "Which component writes the iptables rules that implement a ClusterIP?",
+              "options": {
+                "A": "The kubelet, on the pod's node",
+                "B": "The CNI plugin, at pod creation",
+                "C": "kube-proxy, on every node",
+                "D": "The API server, on Service creation"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.3."
+            },
+            {
+              "id": "s8d1q20",
+              "type": "recall",
+              "category": "Files",
+              "question": "In the controller pod, where are the generated configuration files?",
+              "options": {
+                "A": "`/etc/nginx/sites-enabled/`",
+                "B": "`/etc/nginx/conf.d/`",
+                "C": "`/var/lib/nginx/state/`",
+                "D": "`/etc/kubernetes/manifests/`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.5: `nconf` lists them."
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "title": "Annotations, the Migration, and F5's Custom Resources",
+          "questions": [
+            {
+              "id": "s8d2q01",
+              "type": "scenario",
+              "category": "Annotations",
+              "question": "An Ingress written for Ingress-NGINX is applied to F5 NGINX Ingress Controller with `nginx.ingress.kubernetes.io/limit-rps: \"2\"`. What happens?",
+              "options": {
+                "A": "It's applied with a Normal event, and the annotation is silently ignored",
+                "B": "The Ingress is rejected with a Warning naming the unknown annotation",
+                "C": "The controller translates it to its own rate limit automatically",
+                "D": "The API server refuses the Ingress because the key isn't registered"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1: eight quick requests all got 200."
+            },
+            {
+              "id": "s8d2q02",
+              "type": "scenario",
+              "category": "Migration",
+              "question": "Why is \"`kubectl apply` succeeded\" not proof that a migrated Ingress works?",
+              "options": {
+                "A": "Because apply only validates YAML syntax and the controller re-checks it hours later",
+                "B": "Because the API server stores Ingresses in a draft state until a reload",
+                "C": "Because Ingresses only take effect after the controller pod restarts",
+                "D": "Unknown annotations are stored and ignored, so what they meant silently stops happening"
+              },
+              "answer": "D",
+              "explanation": "Concept 1.1 and 1.2."
+            },
+            {
+              "id": "s8d2q03",
+              "type": "scenario",
+              "category": "Snippets",
+              "question": "Why are snippet annotations disabled by default in F5's controller?",
+              "options": {
+                "A": "Because snippets are only supported by NGINX Plus builds of the controller",
+                "B": "Because snippets slow down every reload by forcing a full `nginx -T`",
+                "C": "Anyone allowed to create an Ingress could inject raw NGINX configuration affecting every host",
+                "D": "Because the Ingress API forbids annotation values longer than one line"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.2: annotation injection was behind 2025's IngressNightmare (CVE-2025-1974) in Ingress-NGINX."
+            },
+            {
+              "id": "s8d2q04",
+              "type": "scenario",
+              "category": "Invalid",
+              "question": "A typo in one route makes a working VirtualServer `Invalid`. What happens to the host?",
+              "options": {
+                "A": "The previous valid version keeps running until the typo is fixed",
+                "B": "Its whole configuration is removed: HTTPS is refused and HTTP gets the default 404",
+                "C": "Only the route with the typo is dropped; the others keep working",
+                "D": "The controller rolls the object back to its last valid version"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.4: unlike BIG-IP, there's no last-good configuration kept."
+            },
+            {
+              "id": "s8d2q05",
+              "type": "scenario",
+              "category": "Delegation",
+              "question": "Why can't the fares team attach their VirtualServerRoute to Copperline's host on their own?",
+              "options": {
+                "A": "It's only used when the host's VirtualServer delegates a path to it with `route:`",
+                "B": "Because VirtualServerRoutes need cluster-admin rights to create",
+                "C": "Because only one namespace may hold resources for a given host",
+                "D": "Because the VirtualServerRoute must be created by the controller itself"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.5: without the reference, it's `Warning ... ignores VirtualServerRoute`."
+            },
+            {
+              "id": "s8d2q06",
+              "type": "scenario",
+              "category": "Delegation",
+              "question": "The fares team adds a subroute `/admin` under their delegated `/fares`. What happens to `/fares/zones`?",
+              "options": {
+                "A": "Only `/admin` is dropped; `/fares/zones` keeps reaching fares",
+                "B": "`/fares/zones` answers 500 until the subroute is removed",
+                "C": "The controller renames `/admin` to `/fares/admin` and applies it",
+                "D": "The whole VirtualServerRoute is ignored, so it falls through to the parent's `/` route"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.5: `must start with '/fares'`; web answered."
+            },
+            {
+              "id": "s8d2q07",
+              "type": "scenario",
+              "category": "Policies",
+              "question": "A route references a Policy that doesn't exist. What do clients get?",
+              "options": {
+                "A": "The route works without the policy until it's created",
+                "B": "`404` on the whole host until the Policy is created",
+                "C": "`500` on that route, while other routes keep working",
+                "D": "`403` on that route, as if access control denied it"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.4 and Activity 3.6: fail closed, per route."
+            },
+            {
+              "id": "s8d2q08",
+              "type": "scenario",
+              "category": "Key Storage",
+              "question": "Without etcd encryption at rest, how is a TLS Secret's private key stored?",
+              "options": {
+                "A": "Encrypted with the cluster CA's key, readable only by the API server",
+                "B": "As given: the raw record in etcd contains the readable PEM key",
+                "C": "Hashed, so only the controller can derive the key from it",
+                "D": "Split across the etcd members so no single copy holds the key"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.7: `etcdctl get` showed `BEGIN PRIVATE KEY`."
+            },
+            {
+              "id": "s8d2q09",
+              "type": "config",
+              "category": "Translation",
+              "question": "Which annotations turn the Ingress-NGINX regex path `/api(/|$)(.*)` with `rewrite-target: /$2` into the same behavior on F5's controller?",
+              "options": {
+                "A": "`nginx.org/path-regex: case_sensitive` and `nginx.org/rewrite-target: /$2`",
+                "B": "`nginx.org/use-regex: \"true\"` and `nginx.org/rewrite: /$2`",
+                "C": "`nginx.org/location-snippets` with a `rewrite` line, which is always enabled",
+                "D": "`nginx.org/regex-path: on` and `nginx.org/strip-prefix: /api`"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.2: the location became `location ~ \"^/api(/|$)(.*)\"` with a rewrite."
+            },
+            {
+              "id": "s8d2q10",
+              "type": "config",
+              "category": "Burst",
+              "question": "`nginx.org/limit-req-rate: 2r/s` and `nginx.org/limit-req-burst: \"10\"`. Sixteen quick sequential requests all get 200. Why?",
+              "options": {
+                "A": "The burst means 10 requests per second are allowed on top of the rate",
+                "B": "The rate applies per worker process, and there are several workers",
+                "C": "Sequential requests from one client aren't counted by `limit_req`",
+                "D": "Without no-delay, requests above the rate wait in the burst queue instead of being rejected"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.2: with `nginx.org/limit-req-no-delay: \"true\"`, 11 passed and then 429."
+            },
+            {
+              "id": "s8d2q11",
+              "type": "config",
+              "category": "Ingress Policy",
+              "question": "`nginx.org/policies: office-only,legacy-rate` on an Ingress, where `legacy-rate` is a rateLimit Policy. Result?",
+              "options": {
+                "A": "Both policies apply, as they would on a VirtualServer route",
+                "B": "The rate limit is ignored; the access control still applies",
+                "C": "A Warning that the Policy isn't supported on Ingress, and `return 500` for the whole host",
+                "D": "The API server refuses the annotation because of the Policy type"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.2: use `nginx.org/limit-req-*` on an Ingress."
+            },
+            {
+              "id": "s8d2q12",
+              "type": "config",
+              "category": "VirtualServer",
+              "question": "```yaml\ntls:\n  secret: transit-tls\n  redirect:\n    enable: true\n    code: 301\n```\nWhat does this give a plain HTTP request?",
+              "options": {
+                "A": "A 301 to the same URL with port 8099 preserved",
+                "B": "A 301 to `https://$host$request_uri`",
+                "C": "The page over HTTP, plus an `Alt-Svc` header",
+                "D": "A 400 \"plain HTTP sent to HTTPS port\""
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3: in the lab the Location drops `:8099`."
+            },
+            {
+              "id": "s8d2q13",
+              "type": "config",
+              "category": "Schema",
+              "question": "`port: eighty` in a VirtualServer upstream. What does `kubectl apply` do?",
+              "options": {
+                "A": "The API server refuses it: the field must be an integer, and nothing is stored",
+                "B": "It's stored, and the controller marks the VirtualServer Invalid",
+                "C": "It's stored with a Warning, and port 80 is used by default",
+                "D": "The controller looks up a named port `eighty` on the Service"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.4: schema validation happens before anything is stored."
+            },
+            {
+              "id": "s8d2q14",
+              "type": "config",
+              "category": "Proxy Action",
+              "question": "BasicAuth on `/dispatch` works, but the app receives the dispatcher's `Authorization` header. What removes it?",
+              "options": {
+                "A": "A second Policy of type `basicAuth` with `forward: false`",
+                "B": "The annotation `nginx.org/hide-auth: \"true\"` on the VirtualServer",
+                "C": "Nothing: Basic auth credentials can't be removed before proxying",
+                "D": "A `proxy` action with `requestHeaders.set` giving `Authorization` an empty value"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.6 and the sprint lab."
+            },
+            {
+              "id": "s8d2q15",
+              "type": "diagnose",
+              "category": "Host Taken",
+              "question": "A new VirtualServer for `transit.copperline.test` is `Warning` with `Host is taken by another resource`. Likely cause?",
+              "options": {
+                "A": "The TLS Secret for the host belongs to another namespace",
+                "B": "Two upstreams in the VirtualServer share the same Service",
+                "C": "An older Ingress or VirtualServer already serves that host",
+                "D": "The host name has no DNS record in the cluster"
+              },
+              "answer": "C",
+              "explanation": "Day 2 building: the older resource keeps the host."
+            },
+            {
+              "id": "s8d2q16",
+              "type": "diagnose",
+              "category": "Snippets Off",
+              "question": "An Ingress with `nginx.org/location-snippets` is `Rejected`: `Forbidden: snippet specified but snippets feature is not enabled`. What does that mean for its host?",
+              "options": {
+                "A": "Only the snippet is dropped, and the rest of the Ingress works",
+                "B": "The whole Ingress isn't applied, so the host isn't served by it",
+                "C": "The snippet is applied at the next controller restart",
+                "D": "The snippet runs in a sandbox with reduced directives"
+              },
+              "answer": "B",
+              "explanation": "Day 2 building: refused, unlike Ingress-NGINX keys, which are ignored."
+            },
+            {
+              "id": "s8d2q17",
+              "type": "diagnose",
+              "category": "TLS Warning",
+              "question": "HTTPS to a host fails with curl exit 35 (`unrecognized name`), while HTTP still redirects to HTTPS. The VirtualServer is `Warning`. Likely cause?",
+              "options": {
+                "A": "Its TLS Secret doesn't exist, so the controller rejects TLS handshakes for that host",
+                "B": "The certificate has expired, and the controller won't serve expired certificates",
+                "C": "The client sent no SNI, so the default server answered over HTTP",
+                "D": "The redirect code is 301 instead of 308, which breaks TLS clients"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.4: `ssl_reject_handshake on`."
+            },
+            {
+              "id": "s8d2q18",
+              "type": "recall",
+              "category": "Secret Type",
+              "question": "Which Secret type does a `basicAuth` Policy read users from?",
+              "options": {
+                "A": "`kubernetes.io/basic-auth`",
+                "B": "`kubernetes.io/tls`",
+                "C": "`nginx.org/jwk`",
+                "D": "`nginx.org/htpasswd`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.6."
+            },
+            {
+              "id": "s8d2q19",
+              "type": "recall",
+              "category": "Annotation",
+              "question": "Which annotation attaches Policy resources to an Ingress?",
+              "options": {
+                "A": "`nginx.org/attach`",
+                "B": "`k8s.nginx.org/policy`",
+                "C": "`nginx.org/policies`",
+                "D": "`nginx.ingress.kubernetes.io/policies`"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.2."
+            },
+            {
+              "id": "s8d2q20",
+              "type": "recall",
+              "category": "RBAC",
+              "question": "Which command checks whether the controller's ServiceAccount may list Secrets everywhere?",
+              "options": {
+                "A": "`kubectl get secrets --as-controller nginx-ingress`",
+                "B": "`kubectl auth can-i list secrets --all-namespaces --as=system:serviceaccount:nginx-ingress:nic-nginx-ingress`",
+                "C": "`kubectl describe clusterrole --who-can secrets`",
+                "D": "`helm get rbac nic -n nginx-ingress`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.7: the answer was yes."
+            }
+          ]
+        },
+        {
+          "day": 3,
+          "title": "Canaries, Zero-Downtime Endpoint Updates & the Sprint Lab",
+          "questions": [
+            {
+              "id": "s8d3q01",
+              "type": "scenario",
+              "category": "Splits",
+              "question": "Alice sends the same cookie on every request, but a `splits` route sends her to v1 and v2 by turns. Why?",
+              "options": {
+                "A": "The split is `split_clients $request_id`, random per request, with nothing about Alice in it",
+                "B": "The cookie expired between requests, so she counts as a new user",
+                "C": "`splits` rotate in strict order, one version per request",
+                "D": "The cookie is only read once matches are evaluated, after the split"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.1."
+            },
+            {
+              "id": "s8d3q02",
+              "type": "scenario",
+              "category": "Matches",
+              "question": "A route has matches for `X-Canary: always` (first) and cookie `canary=always` (second), then 80/20 splits. A request sends `X-Canary: yes`. Where does it go?",
+              "options": {
+                "A": "To v2, because the header is present",
+                "B": "To v1, because a header that doesn't match counts as opted out",
+                "C": "To a 400, because the header value is invalid",
+                "D": "Into the 80/20 split: no match applies"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.2."
+            },
+            {
+              "id": "s8d3q03",
+              "type": "scenario",
+              "category": "Rollout",
+              "question": "Why does a readiness probe fix the start of a rollout but not the end?",
+              "options": {
+                "A": "Because readiness probes run only on pods that are starting, never on running ones",
+                "B": "Because the probe hits `/healthz`, which keeps answering while the app shuts down",
+                "C": "It holds new pods back until they listen, but old pods still exit on SIGTERM before NGINX stops using them",
+                "D": "Because the controller ignores readiness for pods that are terminating"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.2 and Activity 3.4."
+            },
+            {
+              "id": "s8d3q04",
+              "type": "scenario",
+              "category": "preStop",
+              "question": "Why does a 5-second `preStop` sleep remove the last errors when the app still exits immediately on SIGTERM?",
+              "options": {
+                "A": "The sleep makes the kubelet skip SIGTERM and send SIGKILL later instead",
+                "B": "SIGTERM arrives after the sleep, by which time the controller has reloaded without the pod",
+                "C": "The sleep marks the pod ready again so NGINX finishes its requests",
+                "D": "The sleep pauses the Deployment rollout until all connections close"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.5: it's BIG-IP's disable-and-drain, written into the pod spec."
+            },
+            {
+              "id": "s8d3q05",
+              "type": "scenario",
+              "category": "Retries",
+              "question": "During a rollout with only a readiness probe, GETs come through clean but POSTs get a few 502s. Why?",
+              "options": {
+                "A": "NGINX retries a failed GET on another pod, but not a non-idempotent POST that was already sent",
+                "B": "POST bodies are larger, so they hit the client body buffer limit during rollouts",
+                "C": "The readiness probe uses GET, so pods report ready only for GET traffic",
+                "D": "The controller routes POSTs to the ClusterIP, which kube-proxy updates later"
+              },
+              "answer": "A",
+              "explanation": "Concept 1.3 and Activity 3.4."
+            },
+            {
+              "id": "s8d3q06",
+              "type": "scenario",
+              "category": "Half-Broken",
+              "question": "A pod answers 500 to real requests but `/healthz` still passes. With the controller's defaults, what do clients see?",
+              "options": {
+                "A": "Nothing: `max_fails=1` takes the pod out after the first 500",
+                "B": "Nothing: Kubernetes removes the pod from the EndpointSlice",
+                "C": "Only 502s, because NGINX converts upstream 500s",
+                "D": "Some 500s: a 500 isn't a failure to NGINX unless `next-upstream` lists it"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.6: about a quarter of the answers were 500."
+            },
+            {
+              "id": "s8d3q07",
+              "type": "scenario",
+              "category": "fail-timeout",
+              "question": "With `http_500` in `next-upstream` and `fail-timeout: 30s`, what does the broken pod cost users?",
+              "options": {
+                "A": "Nothing at all: it's never sent another request until it recovers",
+                "B": "Every request is sent to it first, failing over each time",
+                "C": "One request every 30 s is sent to it, fails, and is retried on another pod",
+                "D": "One request per worker process, then it's removed from the upstream"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.6: a passive breaker uses real requests as the probe."
+            },
+            {
+              "id": "s8d3q08",
+              "type": "scenario",
+              "category": "Reload Cost",
+              "question": "Why can frequent reloads hurt even though they're graceful?",
+              "options": {
+                "A": "Each reload drops every open connection with a TCP reset",
+                "B": "Old workers live on while long-lived connections stay open, so generations pile up",
+                "C": "Reloads pause new connections for the batch window",
+                "D": "A reload re-reads every TLS Secret from etcd"
+              },
+              "answer": "B",
+              "explanation": "Concept 1.5."
+            },
+            {
+              "id": "s8d3q09",
+              "type": "config",
+              "category": "Timeout",
+              "question": "An upstream has `read-timeout: 5s` and nothing else changed; three pods. A request takes 9 s on every pod. When does the client get its 504?",
+              "options": {
+                "A": "After about 15 s: the timeout is retried on each pod in turn",
+                "B": "After 5 s: `read-timeout` is the total time for the request",
+                "C": "After 9 s, when the first pod finally answers",
+                "D": "After 60 s: `read-timeout` is ignored without `next-upstream`"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.7."
+            },
+            {
+              "id": "s8d3q10",
+              "type": "config",
+              "category": "Timeout",
+              "question": "Which upstream fields hold that client to about 5 s?",
+              "options": {
+                "A": "`max-fails: 0` and `fail-timeout: 5s`",
+                "B": "`keepalive: 5` and `max-conns: 1`",
+                "C": "`client-max-body-size: 5s`",
+                "D": "`next-upstream-tries` and/or `next-upstream-timeout: 5s`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.7 and the sprint lab's requirement 7."
+            },
+            {
+              "id": "s8d3q11",
+              "type": "config",
+              "category": "Canary",
+              "question": "```yaml\nmatches:\n- conditions:\n  - cookie: canary\n    value: always\n  action:\n    pass: arrivals-v2\nsplits:\n- weight: 90\n  action: {pass: arrivals-v1}\n- weight: 10\n  action: {pass: arrivals-v2}\n```\nWhich requests are guaranteed v2?",
+              "options": {
+                "A": "Requests carrying any cookie named `canary`",
+                "B": "One in ten requests, in strict rotation",
+                "C": "Requests carrying the cookie `canary=always`",
+                "D": "None: splits take precedence over matches"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.1."
+            },
+            {
+              "id": "s8d3q12",
+              "type": "config",
+              "category": "Probe",
+              "question": "Where does the `readinessProbe` go in the Deployment?",
+              "options": {
+                "A": "At the top of `spec`, next to `replicas:`",
+                "B": "Inside the container entry, next to `ports:` and `env:`",
+                "C": "In the Service, next to `selector:`",
+                "D": "In the VirtualServer upstream, next to `port:`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.4."
+            },
+            {
+              "id": "s8d3q13",
+              "type": "config",
+              "category": "next-upstream",
+              "question": "Which upstream setting makes a 500 count as a failure and be retried?",
+              "options": {
+                "A": "`next-upstream: \"error timeout http_500\"`",
+                "B": "`max-fails: 500`",
+                "C": "`fail-timeout: 500`",
+                "D": "`healthCheck: {statusMatch: \"500\"}`"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.6."
+            },
+            {
+              "id": "s8d3q14",
+              "type": "config",
+              "category": "preStop",
+              "question": "Which snippet adds the drain delay?",
+              "options": {
+                "A": "`terminationGracePeriodSeconds: 5` in the Service",
+                "B": "`readinessProbe: {initialDelaySeconds: 5}`",
+                "C": "`strategy: {rollingUpdate: {maxSurge: 5}}`",
+                "D": "`lifecycle: {preStop: {sleep: {seconds: 5}}}` in the container"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.5: the `sleep` action is built in since Kubernetes 1.30."
+            },
+            {
+              "id": "s8d3q15",
+              "type": "diagnose",
+              "category": "Rollout",
+              "question": "Hundreds of 502s during `kubectl rollout restart` of a Deployment with no probes, an app that takes 3 s to start, and immediate exit on SIGTERM. Which two gaps?",
+              "options": {
+                "A": "The controller reloads too slowly, and the Service's ClusterIP changes",
+                "B": "The NodePort closes during rollouts, and TLS sessions are reset",
+                "C": "New pods get traffic before listening, and old pods exit before NGINX stops using them",
+                "D": "The EndpointSlice is deleted, and the IngressClass is recreated"
+              },
+              "answer": "C",
+              "explanation": "Activity 3.3."
+            },
+            {
+              "id": "s8d3q16",
+              "type": "diagnose",
+              "category": "No Answer",
+              "question": "During a rollout, one request gets no answer for over 5 s (curl exit 28). Likely cause?",
+              "options": {
+                "A": "The rate limit delayed it in the burst queue",
+                "B": "It was in flight on a pod whose network vanished, so NGINX waits for its read timeout",
+                "C": "DNS for the host failed during the reload",
+                "D": "The client certificate expired mid-request"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.4."
+            },
+            {
+              "id": "s8d3q17",
+              "type": "diagnose",
+              "category": "Counters",
+              "question": "`reason=\"endpoints\"` rose by about ten during one rolling restart of three pods. What does that mean?",
+              "options": {
+                "A": "Each pod change (new, ready, terminating, gone) cost a reload batch",
+                "B": "The controller crashed and restarted ten times",
+                "C": "Ten new Ingresses were created by the rollout",
+                "D": "Ten requests failed during the rollout"
+              },
+              "answer": "A",
+              "explanation": "Activity 3.3."
+            },
+            {
+              "id": "s8d3q18",
+              "type": "recall",
+              "category": "Split Directive",
+              "question": "Which NGINX directive does a VirtualServer's `splits` become?",
+              "options": {
+                "A": "`map`",
+                "B": "`geo`",
+                "C": "`random`",
+                "D": "`split_clients`"
+              },
+              "answer": "D",
+              "explanation": "Activity 3.1."
+            },
+            {
+              "id": "s8d3q19",
+              "type": "recall",
+              "category": "Signal",
+              "question": "What does the kubelet send after the `preStop` hook finishes?",
+              "options": {
+                "A": "SIGHUP",
+                "B": "SIGQUIT",
+                "C": "SIGTERM",
+                "D": "SIGUSR2"
+              },
+              "answer": "C",
+              "explanation": "Concept 1.2."
+            },
+            {
+              "id": "s8d3q20",
+              "type": "recall",
+              "category": "Restart",
+              "question": "Which command replaces every pod of `arrivals-v1` one at a time?",
+              "options": {
+                "A": "`kubectl -n transit restart pods -l app=arrivals`",
+                "B": "`kubectl -n transit rollout restart deployment arrivals-v1`",
+                "C": "`kubectl -n transit rollout redo deployment arrivals-v1`",
+                "D": "`helm upgrade arrivals-v1 --recreate-pods`"
+              },
+              "answer": "B",
+              "explanation": "Activity 3.3."
+            }
+          ],
+          "extra_pools": [
+            {
+              "pool": "enterprise",
+              "title": "Enterprise (Optional): F5 NGINX Ingress Controller with NGINX Plus",
+              "track": "enterprise",
+              "optional": true,
+              "questions": [
+                {
+                  "id": "s8d3e01",
+                  "type": "scenario",
+                  "category": "Endpoints",
+                  "question": "Arrivals scales from 3 to 5 pods and back. What changes on the Plus controller compared with open source?",
+                  "options": {
+                    "A": "Plus updates its upstream servers through the API without reloading; open source reloads",
+                    "B": "Plus reloads too, but faster, because its batch window is shorter",
+                    "C": "Plus ignores the new pods until its next scheduled reload",
+                    "D": "Plus sends traffic to the ClusterIP, so pod changes don't matter"
+                  },
+                  "answer": "A",
+                  "explanation": "Activity 3.2: open source +7 or +8, Plus 0."
+                },
+                {
+                  "id": "s8d3e02",
+                  "type": "scenario",
+                  "category": "Weights",
+                  "question": "How does the Plus controller change split weights without a reload?",
+                  "options": {
+                    "A": "It edits the running `split_clients` block in shared memory",
+                    "B": "It sends a new weight to each worker process with a signal",
+                    "C": "It changes the Service's endpoints so kube-proxy rebalances",
+                    "D": "It pre-generates a `split_clients` block for every weight pair and picks one through a keyval"
+                  },
+                  "answer": "D",
+                  "explanation": "Activity 3.2: 101 blocks, keyval value `..._50_50`."
+                },
+                {
+                  "id": "s8d3e03",
+                  "type": "scenario",
+                  "category": "Health Check",
+                  "question": "Why point the Plus health check at `/arrivals/health` rather than `/healthz`?",
+                  "options": {
+                    "A": "Because `/healthz` is reserved by the kubelet and NGINX can't reach it",
+                    "B": "Because Plus health checks only support paths under a route's prefix",
+                    "C": "A half-broken pod passes `/healthz`; the check should ask for what users ask for",
+                    "D": "Because `/healthz` answers 503 during slow start"
+                  },
+                  "answer": "C",
+                  "explanation": "Concept 1.2."
+                },
+                {
+                  "id": "s8d3e04",
+                  "type": "scenario",
+                  "category": "Ejection",
+                  "question": "With an active health check, how many user requests reach a pod after it starts failing?",
+                  "options": {
+                    "A": "One per `fail-timeout`, as with passive checks",
+                    "B": "None, once the check marks it unhealthy (within interval × fails)",
+                    "C": "All of them until Kubernetes marks it not ready",
+                    "D": "One per worker process"
+                  },
+                  "answer": "B",
+                  "explanation": "Activity 3.3: its `requests` counter didn't move."
+                },
+                {
+                  "id": "s8d3e05",
+                  "type": "scenario",
+                  "category": "mandatory",
+                  "question": "What does `mandatory: true` add to a health check?",
+                  "options": {
+                    "A": "A new pod gets no traffic from NGINX until it passes NGINX's check",
+                    "B": "Every request is preceded by a health check on the chosen pod",
+                    "C": "A failing pod is restarted by the controller",
+                    "D": "The check result is copied into the pod's readiness status"
+                  },
+                  "answer": "A",
+                  "explanation": "Concept 1.2."
+                },
+                {
+                  "id": "s8d3e06",
+                  "type": "scenario",
+                  "category": "Queue",
+                  "question": "Why is a queue the wrong answer for sustained overload?",
+                  "options": {
+                    "A": "Because queued requests are retried on every pod, multiplying load",
+                    "B": "Because the queue is shared with open source controllers in the cluster",
+                    "C": "Because queued requests lose their headers after the timeout",
+                    "D": "It turns overload into latency: the queue fills and times out, adding the wait to the failure"
+                  },
+                  "answer": "D",
+                  "explanation": "Activity 3.4."
+                },
+                {
+                  "id": "s8d3e07",
+                  "type": "scenario",
+                  "category": "Tampering",
+                  "question": "A free-tier partner edits its token's payload to `\"tier\": \"gold\"`. Result?",
+                  "options": {
+                    "A": "The gold limit applies, because the claim says gold",
+                    "B": "The free limit applies, because tiers are cached per subject",
+                    "C": "401: the signature no longer verifies, so no tier is chosen",
+                    "D": "403: the token is valid but the tier is forbidden"
+                  },
+                  "answer": "C",
+                  "explanation": "Activity 3.5."
+                },
+                {
+                  "id": "s8d3e08",
+                  "type": "scenario",
+                  "category": "Classes",
+                  "question": "A VirtualServer without `ingressClassName` is applied while both the `nginx` and `nginx-plus` controllers run. What happens?",
+                  "options": {
+                    "A": "Only the controller installed first configures it",
+                    "B": "Both controllers configure it",
+                    "C": "Neither: the class is required by the schema",
+                    "D": "The API server assigns the default class"
+                  },
+                  "answer": "B",
+                  "explanation": "Activity 3.1."
+                },
+                {
+                  "id": "s8d3e09",
+                  "type": "config",
+                  "category": "Slow Start",
+                  "question": "`slow-start: 30s` on an upstream with no `lb-method` set. What does the controller do?",
+                  "options": {
+                    "A": "Applies it with a Warning: slow start is disabled because `random two least_conn` is incompatible",
+                    "B": "Applies slow start with the default method",
+                    "C": "Rejects the VirtualServer as Invalid",
+                    "D": "Switches the method to round robin silently"
+                  },
+                  "answer": "A",
+                  "explanation": "Activity 3.3."
+                },
+                {
+                  "id": "s8d3e10",
+                  "type": "config",
+                  "category": "Queue",
+                  "question": "`max-conns: 2`, `queue: {size: 10, timeout: 3s}`, three pods. Twelve 1-second requests arrive at once. Result?",
+                  "options": {
+                    "A": "Six 200 and six 502 at once",
+                    "B": "All 200 after 1 s, since the queue is ignored below its size",
+                    "C": "Six 200 and six 503 after 3 s",
+                    "D": "All 200; the six queued ones finish after about 2 s"
+                  },
+                  "answer": "D",
+                  "explanation": "Activity 3.4."
+                },
+                {
+                  "id": "s8d3e11",
+                  "type": "config",
+                  "category": "Tiers",
+                  "question": "```yaml\ncondition:\n  jwt: {claim: tier, match: free}\n  default: true\n```\nWhich requests does this rate limit apply to?",
+                  "options": {
+                    "A": "Only tokens with `tier: free`",
+                    "B": "Every request, on top of the other tiers' limits",
+                    "C": "Tokens with `tier: free`, plus tokens whose tier matches no other policy",
+                    "D": "Requests without any token"
+                  },
+                  "answer": "C",
+                  "explanation": "Concept 1.3 and Activity 3.5."
+                },
+                {
+                  "id": "s8d3e12",
+                  "type": "config",
+                  "category": "Claims",
+                  "question": "A `jwt` Policy rule has `roles` with `match: Contains`, `values: [dispatcher]`, and `errorCode: 403`. A valid token with `roles: [rider]` arrives. Result?",
+                  "options": {
+                    "A": "401",
+                    "B": "403",
+                    "C": "200 with an empty X-User",
+                    "D": "429"
+                  },
+                  "answer": "B",
+                  "explanation": "Activity 3.6."
+                },
+                {
+                  "id": "s8d3e13",
+                  "type": "config",
+                  "category": "proxySetHeader",
+                  "question": "What does `proxySetHeader: X-User` on the `sub` claim do when a client also sends `X-User: mallory`?",
+                  "options": {
+                    "A": "The upstream receives the token's `sub` as `X-User`, not the client's value",
+                    "B": "The upstream receives both values, comma-separated",
+                    "C": "The request is refused as a header injection",
+                    "D": "The client's value wins because it came first"
+                  },
+                  "answer": "A",
+                  "explanation": "Activity 3.6."
+                },
+                {
+                  "id": "s8d3e14",
+                  "type": "config",
+                  "category": "Licensing",
+                  "question": "Which two Secrets does the Plus controller need in its namespace in the lab?",
+                  "options": {
+                    "A": "A TLS Secret for the API and an htpasswd Secret for the dashboard",
+                    "B": "One Secret holding the JWT and the controller's private key",
+                    "C": "A JWK Secret for licensing and an Opaque Secret for the image tag",
+                    "D": "A generic Secret with `license.jwt`, and a docker-registry Secret with the JWT as username"
+                  },
+                  "answer": "D",
+                  "explanation": "Lab Setup and `docs/nginx-plus-lab.md` section 5."
+                },
+                {
+                  "id": "s8d3e15",
+                  "type": "diagnose",
+                  "category": "Queue Logs",
+                  "question": "The Plus controller logs `upstream queue is full` and `upstream queue timeout`, and clients get 502. What's happening?",
+                  "options": {
+                    "A": "The health check marked every pod unhealthy",
+                    "B": "The license expired and the queue was disabled",
+                    "C": "More requests than `max-conns` × pods plus the queue size, and some waited past the queue timeout",
+                    "D": "Slow start held new pods at weight zero"
+                  },
+                  "answer": "C",
+                  "explanation": "Activity 3.4."
+                },
+                {
+                  "id": "s8d3e16",
+                  "type": "diagnose",
+                  "category": "Ready but Out",
+                  "question": "Kubernetes shows a pod `1/1 Ready`, but the Plus API shows it `unhealthy` with no new requests. Why?",
+                  "options": {
+                    "A": "The Plus API is cached and hasn't refreshed yet",
+                    "B": "Its readiness probe passes, but NGINX's own health check on a real path fails",
+                    "C": "The pod is on a node without a controller",
+                    "D": "Slow start is ramping it from zero"
+                  },
+                  "answer": "B",
+                  "explanation": "Activity 3.3."
+                },
+                {
+                  "id": "s8d3e17",
+                  "type": "diagnose",
+                  "category": "Reload Counter",
+                  "question": "After a weight change, the Plus controller's reload counters didn't move but traffic changed. Is something wrong?",
+                  "options": {
+                    "A": "No: the weight changed through the keyval, which is the point of dynamic weight changes",
+                    "B": "Yes: the change was lost and will apply at the next reload",
+                    "C": "Yes: the metrics port is broken",
+                    "D": "No: Plus reloads but doesn't count them"
+                  },
+                  "answer": "A",
+                  "explanation": "Activity 3.2."
+                },
+                {
+                  "id": "s8d3e18",
+                  "type": "recall",
+                  "category": "API",
+                  "question": "Which Plus API path lists upstream peers and their states?",
+                  "options": {
+                    "A": "`/api/9/nginx/servers`",
+                    "B": "`/status/upstreams`",
+                    "C": "`/api/9/stream/keyvals`",
+                    "D": "`/api/9/http/upstreams`"
+                  },
+                  "answer": "D",
+                  "explanation": "Activity 3.2."
+                },
+                {
+                  "id": "s8d3e19",
+                  "type": "recall",
+                  "category": "Values",
+                  "question": "Which Helm value enables split weight changes without a reload?",
+                  "options": {
+                    "A": "`controller.nginxplus.dynamicSplits`",
+                    "B": "`controller.config.entries.keyval-splits`",
+                    "C": "`controller.enableWeightChangesDynamicReload`",
+                    "D": "`controller.batchReloadWindow`"
+                  },
+                  "answer": "C",
+                  "explanation": "`lab/plus/nic-plus-values.yaml`."
+                },
+                {
+                  "id": "s8d3e20",
+                  "type": "recall",
+                  "category": "5.8",
+                  "question": "Which feature is new in 5.8 for NGINX Plus?",
+                  "options": {
+                    "A": "Active health checks",
+                    "B": "JWT claim authorization in the `jwt` Policy",
+                    "C": "The Plus API",
+                    "D": "Split weights in VirtualServers"
+                  },
+                  "answer": "B",
+                  "explanation": "Concept 1.3."
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

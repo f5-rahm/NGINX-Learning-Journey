@@ -1,0 +1,36 @@
+# Day 2 migration drill: an Ingress written for the community Ingress-NGINX controller
+# (retired, archived March 2026). Nothing from that project is installed in this lab:
+# this is only its manifest dialect, the kind teams are migrating today.
+#
+# What its authors meant, in Ingress-NGINX terms:
+#   /api/<anything>  → the arrivals service, with "/api" stripped (regex path + rewrite-target)
+#   only from the office network 192.0.2.0/24 (whitelist-source-range)
+#   at most 2 requests/s per client (limit-rps)
+#   give up on the backend after 5 s (proxy-read-timeout)
+#   add a response header X-Legacy: yes (configuration-snippet; more_set_headers is a Lua-era headers-more directive)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: legacy
+  namespace: transit
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/whitelist-source-range: "192.0.2.0/24"
+    nginx.ingress.kubernetes.io/limit-rps: "2"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "5"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Legacy: yes";
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: legacy.copperline.test
+    http:
+      paths:
+      - path: /api(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: arrivals
+            port:
+              number: 80

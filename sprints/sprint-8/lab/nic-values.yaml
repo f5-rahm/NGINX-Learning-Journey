@@ -1,0 +1,19 @@
+# Helm values for F5 NGINX Ingress Controller (open source), chart 2.9.0 = NIC 5.8.0.
+# Everything not set here keeps the chart's default (helm show values oci://ghcr.io/nginx/charts/nginx-ingress --version 2.9.0).
+controller:
+  image:
+    repository: nginx/nginx-ingress      # F5's image (Docker Hub). Not registry.k8s.io/ingress-nginx/controller, the retired community project.
+    tag: "5.8.0"
+  ingressClass:
+    name: nginx                          # resources pick this controller with ingressClassName: nginx
+  service:
+    type: NodePort                       # kind has no cloud load balancer; kind maps host 8098/8099 to these NodePorts
+    externalTrafficPolicy: Cluster
+    httpPort: {nodePort: 30080}
+    httpsPort: {nodePort: 30443}
+  nodeSelector:                          # run on the control-plane node, where kind's port mappings land
+    kubernetes.io/hostname: s8-control-plane
+  tolerations:
+  - {key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}
+  telemetryReporting:
+    enable: false                        # the lab doesn't send product telemetry to F5

@@ -1,0 +1,43 @@
+# Requirement 8: readiness probe + preStop sleep.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arrivals-v1
+  namespace: transit
+  labels: {app: arrivals, version: v1}
+spec:
+  replicas: 3
+  selector:
+    matchLabels: {app: arrivals, version: v1}
+  template:
+    metadata:
+      labels: {app: arrivals, version: v1}
+    spec:
+      containers:
+      - name: app
+        image: python:3.12-alpine
+        command: ["python3", "-u", "/code/app.py"]
+        ports:
+        - {name: http, containerPort: 8080}
+        env:
+        - {name: APP, value: "arrivals"}
+        - {name: VERSION, value: "v1"}
+        - {name: STARTUP_DELAY, value: "3"}
+        - name: POD_NAME
+          valueFrom: {fieldRef: {fieldPath: metadata.name}}
+        - name: NODE_NAME
+          valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+        - name: POD_IP
+          valueFrom: {fieldRef: {fieldPath: status.podIP}}
+        readinessProbe:                  # no traffic until the app answers (it takes 3 s to start)
+          httpGet: {path: /healthz, port: http}
+          periodSeconds: 1
+          failureThreshold: 1
+        lifecycle:
+          preStop:                       # keep serving while the controller removes this pod from its upstream
+            sleep: {seconds: 5}
+        volumeMounts:
+        - {name: code, mountPath: /code}
+      volumes:
+      - name: code
+        configMap: {name: app-code}    # app.py, created by lab.sh from lab/app.py

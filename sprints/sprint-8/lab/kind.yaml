@@ -1,0 +1,15 @@
+# The Sprint 8 cluster: one control-plane node and two workers, each a Docker container.
+# kind maps host ports to NodePorts on the control-plane node; the ingress controllers
+# run there (see nic-values.yaml), so these are the lab's front doors.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: s8
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - {containerPort: 30080, hostPort: 8098, protocol: TCP}   # NGINX Ingress Controller (open source), HTTP
+  - {containerPort: 30443, hostPort: 8099, protocol: TCP}   # NGINX Ingress Controller (open source), HTTPS
+  - {containerPort: 30086, hostPort: 8086, protocol: TCP}   # NGINX Ingress Controller (Plus, side quest), HTTP
+  - {containerPort: 30087, hostPort: 8087, protocol: TCP}   # NGINX Ingress Controller (Plus, side quest), HTTPS
+- role: worker
+- role: worker

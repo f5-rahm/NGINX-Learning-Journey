@@ -1,0 +1,30 @@
+# Reference solution: the fares team's route and rate limit (requirements 3 and 4), in THEIR namespace.
+apiVersion: k8s.nginx.org/v1
+kind: Policy
+metadata:
+  name: fares-rate
+  namespace: fares
+spec:
+  rateLimit:
+    rate: 5r/s
+    key: ${binary_remote_addr}
+    zoneSize: 1M
+    burst: 10
+    noDelay: true                      # the burst is served at once, not paced
+    rejectCode: 429
+---
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServerRoute
+metadata:
+  name: fares
+  namespace: fares
+spec:
+  ingressClassName: nginx
+  host: transit.copperline.test
+  upstreams:
+  - {name: fares, service: fares, port: 80}
+  subroutes:
+  - path: /fares
+    policies:
+    - name: fares-rate
+    action: {pass: fares}
