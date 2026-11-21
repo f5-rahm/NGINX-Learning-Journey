@@ -156,6 +156,7 @@ Raw findings and clarifications collected during the sprint, to be shaped into t
 
 ### Day 3: Quiz
 * **6/10 first attempt, 9/10 second.** Misses spread across topics, not one concept: breadth to consolidate, not a single gap.
+* **Enterprise quiz: 8/10** first attempt.
 
 ### Day 3: Sprint Lab
 * The end-of-activities `nginx.conf` already passed `test_sprint07.sh` 10/10 before the starter was copied in: by design, each day starts from the previous day's end and the ten requirements are the week's activities, so the from-starter rebuild is recall practice, not new ground.

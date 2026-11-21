@@ -15,12 +15,22 @@ The pattern is Day 2's: each request to `/portal/` makes a subrequest to OAuth2 
 
 I expected OAuth2 Proxy and JWTs to mean the application verifies the user. As the lab is built, it doesn't. OAuth2 Proxy verifies Keycloak's token **once**, at sign-in, and keeps the session in its own encrypted cookie. After that, the portal gets a plain `X-User` header and believes it from anyone who can reach it. That's Day 2's trust model with a better identity source.
 
-So I built a separate throwaway stack where NGINX forwards Keycloak's access token and the application verifies it. A forged `X-User` sent straight to the app was believed; a forged token was rejected. But it took three extra fixes:
-- **An audience mapper.** As configured, the access token had no `aud` claim at all, so a correct application rejected it.
-- **Token refresh.** Without `--cookie-refresh`, the edge kept serving bob nine minutes after the app started rejecting his expired token. Two components, two clocks.
-- **Bigger buffers.** NGINX reads an upstream's response headers into `proxy_buffer_size`, one memory page (4k) by default. A refreshed session cookie of ~3.5 KB overflowed it: `upstream sent too big header`, a `500` for the user. `proxy_buffer_size 16k` alone fails `nginx -t`; it needs `proxy_buffers` raised too.
+## Side quest: zero trust past the edge
 
-Verifying at each stop is real protection, and it's three more things to configure.
+So I made a side quest of my own: a throwaway stack, separate from the lab, where OAuth2 Proxy hands NGINX Keycloak's tokens (`--set-authorization-header`, `--pass-access-token`), NGINX forwards the access token with `auth_request_set` + `proxy_set_header`, and the application verifies Keycloak's signature, issuer, audience and expiry itself. The write-up is in the repo as [`zta-side-quest/`](zta-side-quest/README.md), with what I assumed before and what really happened.
+
+The core result held. Sent straight to the application, bypassing NGINX:
+- a forged `X-User: alice` was **believed**;
+- bob's token edited to say `alice` was **rejected**: `bad signature`.
+
+A header proves only that someone could reach the app. A token proves that the identity provider said so. But getting there took three fixes I hadn't predicted correctly:
+- **An audience mapper.** As the realm was configured, the access token had **no `aud` claim at all**, and the ID token's audience was the proxy's client, not the app. A correct application rejected both. Keycloak needed an audience mapper before the access token was usable. An app that skips the audience check would accept any token the realm issued, for any client.
+- **Token refresh, and the cookie back to the browser.** Without `--cookie-refresh`, the edge kept serving bob nine minutes after the app started rejecting his expired 60-second token. The edge and the app disagreed about whether he was signed in: two components, two clocks. Turning refresh on wasn't enough by itself: the refreshed cookie arrives on the **subrequest's** response, and `auth_request` throws those headers away. Without `auth_request_set $sso_cookie $upstream_http_set_cookie;` + `add_header Set-Cookie $sso_cookie;`, the browser kept the old cookie and OAuth2 Proxy called Keycloak on every request.
+- **Bigger buffers.** NGINX reads an upstream's response headers into `proxy_buffer_size`, one memory page (4k) by default. The refreshed ~3.5 KB cookie overflowed it: `upstream sent too big header`, a `500` for the user. With 40 group names, sign-in itself broke first (`502` on `/oauth2/callback`). `proxy_buffer_size 16k` alone fails `nginx -t`; it needs `proxy_buffers` raised too.
+
+The same stack answered the sign-out question for production. OAuth2 Proxy's `--backend-logout-url`, with the ID token as a hint, ended Keycloak's session server to server, and the next sign-in asked for a password. And a session ended in Keycloak by an admin kept working at the edge until the next `--cookie-refresh`: the refresh interval is the revocation delay, the same trade-off as Day 2's decision cache.
+
+**The practical trade-off.** Verifying at each stop means the network stops being the credential, a mistake at the edge stops being fatal, and the credential expires on its own. It also means configuration in three places (identity provider, proxy, NGINX), more load on the identity provider, header sizes as an operations problem, and a verifier in every application. The middle grounds I'd actually reach for: mTLS from the edge to the app (Day 1's ledger leg) so only the edge can set the headers, or verify at the edge and forward the same token so the app can check again.
 
 ## Plus: the same portal, one container fewer
 
@@ -38,7 +48,8 @@ NGINX Plus has `oidc_provider` and `auth_oidc`. The sign-in flow, the session an
 What that buys, in practice:
 - **One fewer thing to fail.** Day 2 showed an `auth_request` service that's down or slow is a `500` for every request. With Plus there's no second hop.
 - **No subrequest bridge.** `auth_jwt` and `auth_oidc` work inside the main request, so claim variables are just there. No `auth_request_set`, the lesson from Day 2's image.
-- **No cookie-size problems.** The session stays in NGINX, so the buffer overflow above doesn't happen.
+- **No cookie-size problems.** The session stays in NGINX, so the side quest's buffer overflow doesn't happen.
+- **Verify at the edge, then again at the app.** `auth_jwt` checks the token in NGINX, and the same token can go on to the application: the side quest's middle ground, without a second service.
 - **Real token checks for APIs:** `auth_jwt` verifies the signature against Keycloak's JWKS, `auth_jwt_key_cache` keeps the keys, and `auth_jwt_require` adds the claims: issuer and audience as `map` variables. A correctly signed token issued for `billing-api` got `401` at the dispatch API.
 - **Logout is built in** (`post_logout_uri`, `logout_token_hint`) instead of extra proxy flags.
 
@@ -64,9 +75,12 @@ Day 1 checked a **certificate** at the door (at the HTTP layer, not in the hands
 
 Open source can do everything here, and OAuth2 Proxy is solid. But it's a second service with its own configuration, cookie, clocks and failure modes, and NGINX's part is wiring: subrequests, named locations, variable bridges, buffer sizes. Plus collapses that into a few directives and keeps the session where NGINX can manage it. Coming from APM, the Plus version feels like home: one box owns the sign-in, the session and the claims. If sign-in is the reason you'd add a component, that's a strong case for Plus.
 
-## Quiz: 6 out of 10, then 9 out of 10
+## Quizzes
 
-No single topic: the misses were spread across the day. Breadth to consolidate, not one gap. The sprint lab passed 10/10 from the end of the activities, since the lab is the week's work added together.
+- **Day 3: 6 out of 10, then 9 out of 10.** No single topic: the misses were spread across the day. Breadth to consolidate, not one gap.
+- **Enterprise side quest: 8 out of 10** on the first attempt.
+
+The sprint lab passed 10/10 from the end of the activities, since the lab is the week's work added together.
 
 ## What's next
 
