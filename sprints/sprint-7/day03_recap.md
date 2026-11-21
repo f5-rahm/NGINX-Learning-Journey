@@ -2,6 +2,8 @@
 
 Day 3 put Tidewater's staff portal behind Keycloak twice. First with open source NGINX, which doesn't speak OpenID Connect itself, so OAuth2 Proxy does the sign-in and NGINX asks it with Day 2's `auth_request`. Then with NGINX Plus, which does it natively. On BIG-IP both are one APM access profile acting as the OIDC relying party. The difference between the two NGINX versions turned out to be the most useful lesson of the day.
 
+![Same sign-in, one service fewer: open source NGINX + OAuth2 Proxy vs NGINX Plus](sso-oss-vs-plus.png)
+
 ## Open source: NGINX asks, OAuth2 Proxy holds the session
 
 The pattern is Day 2's: each request to `/portal/` makes a subrequest to OAuth2 Proxy's `/oauth2/auth`, which answers `202` with the user as `X-Auth-Request-*` headers, or `401`, which `error_page 401 = @login` turns into the sign-in redirect. The details that weren't obvious:

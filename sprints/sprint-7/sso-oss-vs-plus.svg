@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="908" viewBox="0 0 1200 908" font-family="Lato" xml:space="preserve">
+<rect x="0" y="0" width="1200" height="908" fill="#FFFFFF"/>
+<text x="24" y="46" font-size="28" fill="#1F1F1F" text-anchor="start" font-weight="bold">Same sign-in, one service fewer</text>
+<text x="24" y="78" font-size="15.5" fill="#555555" text-anchor="start">Sprint 7 Day 3: Tidewater's staff portal behind Keycloak. One request from a signed-in user, open source NGINX with</text>
+<text x="24" y="99" font-size="15.5" fill="#555555" text-anchor="start">OAuth2 Proxy vs NGINX Plus native OpenID Connect. Measured on nginx 1.31.6, Plus R37.1, OAuth2 Proxy 7.15.6, Keycloak 26.8.2.</text>
+<rect x="24" y="116" width="104" height="22" rx="5" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="1.2"/>
+<text x="76.0" y="132" font-size="11.5" fill="#1D4ED8" text-anchor="middle" font-weight="bold">WHAT HAPPENS</text>
+<rect x="138" y="116" width="58" height="22" rx="5" fill="#FEF2F2" stroke="#B91C1C" stroke-width="1.2"/>
+<text x="167.0" y="132" font-size="11.5" fill="#B91C1C" text-anchor="middle" font-weight="bold">TRAP</text>
+<rect x="206" y="116" width="66" height="22" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.2"/>
+<text x="239.0" y="132" font-size="11.5" fill="#15803D" text-anchor="middle" font-weight="bold">SET IT</text>
+<text x="288" y="132" font-size="13" fill="#555555" text-anchor="start">what NGINX does  ·  where it bites  ·  what you have to configure</text>
+<rect x="24" y="158" width="1152" height="26" rx="5" fill="#FFF7ED" stroke="#C2410C" stroke-width="1.2"/>
+<text x="36" y="176" font-size="13" fill="#C2410C" text-anchor="start" font-weight="bold">OPEN SOURCE NGINX + OAUTH2 PROXY  ·  two services, a subrequest on every request</text>
+<rect x="24.0" y="198" width="214" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="36.0" y="222" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">Browser</text>
+<text x="36.0" y="241" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">_tidewater_sso</text>
+<path d="M242.0,216 L254.0,225 L242.0,234 z" fill="#9CA3AF"/>
+<rect x="259.5" y="198" width="214" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="271.5" y="222" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">NGINX</text>
+<text x="271.5" y="241" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">auth_request</text>
+<path d="M477.5,216 L489.5,225 L477.5,234 z" fill="#9CA3AF"/>
+<rect x="495.0" y="198" width="214" height="54" rx="8" fill="#C2410C" stroke="#C2410C" stroke-width="1.5"/>
+<text x="507.0" y="222" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">OAuth2 Proxy</text>
+<text x="507.0" y="241" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">/oauth2/auth</text>
+<path d="M713.0,216 L725.0,225 L713.0,234 z" fill="#9CA3AF"/>
+<rect x="730.5" y="198" width="214" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="742.5" y="222" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">NGINX</text>
+<text x="742.5" y="241" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">auth_request_set</text>
+<path d="M948.5,216 L960.5,225 L948.5,234 z" fill="#9CA3AF"/>
+<rect x="966.0" y="198" width="214" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="978.0" y="222" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">Portal</text>
+<text x="978.0" y="241" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">X-User: bob</text>
+<rect x="24.0" y="262" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="40.0" cy="278" r="3.2" fill="#1D4ED8"/>
+<text x="49.0" y="282" font-size="12" fill="#374151" text-anchor="start">sends its session cookie:</text>
+<text x="49.0" y="299" font-size="12" fill="#374151" text-anchor="start">the whole encrypted session</text>
+<circle cx="40.0" cy="312" r="3.2" fill="#B91C1C"/>
+<text x="49.0" y="316" font-size="12" fill="#B91C1C" text-anchor="start">grows with claims and groups</text>
+<rect x="259.5" y="262" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="275.5" cy="278" r="3.2" fill="#1D4ED8"/>
+<text x="284.5" y="282" font-size="12" fill="#374151" text-anchor="start">pauses the request and makes</text>
+<text x="284.5" y="299" font-size="12" fill="#374151" text-anchor="start">a subrequest (always a GET)</text>
+<circle cx="275.5" cy="312" r="3.2" fill="#15803D"/>
+<text x="284.5" y="316" font-size="12" fill="#15803D" text-anchor="start">internal location, body off,</text>
+<text x="284.5" y="333" font-size="12" fill="#15803D" text-anchor="start">Content-Length ""</text>
+<rect x="495.0" y="262" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="511.0" cy="278" r="3.2" fill="#1D4ED8"/>
+<text x="520.0" y="282" font-size="12" fill="#374151" text-anchor="start">decrypts its own cookie:</text>
+<text x="520.0" y="299" font-size="12" fill="#374151" text-anchor="start">202 + X-Auth-Request-*</text>
+<circle cx="511.0" cy="312" r="3.2" fill="#1D4ED8"/>
+<text x="520.0" y="316" font-size="12" fill="#374151" text-anchor="start">401 → error_page → @login</text>
+<circle cx="511.0" cy="329" r="3.2" fill="#B91C1C"/>
+<text x="520.0" y="333" font-size="12" fill="#B91C1C" text-anchor="start">down or slow → 500 for all</text>
+<rect x="730.5" y="262" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="746.5" cy="278" r="3.2" fill="#15803D"/>
+<text x="755.5" y="282" font-size="12" fill="#15803D" text-anchor="start">copies each header across</text>
+<text x="755.5" y="299" font-size="12" fill="#15803D" text-anchor="start">the subrequest boundary</text>
+<circle cx="746.5" cy="312" r="3.2" fill="#B91C1C"/>
+<text x="755.5" y="316" font-size="12" fill="#B91C1C" text-anchor="start">X-Auth-Request-User = sub</text>
+<circle cx="746.5" cy="329" r="3.2" fill="#15803D"/>
+<text x="755.5" y="333" font-size="12" fill="#15803D" text-anchor="start">Cookie "" or it leaks</text>
+<rect x="966.0" y="262" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="982.0" cy="278" r="3.2" fill="#1D4ED8"/>
+<text x="991.0" y="282" font-size="12" fill="#374151" text-anchor="start">gets the username and</text>
+<text x="991.0" y="299" font-size="12" fill="#374151" text-anchor="start">groups as plain headers,</text>
+<circle cx="982.0" cy="312" r="3.2" fill="#B91C1C"/>
+<text x="991.0" y="316" font-size="12" fill="#B91C1C" text-anchor="start">believes them from anyone</text>
+<text x="991.0" y="333" font-size="12" fill="#B91C1C" text-anchor="start">who can reach it</text>
+<rect x="24" y="362" width="1152" height="46" rx="6" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1"/>
+<text x="36" y="381" font-size="12" fill="#374151" text-anchor="start" font-weight="bold">First sign-in:</text>
+<text x="130" y="381" font-size="12" fill="#374151" text-anchor="start">401 → /oauth2/start → Keycloak login → /oauth2/callback proxied to OAuth2 Proxy → it redeems the code on the back channel → cookie set</text>
+<text x="36" y="399" font-size="12" fill="#B91C1C" text-anchor="start">Refresh puts a ~3.5 KB Set-Cookie on the subrequest: pass it on with auth_request_set + add_header, and raise proxy_buffer_size (4k) and proxy_buffers.</text>
+<rect x="24" y="426" width="1152" height="26" rx="5" fill="#F0FDF4" stroke="#15803D" stroke-width="1.2"/>
+<text x="36" y="444" font-size="13" fill="#15803D" text-anchor="start" font-weight="bold">NGINX PLUS  ·  one service, no subrequest</text>
+<rect x="24.0" y="466" width="214" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="36.0" y="490" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">Browser</text>
+<text x="36.0" y="509" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">NGX_OIDC_SESSION</text>
+<path d="M242.0,484 L254.0,493 L242.0,502 z" fill="#9CA3AF"/>
+<rect x="259.5" y="466" width="685.0" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="271.5" y="490" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">NGINX Plus</text>
+<text x="271.5" y="509" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">auth_oidc tidewater</text>
+<path d="M948.5,484 L960.5,493 L948.5,502 z" fill="#9CA3AF"/>
+<rect x="966.0" y="466" width="214" height="54" rx="8" fill="#1F2937" stroke="#1F2937" stroke-width="1.5"/>
+<text x="978.0" y="490" font-size="16.5" fill="#FFFFFF" text-anchor="start" font-weight="bold">Portal</text>
+<text x="978.0" y="509" font-size="12" fill="#D1D5DB" text-anchor="start" font-family="DejaVu Sans Mono">X-User: bob</text>
+<rect x="24.0" y="530" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="40.0" cy="546" r="3.2" fill="#1D4ED8"/>
+<text x="49.0" y="550" font-size="12" fill="#374151" text-anchor="start">sends a short session ID;</text>
+<text x="49.0" y="567" font-size="12" fill="#374151" text-anchor="start">the session itself stays</text>
+<text x="49.0" y="584" font-size="12" fill="#374151" text-anchor="start">in NGINX</text>
+<rect x="259.5" y="530" width="685.0" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="275.5" cy="546" r="3.2" fill="#1D4ED8"/>
+<text x="284.5" y="550" font-size="12" fill="#374151" text-anchor="start">looks the session up in shared memory</text>
+<circle cx="275.5" cy="563" r="3.2" fill="#1D4ED8"/>
+<text x="284.5" y="567" font-size="12" fill="#374151" text-anchor="start">claims are variables: $oidc_claim_*</text>
+<circle cx="275.5" cy="580" r="3.2" fill="#1D4ED8"/>
+<text x="284.5" y="584" font-size="12" fill="#374151" text-anchor="start">no subrequest, no auth_request_set</text>
+<circle cx="275.5" cy="597" r="3.2" fill="#1D4ED8"/>
+<text x="284.5" y="601" font-size="12" fill="#374151" text-anchor="start">no second process to run or watch</text>
+<circle cx="618.0" cy="546" r="3.2" fill="#B91C1C"/>
+<text x="627.0" y="550" font-size="12" fill="#B91C1C" text-anchor="start">issuer must be https:// or it won't load</text>
+<circle cx="618.0" cy="563" r="3.2" fill="#B91C1C"/>
+<text x="627.0" y="567" font-size="12" fill="#B91C1C" text-anchor="start">/oidc_callback needs its own auth_oidc</text>
+<text x="627.0" y="584" font-size="12" fill="#B91C1C" text-anchor="start">otherwise: served as a file, 404</text>
+<circle cx="618.0" cy="597" r="3.2" fill="#15803D"/>
+<text x="627.0" y="601" font-size="12" fill="#15803D" text-anchor="start">Cookie "" still yours to set</text>
+<rect x="966.0" y="530" width="214" height="88" rx="6" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1"/>
+<circle cx="982.0" cy="546" r="3.2" fill="#1D4ED8"/>
+<text x="991.0" y="550" font-size="12" fill="#374151" text-anchor="start">same headers as open</text>
+<text x="991.0" y="567" font-size="12" fill="#374151" text-anchor="start">source, from variables</text>
+<text x="991.0" y="584" font-size="12" fill="#374151" text-anchor="start">read in the main request</text>
+<rect x="24" y="630" width="1152" height="46" rx="6" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1"/>
+<text x="36" y="649" font-size="12" fill="#374151" text-anchor="start" font-weight="bold">First sign-in:</text>
+<text x="130" y="649" font-size="12" fill="#374151" text-anchor="start">auth_oidc → Keycloak login (PKCE S256 + nonce by default) → /oidc_callback → NGINX Plus redeems the code → session in shared memory</text>
+<text x="36" y="667" font-size="12" fill="#15803D" text-anchor="start">API bearer tokens too: auth_jwt verifies Keycloak's signature (JWKS fetched and cached), auth_jwt_require adds issuer and audience.</text>
+<rect x="24" y="696" width="1152" height="28" rx="5" fill="#1F2937" stroke="#1F2937" stroke-width="1"/>
+<text x="36" y="715" font-size="13" fill="#FFFFFF" text-anchor="start" font-weight="bold"></text>
+<text x="276" y="715" font-size="13" fill="#FFFFFF" text-anchor="start" font-weight="bold">Open source + OAuth2 Proxy</text>
+<text x="732" y="715" font-size="13" fill="#FFFFFF" text-anchor="start" font-weight="bold">NGINX Plus</text>
+<text x="36" y="743" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Services to run</text>
+<text x="276" y="743" font-size="12.5" fill="#C2410C" text-anchor="start">NGINX + OAuth2 Proxy: ~20 flags, a cookie secret</text>
+<text x="732" y="743" font-size="12.5" fill="#15803D" text-anchor="start">NGINX Plus</text>
+<rect x="24" y="752" width="1152" height="28" fill="#F9FAFB"/>
+<text x="36" y="771" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Calls per request</text>
+<text x="276" y="771" font-size="12.5" fill="#C2410C" text-anchor="start">1 subrequest to OAuth2 Proxy</text>
+<text x="732" y="771" font-size="12.5" fill="#15803D" text-anchor="start">0</text>
+<text x="36" y="799" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">NGINX config for sign-in</text>
+<text x="276" y="799" font-size="12.5" fill="#C2410C" text-anchor="start">~50 lines, 6 locations</text>
+<text x="732" y="799" font-size="12.5" fill="#15803D" text-anchor="start">~17 lines: provider + 2 locations</text>
+<rect x="24" y="808" width="1152" height="28" fill="#F9FAFB"/>
+<text x="36" y="827" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">Where the session lives</text>
+<text x="276" y="827" font-size="12.5" fill="#C2410C" text-anchor="start">encrypted cookie in the browser</text>
+<text x="732" y="827" font-size="12.5" fill="#15803D" text-anchor="start">NGINX shared memory, cookie = short ID</text>
+<text x="36" y="855" font-size="12.5" fill="#1F1F1F" text-anchor="start" font-weight="bold">API tokens</text>
+<text x="276" y="855" font-size="12.5" fill="#C2410C" text-anchor="start">not covered: a validator or njs</text>
+<text x="732" y="855" font-size="12.5" fill="#15803D" text-anchor="start">auth_jwt, keys cached</text>
+<text x="24" y="890" font-size="12" fill="#9CA3AF" text-anchor="start">Sprint 7 · NGINX Learning Journey · OSS vs Plus single sign-on</text>
+</svg>
